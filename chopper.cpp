@@ -3,7 +3,7 @@
 #include <iostream>
 
 int main(){
-    std::cout << "Hi";
+    std::cerr << "Hi" << std::endl;
     std::string filename = "~/sno.zdab";
     FILE* f = fopen(filename.c_str(), "rb");
 
