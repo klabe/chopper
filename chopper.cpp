@@ -9,6 +9,7 @@
 void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 int GetLastIndex();
+PZdabWriter* Output(int);
 
 int main(int argc, char *argv[]){
     // Get Input File
@@ -34,9 +35,9 @@ int main(int argc, char *argv[]){
     uint64_t time10 = 0;
     int index = GetLastIndex();
 
-    // Setup output file
-    char* outfilename = "~/chopped.zdab";
-    PZdabWriter* w = new PZdabWriter(outfilename,0);
+    // Setup initial output file
+    PZdabWriter* w;
+    w = Output(index);
     if(w->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
         return -1;
@@ -73,10 +74,13 @@ int main(int argc, char *argv[]){
         if ((time0 + ticks < maxtime && time > time0 + ticks) ||
             (time > time0 + ticks - maxtime && time < time0) ){
             w->Close();
-            // START NEW FILE
-            Database(index, time10, time);
             index++;
-            std::cerr << index << std::endl;
+            w = Output(index);
+            if(w->IsOpen() == 0){
+                std::cerr << "Could not open output file" << std::endl;
+                return -1;
+            }
+            Database(index, time10, time);
             time0 = time;
         }
     }
@@ -118,4 +122,15 @@ int GetLastIndex(){
     int id = atoi(row[0]) + 1;
     std::cerr << id << std::endl;
     return id;
+}
+
+// This function builds a new output file for each chunk and should be
+// called each time the index in incremented.
+PZdabWriter* Output(int index){
+    char* outfilename = "~/chopped.zdab";
+    PZdabWriter* w = new PZdabWriter(outfilename, 0);
+    return w;
+    if(w->IsOpen() == 0){
+        std::cerr << "Could not open output file" << std::endl;
+    }
 }
