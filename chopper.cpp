@@ -11,6 +11,7 @@ void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 int GetLastIndex();
 
 int main(int argc, char *argv[]){
+    // Get Input File
     if(argc != 2){
         std::cerr << "Enter filename" << std::endl;
         return -1;
@@ -24,6 +25,7 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
+    // Initialize time information
     uint64_t time0 = -1;
     const double chunksize = 1.2; // Chunk Size in Seconds;
     const uint64_t ticks = int(chunksize*50000000);
@@ -31,6 +33,7 @@ int main(int argc, char *argv[]){
     uint64_t time = 0;
     int index = GetLastIndex();
 
+    // Setup output file
     char *outfilename = "/home/cp/klabe/chopped.zdab";
     PZdabWriter* w = new PZdabWriter(outfilename,0);
     if(w->IsOpen() == 0){
@@ -67,8 +70,12 @@ int main(int argc, char *argv[]){
             (time > time0 + ticks - maxtime && time < time0) ){
             w->Close();
             // START NEW FILE
-            // GET 10MHz CLOCK TIME
-            uint64_t time10 = 0;
+            // Get 10MHz Clock Time
+            // Location taken from Zdab_convert.cxx
+            // (Note we know hits is not NULL because time must
+            //  have changed to end up here)
+            uint64_t time10 = hits->TriggerCardData.Bc10_2
+                              + hits->TriggerCardData.Bc10_1;
             Database(index, time10, time);
             index++;
             std::cerr << index << std::endl;
