@@ -10,8 +10,12 @@ void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 int GetLastIndex();
 
-int main(){
-    char* infilename = "/home/cp/klabe/sno.zdab";
+int main(int argc, char *argv[]){
+    if(argc != 2){
+        std::cerr << "Enter filename" << std::endl;
+        return -1;
+    }
+    char* infilename = argv[1];
     FILE* infile = fopen(infilename, "rb");
 
     PZdabFile* p = new PZdabFile();
