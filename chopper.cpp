@@ -2,6 +2,10 @@
 #include "PZdabWriter.h"
 #include <string>
 #include <iostream>
+#include <mysql.h>
+#include <sstream>
+
+void Database(double, int);
 
 int main(){
     std::string infilename = "/home/cp/klabe/sno.zdab";
@@ -37,7 +41,7 @@ int main(){
         if (time0 + ticks < maxtime){
             if (time > time0 + ticks){
                 // START NEW FILE, CLOSE PRESENT FILE
-                // WRITE TO DATABASE
+                Database(time, index);
                 index++;
                 time0 = time;
             }
@@ -45,7 +49,7 @@ int main(){
         else{
             if (time > time0 + ticks - maxtime && time < time0 ){
                 // START NEW FILE, CLOSE PRESENT FILE
-                // WRITE TO DATABASE
+                Database(time, index);
                 index ++;
                 time0 = time;
             }
@@ -54,4 +58,15 @@ int main(){
         std::cerr << time << std::endl;
     }
     return 0;
+}
+
+void Database(double time, int index){
+    MYSQL* conn = mysql_init(NULL);
+    if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
+                             "monitor",0,NULL,0))
+        std::cerr << "Cannot write to database" << std::endl;
+    std::stringstream query;
+    query << "INSERT INTO Index VALUES (";
+    query << time << "," << index << ")";
+    mysql_query(conn, query.str().c_str());
 }

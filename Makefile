@@ -1,4 +1,4 @@
-CFLAGS = -Wno-write-strings -DSWAP_BYTES -g -fdiagnostics-show-option
+CFLAGS = -Wno-write-strings -DSWAP_BYTES -g -fdiagnostics-show-option -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
 
 CC = g++
 
