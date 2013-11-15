@@ -127,7 +127,8 @@ int GetLastIndex(){
 // This function builds a new output file for each chunk and should be
 // called each time the index in incremented.
 PZdabWriter* Output(int index){
-    char* outfilename = "~/chopped.zdab";
+    char* outfilename;
+    sprintf(outfilename, "~/chopped%i.zdab", index);
     PZdabWriter* w = new PZdabWriter(outfilename, 0);
     return w;
     if(w->IsOpen() == 0){
