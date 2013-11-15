@@ -29,12 +29,13 @@ int main(int argc, char *argv[]){
     uint64_t time0 = -1;
     const double chunksize = 1.2; // Chunk Size in Seconds;
     const uint64_t ticks = int(chunksize*50000000);
-    const uint64_t maxtime = (1UL << 43); // IS THIS CORRECT?
+    const uint64_t maxtime = (1UL << 43); 
     uint64_t time = 0;
+    uint64_t time10 = 0;
     int index = GetLastIndex();
 
     // Setup output file
-    char *outfilename = "/home/cp/klabe/chopped.zdab";
+    char* outfilename = "~/chopped.zdab";
     PZdabWriter* w = new PZdabWriter(outfilename,0);
     if(w->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
@@ -46,7 +47,6 @@ int main(int argc, char *argv[]){
         nZDAB* data = p->NextRecord();
             if (data == NULL){
                 w->Close();
-                uint64_t time10 = 0;
                 Database(index, time10, time);
                 index++;
                 time0 = time;
@@ -57,8 +57,12 @@ int main(int argc, char *argv[]){
             // Get the 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
-            time = hits->TriggerCardData.Bc50_2 
+            time = hits->TriggerCardData.Bc50_2 << 11 
                    + hits->TriggerCardData.Bc50_1;
+            // Now get the 10MHz Clock Time
+            // Method taken from zdab_convert.cpp
+            time10 = hits->TriggerCardData.Bc10_2 << 32
+                     + hits->TriggerCardData.Bc10_1;
             if (time0 == -1)
                 time0 = time;
         }
@@ -70,12 +74,6 @@ int main(int argc, char *argv[]){
             (time > time0 + ticks - maxtime && time < time0) ){
             w->Close();
             // START NEW FILE
-            // Get 10MHz Clock Time
-            // Location taken from Zdab_convert.cxx
-            // (Note we know hits is not NULL because time must
-            //  have changed to end up here)
-            uint64_t time10 = hits->TriggerCardData.Bc10_2
-                              + hits->TriggerCardData.Bc10_1;
             Database(index, time10, time);
             index++;
             std::cerr << index << std::endl;
