@@ -18,7 +18,6 @@
 #include <unistd.h>
 #include "PZdabFile.h"
 //#include "CUtils.h"
-#define Printf printf
 #pragma GCC diagnostic ignored "-Wformat"
 //#include "SnoStr.h" // DumpRecord is disabled
 #include "Record_Info.h"
@@ -97,7 +96,7 @@ int PZdabFile::Init( FILE *inFile )
 			mRecBuffer = (u_int32 *)malloc(mRecBuffsize * sizeof(u_int32));
 			if (!mRecBuffer) {
 				mRecBuffsize = 0;
-				Printf("Out of memory for zdab record buffer!\x07\n");
+				printf("Out of memory for zdab record buffer!\x07\n");
 				return( -1 );
 			}
 		}
@@ -180,7 +179,7 @@ nZDAB *PZdabFile::NextRecord()
 		
 			n = fread( &daqST, sizeof(daqST), 1, mFile );
 			if (n != 1) {
-				Printf("Unexpected EOF while reading zdab file!\x07\n");
+				printf("Unexpected EOF while reading zdab file!\x07\n");
 				return(0);
 			}
 			SWAP_INT32( &daqST, 8 );
@@ -189,19 +188,19 @@ nZDAB *PZdabFile::NextRecord()
 			if( daqST.MPR[0] != ZEBRA_SIG0 || daqST.MPR[1] != ZEBRA_SIG1 ||
 				daqST.MPR[2] != ZEBRA_SIG2 || daqST.MPR[3] != ZEBRA_SIG3 )
 			{
-				Printf("Invalid ZEBRA steering block!\x07\n");
+				printf("Invalid ZEBRA steering block!\x07\n");
 				return(0);
 			}
 				
 			if( daqST.MPR[4] & ( ZEBRA_EMERGENCY_STOP | ZEBRA_END_OF_RUN ) ) {
-				Printf("ZEBRA EOF after [%ld] blocks and [%ld] records\n",
+				printf("ZEBRA EOF after [%ld] blocks and [%ld] records\n",
 							 (long)mBlockCount, (long)mRecordCount );
 				return(0);
 			}
 			block_size = daqST.MPR[4] & ZEBRA_BLOCK_SIZE_MASK;  //Phys. rec. length
 			
 			if( block_size > ZEBRA_BLOCKSIZE ) { 
-				Printf("Illegal ZEBRA blocksize\x07\n");
+				printf("Illegal ZEBRA blocksize\x07\n");
 				return(0);
 			} else {
 
@@ -211,7 +210,7 @@ nZDAB *PZdabFile::NextRecord()
 			}
 			
 			if( daqST.MPR[5] != mBlockCount ) {
-				Printf("Wrong ZEBRA bank number: %ld (should be %ld)\n",
+				printf("Wrong ZEBRA bank number: %ld (should be %ld)\n",
 							(long)daqST.MPR[5], (long)mBlockCount );
 			}
 			mBlockCount++;
@@ -220,7 +219,7 @@ nZDAB *PZdabFile::NextRecord()
 				if (mWordsTotal < BASE_BUFFSIZE) {
 					new_buffsize = BASE_BUFFSIZE;
 				} else if (mWordsTotal > MAX_BUFFSIZE) {
-					Printf("ZDAB record too large! (%ld)  (corrupted file?)\x07\n",
+					printf("ZDAB record too large! (%ld)  (corrupted file?)\x07\n",
 							(long)mWordsTotal);
 					return(0);
 				} else {
@@ -228,7 +227,7 @@ nZDAB *PZdabFile::NextRecord()
 				}
 				new_buffer = (u_int32 *)malloc(new_buffsize * sizeof(u_int32));
 				if (!new_buffer) {
-					Printf("Out of memory for ZDAB record buffer!\x07\n");
+					printf("Out of memory for ZDAB record buffer!\x07\n");
 					return(0);
 				}
 				// copy any old zdab data into new (larger) buffer
@@ -243,7 +242,7 @@ nZDAB *PZdabFile::NextRecord()
 			n = fread( mRecBuffer+mWordOffset, sizeof(u_int32), nw_count, mFile );
 			if ((u_int32)n != nw_count) {
 				if (!n) {
-					Printf("Unexpected EOF while reading zdab file!\x07\n");
+					printf("Unexpected EOF while reading zdab file!\x07\n");
 					return(0);
 				}
 				nw_count = n;
@@ -293,7 +292,7 @@ nZDAB *PZdabFile::NextRecord()
 						
 						/* new addition 07/03/98 */
 						if( skip32Ptr < mRecBuffer || skip32Ptr >= mRecBuffer+mRecBuffsize ) {
-							Printf("Error 1 reading zdab file\x07\n");
+							printf("Error 1 reading zdab file\x07\n");
 							return(0);
 						}
 						SWAP_INT32( skip32Ptr, 1 );	/* swap zdab offset word */
@@ -303,7 +302,7 @@ nZDAB *PZdabFile::NextRecord()
 
 						/* range check pointer again */
 						if( skip32Ptr < mRecBuffer || skip32Ptr > mRecBuffer+mRecBuffsize-9 ) {
-							Printf("Error 2 reading zdab file\x07\n");
+							printf("Error 2 reading zdab file\x07\n");
 							return(0);
 						}
 						
@@ -314,14 +313,14 @@ nZDAB *PZdabFile::NextRecord()
 						
 						// make sure the bank header is contained in our buffer
 						if ((u_int32 *)(nzdabPtr+1) > mBuffPtr32) {
-							Printf("Error 3 reading zdab file\x07\n");
+							printf("Error 3 reading zdab file\x07\n");
 							return(0);
 						}
 						SWAP_INT32(nzdabPtr, 9);	// swap the zdab header
 						
 						// make sure the bank data is contained in our buffer
 						if ((u_int32 *)(nzdabPtr+1)+nzdabPtr->data_words > mBuffPtr32) {
-							Printf("Error 4 reading zdab file\x07\n");
+							printf("Error 4 reading zdab file\x07\n");
 							return(0);
 						}
 						
@@ -340,7 +339,7 @@ nZDAB *PZdabFile::NextRecord()
 						continue;
 					}
 				} else {
-					Printf("Unknown record type 0x%lx, length 0x%lx\x07\n",
+					printf("Unknown record type 0x%lx, length 0x%lx\x07\n",
 								(long)recType, (long)recLength );
 					return(0);
 				}
@@ -351,7 +350,7 @@ nZDAB *PZdabFile::NextRecord()
 			mWordOffset = ( mBytesTotal - mBytesRead ) / sizeof(u_int32);
 			// quit now if our remaining record is too large for the buffer (double check)
 			if( (u_int32)(mWordOffset + mBuffPtr32 - mRecBuffer) > mRecBuffsize ) {
-				Printf("Record too large!\x07\n");
+				printf("Record too large!\x07\n");
 				return(0);
 			}				
 			// move remaining data to the beginning of buffer 
@@ -418,7 +417,7 @@ PmtEventRecord *PZdabFile::GetPmtRecord(nZDAB *nzdabPtr)
 		
 		if (npmt > MAX_NHIT) {
 		
-			Printf("Read error: Bad ZDAB -- %d pmt hit!\x07\n", npmt );
+			printf("Read error: Bad ZDAB -- %d pmt hit!\x07\n", npmt );
 			pmtEventPtr = NULL;	// not a valid PmtEventRecord
 			
 		}  else {
@@ -427,7 +426,7 @@ PmtEventRecord *PZdabFile::GetPmtRecord(nZDAB *nzdabPtr)
 			SWAP_INT32( pmtEventPtr + 1, 3 * npmt );
 #ifdef DEBUG_EXTENDED_ZDAB
 			static int count = 0;
-			Printf("ZDAB %2d) %d hits\n",++count,npmt);
+			printf("ZDAB %2d) %d hits\n",++count,npmt);
 #endif			
 			// swap the sub-fields
 			u_int32	*sub_header = &pmtEventPtr->CalPckType;
@@ -439,7 +438,7 @@ PmtEventRecord *PZdabFile::GetPmtRecord(nZDAB *nzdabPtr)
 				u_int32 data_words = (*sub_header & SUB_LENGTH_MASK) - 1;
 #endif
 #ifdef DEBUG_EXTENDED_ZDAB
-				Printf("  Sub-field %d - %d words\n", (int)(*sub_header >> SUB_TYPE_BITNUM),(int)data_words);
+				printf("  Sub-field %d - %d words\n", (int)(*sub_header >> SUB_TYPE_BITNUM),(int)data_words);
 #endif			
 				SWAP_INT32( sub_header+1, data_words );
 			}
@@ -570,7 +569,7 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 					flag_str = buff2;
 					break;
 			}
-			Printf("EPED at GT %.8ld: %s-%s cr=%-2ld sl=%s Wid=%-3ld C-Dly=%-3ld F-Dly=%-3ld Q-Inj=%-3ld GTID=%.8ld\n",
+			printf("EPED at GT %.8ld: %s-%s cr=%-2ld sl=%s Wid=%-3ld C-Dly=%-3ld F-Dly=%-3ld Q-Inj=%-3ld GTID=%.8ld\n",
 					(long)lastGTID, type_str, flag_str, eped->halfCrateID & 0x7f,
 					(eped->halfCrateID & EPED_SECOND_HALF) ? "8-15" : "0-7 " ,
 					eped->ped_width,eped->ped_delay_coarse,
@@ -582,14 +581,14 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 		case RUN_RECORD: {
 			SBankRHDR *rhdr = (RunRecord *)bankData;
 			SnoStr::GetList(buff, SnoStr::sRunType, rhdr->RunMask);
-			Printf("RHDR at GT %.8ld: Run=%ld - %s\n", (long)lastGTID,
+			printf("RHDR at GT %.8ld: Run=%ld - %s\n", (long)lastGTID,
 					(long)rhdr->RunNumber, buff);
 		} break;
 		
 		case TRIG_RECORD: {
 			SBankTRIG *trig = (TriggerInfo *)bankData;
 			SnoStr::GetList(buff, SnoStr::sTrigMask, trig->TriggerMask);
-			Printf("TRIG at GT %.8ld: %s - GTID=%.8ld\n", (long)lastGTID,
+			printf("TRIG at GT %.8ld: %s - GTID=%.8ld\n", (long)lastGTID,
 					buff, (long)trig->GTID);
 		} break;
 		
@@ -602,7 +601,7 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 				sprintf(buff,"Status=0x%lx",(long)cast->status);
 				pt = buff;
 			}
-			Printf("%s at GT %.8ld: ID=%ld %s Pos=(%.1f,%.1f,%.1f)\n",
+			printf("%s at GT %.8ld: ID=%ld %s Pos=(%.1f,%.1f,%.1f)\n",
 					BankNameString(bankName), (long)lastGTID, cast->sourceID,
 					pt,cast->position[0],cast->position[1],cast->position[2]);
 		} break;
@@ -610,7 +609,7 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 		case CAAC_RECORD:
 		case CLAC_RECORD: {
 			SBankCAAC *caac = (AVStatus *)bankData;
-			Printf("%s at GT %.8ld: Pos=(%.1f,%.1f,%.1f) Rot=(%.2f,%.2f,%.2f)\n",
+			printf("%s at GT %.8ld: Pos=(%.1f,%.1f,%.1f) Rot=(%.2f,%.2f,%.2f)\n",
 					BankNameString(bankName), (long)lastGTID,
 					caac->position[0], caac->position[1], caac->position[2],
 					caac->rotation[0], caac->rotation[1], caac->rotation[2]);
@@ -618,7 +617,7 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 		
 		case SOSL_RECORD: {
 			SBankSOSL *sosl = (LaserStatus *)bankData;
-			Printf("SOSL at GT %.8ld: Status=0x%lx Dye=%ld Filter1=%ld Filter2=%ld\n",
+			printf("SOSL at GT %.8ld: Status=0x%lx Dye=%ld Filter1=%ld Filter2=%ld\n",
 					(long)lastGTID,
 					(long)sosl->status, (long)sosl->dyeCellNumber,
 					(long)sosl->filterWheel1Position, (long)sosl->filterWheel2Position);
@@ -626,12 +625,12 @@ void PZdabFile::DumpRecord(u_int32 *bankData, int bankSize, u_int32 bankName, u_
 		
 		case MAST_RECORD: {
 			SBankMAST *mast = (MastRecord *)bankData;
-			Printf("MAST at GT %.8ld: Version=%.4f Original=%.4f\n",
+			printf("MAST at GT %.8ld: Version=%.4f Original=%.4f\n",
 					(long)lastGTID, mast->currentVersion, mast->originalVersion);
 		} break;
 		
 		default: {
-			Printf("%s at GT %.8ld\n", 
+			printf("%s at GT %.8ld\n", 
 					BankNameString(bankName), (long)lastGTID);
 		} break;
 		

@@ -2,9 +2,9 @@ CFLAGS = -Wno-write-strings -DSWAP_BYTES -g -fdiagnostics-show-option -I/usr/inc
 
 CC = g++
 
-CHOPPER_SOURCES = chopper.cpp PZdabFile.cxx 
+CHOPPER_SOURCES = chopper.cpp PZdabFile.cxx PZdabWriter.cxx MD5Checksum.cxx 
 
-# PThread.cxx PThreadInt.cxx PZdabWriter.cxx CUtils.cxx error_ph.c
+# PThread.cxx PThreadInt.cxx CUtils.cxx error_ph.c
 
 all: chopper 
 

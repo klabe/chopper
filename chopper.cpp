@@ -4,12 +4,15 @@
 #include <iostream>
 #include <mysql.h>
 #include <sstream>
+#include <stdint.h>
 
-void Database(double, int);
+void Database(int, uint64_t, uint64_t);
+void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
+int GetLastIndex();
 
 int main(){
-    std::string infilename = "/home/cp/klabe/sno.zdab";
-    FILE* infile = fopen(infilename.c_str(), "rb");
+    char* infilename = "/home/cp/klabe/sno.zdab";
+    FILE* infile = fopen(infilename, "rb");
 
     PZdabFile* p = new PZdabFile();
     if (p->Init(infile) < 0){
@@ -17,56 +20,93 @@ int main(){
         return -1;
     }
 
-    double time0 = -1;
+    uint64_t time0 = -1;
     const double chunksize = 1.2; // Chunk Size in Seconds;
-    const double ticks = chunksize*50000000;
-    const int maxtime = 8796093022208; // IS THIS CORRECT?
-    double time = 0;
-    int index = 0;
+    const uint64_t ticks = int(chunksize*50000000);
+    const uint64_t maxtime = (1UL << 43); // IS THIS CORRECT?
+    uint64_t time = 0;
+    int index = GetLastIndex();
 
-    //char *outfilename = "/home/cp/klabe/chopped.zdab";
-    //PZdabWriter w = PZdabWriter(outfilename,0);
+    char *outfilename = "/home/cp/klabe/chopped.zdab";
+    PZdabWriter* w = new PZdabWriter(outfilename,0);
+    if(w->IsOpen() == 0){
+        std::cerr << "Could not open output file" << std::endl;
+        return -1;
+    }
 
+    // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
-            if (data == NULL)
+            if (data == NULL){
+                w->Close();
+                uint64_t time10 = 0;
+                Database(index, time10, time);
+                index++;
+                time0 = time;
                 break;
+            }
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits != NULL){
-            time = get50MHzTime(hits);
+            // Get the 50MHz Clock Time
+            // Implementing Part of Method Get50MHzTime() 
+            // from PZdabFile.cxx
+            time = hits->TriggerCardData.Bc50_2 
+                   + hits->TriggerCardData.Bc50_1;
             if (time0 == -1)
                 time0 = time;
         }
-        // OUTPUT ZDAB RECORD HERE
-        if (time0 + ticks < maxtime){
-            if (time > time0 + ticks){
-                // START NEW FILE, CLOSE PRESENT FILE
-                Database(time, index);
-                index++;
-                time0 = time;
-            }
+        // Output Zdab Record Here
+        OutZdab(data, w, p);
+
+        // Chop
+        if ((time0 + ticks < maxtime && time > time0 + ticks) ||
+            (time > time0 + ticks - maxtime && time < time0) ){
+            w->Close();
+            // START NEW FILE
+            // GET 10MHz CLOCK TIME
+            uint64_t time10 = 0;
+            Database(index, time10, time);
+            index++;
+            std::cerr << index << std::endl;
+            time0 = time;
         }
-        else{
-            if (time > time0 + ticks - maxtime && time < time0 ){
-                // START NEW FILE, CLOSE PRESENT FILE
-                Database(time, index);
-                index ++;
-                time0 = time;
-            }
-        }
-        
-        std::cerr << time << std::endl;
     }
     return 0;
 }
 
-void Database(double time, int index){
+// This function writes index-time pairs to the clock database
+void Database(int index, uint64_t time10, uint64_t time50){
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
                              "monitor",0,NULL,0))
         std::cerr << "Cannot write to database" << std::endl;
     std::stringstream query;
     query << "INSERT INTO Index VALUES (";
-    query << time << "," << index << ")";
+    query << index << "," << time10 << "," << time50 << ")";
     mysql_query(conn, query.str().c_str());
+}
+
+// This function writes out the ZDAB record
+void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
+    int index = PZdabWriter::GetIndex(data->bank_name);
+    if (index<0)
+        std::cerr << "Unrecognized bank name" << std::endl;
+    else
+        w->WriteBank(p->GetBank(data), index);
+}
+
+// This function queries the clock database to determine the most recent
+// value of the index.
+int GetLastIndex(){
+    MYSQL* conn = mysql_init(NULL);
+    if (! mysql_real_connect(conn, "cps4","snot","looseCable60",
+                             "monitor",0,NULL,0))
+        std::cerr << "Cannot read from database" << std::endl;
+    char* query = "SELECT MAX(id) AS id FROM clock";
+    mysql_query(conn, query);
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    int id = atoi(row[0]) + 1;
+    std::cerr << id << std::endl;
+    return id;
 }
