@@ -94,7 +94,7 @@ void Database(int index, uint64_t time10, uint64_t time50){
                              "monitor",0,NULL,0))
         std::cerr << "Cannot write to database" << std::endl;
     std::stringstream query;
-    query << "INSERT INTO Index VALUES (";
+    query << "INSERT INTO clock VALUES (";
     query << index << "," << time10 << "," << time50 << ")";
     mysql_query(conn, query.str().c_str());
 }
