@@ -28,8 +28,10 @@ int main(int argc, char *argv[]){
 
     // Initialize time information
     uint64_t time0 = -1;
-    const double chunksize = 1.2; // Chunk Size in Seconds;
-    const uint64_t ticks = int(chunksize*50000000);
+    const double chunksize = 1.0; // Chunk Size in Seconds;
+    const double overlap = 0.1; // Overlap Size in Seconds;
+    const uint64_t ticks = int((chunksize+overlap)*50000000);
+    const uint64_t iterator = int(chunksize*50000000);
     const uint64_t maxtime = (1UL << 43); 
     uint64_t time = 0;
     uint64_t time10 = 0;
@@ -53,7 +55,10 @@ int main(int argc, char *argv[]){
                 break;
             }
         PmtEventRecord* hits = p->GetPmtRecord(data);
-        if (hits != NULL){
+        if (hits == NULL){
+            // WRITE TO HEADER BUFFER
+        }
+        else{
             // Get the 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
@@ -63,8 +68,11 @@ int main(int argc, char *argv[]){
             // Method taken from zdab_convert.cpp
             time10 = hits->TriggerCardData.Bc10_2 << 32
                      + hits->TriggerCardData.Bc10_1;
-            if (time0 == -1)
+            if (time0 == -1){
                 time0 = time;
+                // Make initial database entry
+                Database(index, time10, time);
+            }
         }
         // Output Zdab Record Here
         OutZdab(data, w, p);
@@ -80,7 +88,7 @@ int main(int argc, char *argv[]){
                 return -1;
             }
             Database(index, time10, time);
-            time0 = time;
+            time0 += iterator;
         }
     }
     return 0;
@@ -88,7 +96,6 @@ int main(int argc, char *argv[]){
 
 // This function writes index-time pairs to the clock database
 void Database(int index, uint64_t time10, uint64_t time50){
-    std::cerr << "Writing to database" << std::endl;
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
                              "monitor",0,NULL,0))
