@@ -36,8 +36,7 @@ int main(int argc, char *argv[]){
     int index = GetLastIndex();
 
     // Setup initial output file
-    PZdabWriter* w;
-    w = Output(index);
+    PZdabWriter* w  = Output(index);
     if(w->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
         return -1;
@@ -89,6 +88,7 @@ int main(int argc, char *argv[]){
 
 // This function writes index-time pairs to the clock database
 void Database(int index, uint64_t time10, uint64_t time50){
+    std::cerr << "Writing to database" << std::endl;
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
                              "monitor",0,NULL,0))
@@ -127,11 +127,8 @@ int GetLastIndex(){
 // This function builds a new output file for each chunk and should be
 // called each time the index in incremented.
 PZdabWriter* Output(int index){
-    char* outfilename;
-    sprintf(outfilename, "~/chopped%i.zdab", index);
+    char outfilename[32];
+    sprintf(outfilename, "chopped%i.zdab", index);
     PZdabWriter* w = new PZdabWriter(outfilename, 0);
     return w;
-    if(w->IsOpen() == 0){
-        std::cerr << "Could not open output file" << std::endl;
-    }
 }
