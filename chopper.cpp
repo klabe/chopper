@@ -11,6 +11,13 @@ void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 int GetLastIndex();
 PZdabWriter* Output(int);
 
+// The general logic here is as follows:
+// We open a zdab file and read in events, looking at their time. The 
+// events are written out into smaller files of fixed time length.  In 
+// addition, we allow for a nonzero overlap interval, in which events
+// are written into two files.  When header records are encountered,
+// they are saved to a buffer, which is written out at the beginning of
+// each new output file.
 int main(int argc, char *argv[]){
     // Get Input File
     if(argc != 2){
@@ -26,7 +33,20 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    // Initialize time information
+    // Initialize time information.  I should explain what's going on
+    // here because there are so many times.  Since I'm reading ZDABs
+    // I need to track the 50 MHz clock for accuracy, and the 10 MHz
+    // clock for uniqueness.  For a given event, the trigger time will
+    // be stored in the variables time10 and time50.  The chopper is
+    // designed to output files with overlapping time intervals to aid
+    // in the search of correlated events near edges.  The unique length
+    // of the output file will be the "chunksize" with an overlap of 
+    // "overlap" size with the following chunk.  Time0 represents the
+    // beginning of the oldest open chunk.  (It's initialized to -1 here
+    // as a flag that it needs to be set when the data is read).  When
+    // the chunk is closed, Time0 is increased by "iterator" to ensure
+    // that it increases uniformly.  "maxtime" tells us when the 50 MHz
+    // clock rolls over, and is subtracted from times when appropriate.
     uint64_t time0 = -1;
     const double chunksize = 1.0; // Chunk Size in Seconds;
     const double overlap = 0.1; // Overlap Size in Seconds;
@@ -38,18 +58,19 @@ int main(int argc, char *argv[]){
     int index = 0;
 
     // Setup initial output file
-//    PZdabWriter* w  = Output(index);
-//    if(w->IsOpen() == 0){
-//        std::cerr << "Could not open output file" << std::endl;
-//        return -1;
-//    }
+    PZdabWriter* w  = Output(index);
+    PZdabWriter* w2;
+    if(w->IsOpen() == 0){
+        std::cerr << "Could not open output file" << std::endl;
+        return -1;
+    }
 
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
         if (data == NULL){
-//            w->Close();
-//            Database(index, time10, time50);
+            w->Close();
+            Database(index, time10, time50);
             index++;
             time0 = time50;
             break;
@@ -86,40 +107,68 @@ int main(int argc, char *argv[]){
             // from PZdabFile.cxx
             time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                    + hits->TriggerCardData.Bc50_1;
-//            printf("%10u\t%x\t%x\t", time50, hits->TriggerCardData.Bc50_2, hits->TriggerCardData.Bc50_1);
             // Now get the 10MHz Clock Time
             // Method taken from zdab_convert.cpp
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                      + hits->TriggerCardData.Bc10_1;
-//            printf("%10u\t%x\t%x\n", time10, hits->TriggerCardData.Bc10_2, hits->TriggerCardData.Bc10_1);
+            // Set Time Origin
             if (time0 == -1){
                 time0 = time50;
                 // Make initial database entry
-//                Database(index, time10, time50);
+                Database(index, time10, time50);
             }
         }
-        // Output Zdab Record Here
-//        OutZdab(data, w, p);
 
         // Chop
-        if ((time0 + ticks < maxtime && time50 > time0 + ticks) ||
-            (time50 > time0 + ticks - maxtime && time50 < time0) ){
-//            w->Close();
-            index++;
-//            w = Output(index);
-//            if(w->IsOpen() == 0){
-//                std::cerr << "Could not open output file" << std::endl;
-//                return -1;
-//            }
-              // Insert Headers into new file
-//            OutZdab(mastheader, w, p);
-//            OutZdab(rhdrheader, w, p);
-//            OutZdab(trigheader, w, p);
-            // Write in Headers from Buffer
-//            Database(index, time10, time50);
-            time0 += iterator;
-            if (time0 > maxtime)
-                time0 -= maxtime;
+
+        // There are twelve possible cases here: The 50 MHz clock can 
+        // roll over during the unique interval, during the overlap 
+        // period, or not at all.  In each case, we must be able to
+        // identify whether our event falls in the unique interval or 
+        // the overlap interval, and recognize the first event in the 
+        // overlap interval as a special case.
+
+        // We first identify where the rollover occurs:
+        int rollflag = 0;
+        if (time0 + iterator > maxtime)
+            rollflag = 1;
+        else if (time0 + ticks > maxtime)
+            rollflag = 2;
+
+        // Now we check the interval in each case:
+        if ((rollflag==0) && (time50 < time0 + iterator) ||
+            (rollflag==1) && (time50 < time0 + iterator - maxtime) ||
+            (rollflag==1) && (time50 > time0) ||
+            (rollflag==2) && (time50 < time0 + iterator))
+            OutZdab(data, w, p);
+        else{
+            if ((rollflag==0) && (time50 < time0 + ticks) ||
+                (rollflag==1) && (time50 < time0 + ticks - maxtime) ||
+                (rollflag==2) && (time50 > time0 + iterator) ||
+                (rollflag==2) && (time50 < time0 + ticks - maxtime)){
+                if(w2->IsOpen()==0){
+                    index++;
+                    w2 = Output(index);
+                    if(w2->IsOpen()==0){
+                        std::cerr << "Could not open output file\n";
+                        return -1;
+                    }
+                    OutZdab(mastheader, w2, p);
+                    OutZdab(rhdrheader, w2, p);
+                    OutZdab(trigheader, w2, p);
+                    Database(index, time10, time50);
+                }
+            OutZdab(data, w, p);
+            OutZdab(data, w2, p);    
+            }
+            else{
+                w->Close();
+                w = w2;
+                w2->Close();
+                time0 += iterator;
+                if (time0 > maxtime)
+                    time0 -= maxtime;
+            }
         }
     }
     return 0;
@@ -135,6 +184,7 @@ void Database(int index, uint64_t time10, uint64_t time50){
     query << "INSERT INTO clock VALUES (";
     query << index << "," << time10 << "," << time50 << ")";
     mysql_query(conn, query.str().c_str());
+    mysql_close(conn);
 }
 
 // This function writes out the ZDAB record
@@ -159,6 +209,7 @@ int GetLastIndex(){
     MYSQL_ROW row = mysql_fetch_row(result);
     int id = atoi(row[0]) + 1;
     std::cerr << id << std::endl;
+    mysql_close(conn);
     return id;
 }
 
