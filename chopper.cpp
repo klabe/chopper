@@ -58,18 +58,23 @@ int main(int argc, char *argv[]){
     int index = 0;
 
     // Setup initial output file
-    PZdabWriter* w  = Output(index);
-    PZdabWriter* w2;
-    if(w->IsOpen() == 0){
+    PZdabWriter* r1  = Output(index);
+    PZdabWriter* w1 = r1;
+    if(w1->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
         return -1;
     }
+    PZdabWriter* r2;
+    PZdabWriter* w2;
+    w2 = r2;
+    int testw2 = -1;
+    int parity = 0;
 
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
         if (data == NULL){
-            w->Close();
+            w1->Close();
             Database(index, time10, time50);
             index++;
             time0 = time50;
@@ -98,10 +103,7 @@ int main(int argc, char *argv[]){
         }
 
         PmtEventRecord* hits = p->GetPmtRecord(data);
-        if (hits == NULL){
-            // WRITE TO HEADER BUFFER
-        }
-        else{
+        if (hits != NULL){
             // Get the 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
@@ -140,15 +142,14 @@ int main(int argc, char *argv[]){
             (rollflag==1) && (time50 < time0 + iterator - maxtime) ||
             (rollflag==1) && (time50 > time0) ||
             (rollflag==2) && (time50 < time0 + iterator))
-            OutZdab(data, w, p);
+            OutZdab(data, w1, p);
         else{
             if ((rollflag==0) && (time50 < time0 + ticks) ||
                 (rollflag==1) && (time50 < time0 + ticks - maxtime) ||
                 (rollflag==2) && (time50 > time0 + iterator) ||
                 (rollflag==2) && (time50 < time0 + ticks - maxtime)){
-                if(w2->IsOpen()==0){
+                if(testw2==-1){
                     index++;
-                    w2 = Output(index);
                     if(w2->IsOpen()==0){
                         std::cerr << "Could not open output file\n";
                         return -1;
@@ -157,14 +158,26 @@ int main(int argc, char *argv[]){
                     OutZdab(rhdrheader, w2, p);
                     OutZdab(trigheader, w2, p);
                     Database(index, time10, time50);
+                    testw2 = 0;
                 }
-            OutZdab(data, w, p);
-            OutZdab(data, w2, p);    
+                OutZdab(data, w1, p);
+                OutZdab(data, w2, p);    
             }
             else{
-                w->Close();
-                w = w2;
-                w2->Close();
+                if(parity%2 == 0 ){
+                    r1->Close();
+                    w1 = r2;
+                    PZdabWriter* r1 = Output(index+1);
+                    w2 = r1;
+                }
+                else{
+                    r2->Close();
+                    w1 = r1;
+                    PZdabWriter* r2 = Output(index+1);
+                    w2 = r2;
+                }
+                parity++;
+                testw2 = -1;
                 time0 += iterator;
                 if (time0 > maxtime)
                     time0 -= maxtime;
