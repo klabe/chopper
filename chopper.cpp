@@ -35,25 +35,37 @@ int main(int argc, char *argv[]){
     const uint64_t maxtime = (1UL << 43); 
     uint64_t time = 0;
     uint64_t time10 = 0;
-    int index = GetLastIndex();
+    int index = 0;
 
     // Setup initial output file
-    PZdabWriter* w  = Output(index);
-    if(w->IsOpen() == 0){
-        std::cerr << "Could not open output file" << std::endl;
-        return -1;
-    }
+//    PZdabWriter* w  = Output(index);
+//    if(w->IsOpen() == 0){
+//        std::cerr << "Could not open output file" << std::endl;
+//        return -1;
+//    }
 
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
-            if (data == NULL){
-                w->Close();
-                Database(index, time10, time);
-                index++;
-                time0 = time;
-                break;
-            }
+        if (data == NULL){
+//            w->Close();
+//            Database(index, time10, time);
+            index++;
+            time0 = time;
+            break;
+        }
+
+        // Set up Header Buffer
+        u_int32 bank_name = data->bank_name;
+        if (bank_name == MAST_RECORD)
+            printf("Found a MAST record!");
+        if (bank_name == RHDR_RECORD)
+            printf("Found a run header!");
+        if (bank_name == TRIG_RECORD)
+            printf("Found a TRIG record!");
+        if (bank_name == ZDAB_RECORD){
+            ;
+        }
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits == NULL){
             // WRITE TO HEADER BUFFER
@@ -62,33 +74,38 @@ int main(int argc, char *argv[]){
             // Get the 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
-            time = hits->TriggerCardData.Bc50_2 << 11 
+            time = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                    + hits->TriggerCardData.Bc50_1;
+//            printf("%10u\t%x\t%x\t", time, hits->TriggerCardData.Bc50_2, hits->TriggerCardData.Bc50_1);
             // Now get the 10MHz Clock Time
             // Method taken from zdab_convert.cpp
-            time10 = hits->TriggerCardData.Bc10_2 << 32
+            time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                      + hits->TriggerCardData.Bc10_1;
+//            printf("%10u\t%x\t%x\n", time10, hits->TriggerCardData.Bc10_2, hits->TriggerCardData.Bc10_1);
             if (time0 == -1){
                 time0 = time;
                 // Make initial database entry
-                Database(index, time10, time);
+//                Database(index, time10, time);
             }
         }
         // Output Zdab Record Here
-        OutZdab(data, w, p);
+//        OutZdab(data, w, p);
 
         // Chop
         if ((time0 + ticks < maxtime && time > time0 + ticks) ||
             (time > time0 + ticks - maxtime && time < time0) ){
-            w->Close();
+//            w->Close();
             index++;
-            w = Output(index);
-            if(w->IsOpen() == 0){
-                std::cerr << "Could not open output file" << std::endl;
-                return -1;
-            }
-            Database(index, time10, time);
+//            w = Output(index);
+//            if(w->IsOpen() == 0){
+//                std::cerr << "Could not open output file" << std::endl;
+//                return -1;
+//            }
+            // Write in Headers from Buffer
+//            Database(index, time10, time);
             time0 += iterator;
+            if (time0 > maxtime)
+                time0 -= maxtime;
         }
     }
     return 0;
