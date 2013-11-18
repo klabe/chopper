@@ -56,16 +56,24 @@ int main(int argc, char *argv[]){
         }
 
         // Set up Header Buffer
+        nZDAB* mastheader, rhdrheader, trigheader;
         u_int32 bank_name = data->bank_name;
-        if (bank_name == MAST_RECORD)
+        if (bank_name == MAST_RECORD){
             printf("Found a MAST record!");
-        if (bank_name == RHDR_RECORD)
+            mastheader = data;
+        }
+        if (bank_name == RHDR_RECORD){
             printf("Found a run header!");
-        if (bank_name == TRIG_RECORD)
+            rhdrheader = data;
+        }
+        if (bank_name == TRIG_RECORD){
             printf("Found a TRIG record!");
+            trigheader = data;
+        }
         if (bank_name == ZDAB_RECORD){
             ;
         }
+
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits == NULL){
             // WRITE TO HEADER BUFFER
@@ -101,6 +109,10 @@ int main(int argc, char *argv[]){
 //                std::cerr << "Could not open output file" << std::endl;
 //                return -1;
 //            }
+              // Insert Headers into new file
+//            OutZdab(mastheader, w, p);
+//            OutZdab(rhdrheader, w, p);
+//            OutZdab(trigheader, w, p);
             // Write in Headers from Buffer
 //            Database(index, time10, time);
             time0 += iterator;
