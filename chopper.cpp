@@ -42,11 +42,16 @@ int main(int argc, char *argv[]){
     // in the search of correlated events near edges.  The unique length
     // of the output file will be the "chunksize" with an overlap of 
     // "overlap" size with the following chunk.  Time0 represents the
-    // beginning of the oldest open chunk.  (It's initialized to -1 here
+    // beginning of the oldest open chunk, according to the LongTime 
+    // clock.  (It's initialized to -1 here
     // as a flag that it needs to be set when the data is read).  When
     // the chunk is closed, Time0 is increased by "iterator" to ensure
     // that it increases uniformly.  "maxtime" tells us when the 50 MHz
     // clock rolls over, and is subtracted from times when appropriate.
+    // LongTime is an internal 50 MHz clock that uses the full 64 bits
+    // available so that it does not roll over during the execution of
+    // the processor (it will last 5000 years).  Epoch counts the number
+    // of times that the real 50 MHz clock has rolled over.
     uint64_t time0 = -1;
     const double chunksize = 1.0; // Chunk Size in Seconds;
     const double overlap = 0.1; // Overlap Size in Seconds;
@@ -55,6 +60,8 @@ int main(int argc, char *argv[]){
     const uint64_t maxtime = (1UL << 43); 
     uint64_t time50 = 0;
     uint64_t time10 = 0;
+    uint64_t longtime = 0;
+    int epoch = 0;
     int index = GetLastIndex();
 
     // Setup initial output file
@@ -101,7 +108,10 @@ int main(int argc, char *argv[]){
 
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits != NULL){
-            // Get the 50MHz Clock Time
+            // Store the old 50MHz Clock Time for comparison
+            uint64_t oldtime = time50;
+
+            // Get the current 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
             time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
@@ -110,67 +120,51 @@ int main(int argc, char *argv[]){
             // Method taken from zdab_convert.cpp
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                      + hits->TriggerCardData.Bc10_1;
+
+            // Check whether clock has rolled over
+            if (time50 < oldtime)
+                epoch++;
+            
+            // Set the Internal Clock
+            longtime = time50 + maxtime*epoch;
+
             // Set Time Origin
             if (time0 == -1){
-                time0 = time50;
+                time0 = longtime;
                 // Make initial database entry
                 Database(index, time10, time50);
             }
 
-        // Chop
-
-        // There are twelve possible cases here: The 50 MHz clock can 
-        // roll over during the unique interval, during the overlap 
-        // period, or not at all.  In each case, we must be able to
-        // identify whether our event falls in the unique interval or 
-        // the overlap interval, and recognize the first event in the 
-        // overlap interval as a special case.
-
-        // We first identify where the rollover occurs:
-        int rollflag = 0;
-        if (time0 + iterator > maxtime)
-            rollflag = 1;
-        else if (time0 + ticks > maxtime)
-            rollflag = 2;
-
-        // Now we check the interval in each case:
-        if (((rollflag==0) && (time50 < time0 + iterator)) ||
-            ((rollflag==1) && (time50 < time0 + iterator - maxtime)) ||
-            ((rollflag==1) && (time50 > time0)) ||
-            ((rollflag==2) && (time50 < time0 + iterator)))
-            OutZdab(data, w1, p);
-        else{
-            if (((rollflag==0) && (time50 < time0 + ticks)) ||
-                ((rollflag==1) && (time50 < time0 + ticks - maxtime)) ||
-                ((rollflag==2) && (time50 > time0 + iterator)) ||
-                ((rollflag==2) && (time50 < time0 + ticks - maxtime))){
-                if(testw2==-1){
-                    w2 = Output(index+1);
-                    if(w2->IsOpen()==0){
-                        std::cerr << "Could not open output file\n";
-                        return -1;
-                    }
-                    OutZdab(mastheader, w2, p);
-                    OutZdab(rhdrheader, w2, p);
-                    OutZdab(trigheader, w2, p);
-                    Database(index, time10, time50);
-                    testw2 = 0;
-                }
+            // Chop
+            if (longtime < time0 + iterator)
                 OutZdab(data, w1, p);
-                OutZdab(data, w2, p);    
-            }
             else{
-                index++;
-                w1->Close();
-                w2->Close();
-                w1 = Output(index);
-                testw2 = -1;
-                time0 += iterator;
-                if (time0 > maxtime)
-                    time0 -= maxtime;
+                if (longtime < time0 + ticks){
+                    if(testw2==-1){
+                        w2 = Output(index+1);
+                        if(w2->IsOpen()==0){
+                            std::cerr << "Could not open output file\n";
+                            return -1;
+                        }
+                        OutZdab(mastheader, w2, p);
+                        OutZdab(rhdrheader, w2, p);
+                        OutZdab(trigheader, w2, p);
+                        Database(index, time10, time50);
+                        testw2 = 0;
+                    }
+                    OutZdab(data, w1, p);
+                    OutZdab(data, w2, p);
+                }
+                else{
+                    index++;
+                    w1->Close();
+                    w2->Close();
+                    w1 = Output(index);
+                    testw2 = -1;
+                    time0 += iterator;
+                }
             }
         }
-    }
     }
     return 0;
 }
