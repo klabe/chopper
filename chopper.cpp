@@ -55,26 +55,23 @@ int main(int argc, char *argv[]){
     const uint64_t maxtime = (1UL << 43); 
     uint64_t time50 = 0;
     uint64_t time10 = 0;
-    int index = 0;
+    int index = GetLastIndex();
 
     // Setup initial output file
-    PZdabWriter* r1  = Output(index);
-    PZdabWriter* w1 = r1;
+    PZdabWriter* w1  = Output(index);
     if(w1->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
         return -1;
     }
-    PZdabWriter* r2;
     PZdabWriter* w2;
-    w2 = r2;
     int testw2 = -1;
-    int parity = 0;
 
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
         if (data == NULL){
             w1->Close();
+            w2->Close();
             Database(index, time10, time50);
             index++;
             time0 = time50;
@@ -119,7 +116,6 @@ int main(int argc, char *argv[]){
                 // Make initial database entry
                 Database(index, time10, time50);
             }
-        }
 
         // Chop
 
@@ -138,18 +134,18 @@ int main(int argc, char *argv[]){
             rollflag = 2;
 
         // Now we check the interval in each case:
-        if ((rollflag==0) && (time50 < time0 + iterator) ||
-            (rollflag==1) && (time50 < time0 + iterator - maxtime) ||
-            (rollflag==1) && (time50 > time0) ||
-            (rollflag==2) && (time50 < time0 + iterator))
+        if (((rollflag==0) && (time50 < time0 + iterator)) ||
+            ((rollflag==1) && (time50 < time0 + iterator - maxtime)) ||
+            ((rollflag==1) && (time50 > time0)) ||
+            ((rollflag==2) && (time50 < time0 + iterator)))
             OutZdab(data, w1, p);
         else{
-            if ((rollflag==0) && (time50 < time0 + ticks) ||
-                (rollflag==1) && (time50 < time0 + ticks - maxtime) ||
-                (rollflag==2) && (time50 > time0 + iterator) ||
-                (rollflag==2) && (time50 < time0 + ticks - maxtime)){
+            if (((rollflag==0) && (time50 < time0 + ticks)) ||
+                ((rollflag==1) && (time50 < time0 + ticks - maxtime)) ||
+                ((rollflag==2) && (time50 > time0 + iterator)) ||
+                ((rollflag==2) && (time50 < time0 + ticks - maxtime))){
                 if(testw2==-1){
-                    index++;
+                    w2 = Output(index+1);
                     if(w2->IsOpen()==0){
                         std::cerr << "Could not open output file\n";
                         return -1;
@@ -164,25 +160,17 @@ int main(int argc, char *argv[]){
                 OutZdab(data, w2, p);    
             }
             else{
-                if(parity%2 == 0 ){
-                    r1->Close();
-                    w1 = r2;
-                    PZdabWriter* r1 = Output(index+1);
-                    w2 = r1;
-                }
-                else{
-                    r2->Close();
-                    w1 = r1;
-                    PZdabWriter* r2 = Output(index+1);
-                    w2 = r2;
-                }
-                parity++;
+                index++;
+                w1->Close();
+                w2->Close();
+                w1 = Output(index);
                 testw2 = -1;
                 time0 += iterator;
                 if (time0 > maxtime)
                     time0 -= maxtime;
             }
         }
+    }
     }
     return 0;
 }
@@ -202,11 +190,13 @@ void Database(int index, uint64_t time10, uint64_t time50){
 
 // This function writes out the ZDAB record
 void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
-    int index = PZdabWriter::GetIndex(data->bank_name);
-    if (index<0)
-        std::cerr << "Unrecognized bank name" << std::endl;
-    else
-        w->WriteBank(p->GetBank(data), index);
+    if (data!=NULL){
+        int index = PZdabWriter::GetIndex(data->bank_name);
+        if (index<0)
+            std::cerr << "Unrecognized bank name" << std::endl;
+        else
+            w->WriteBank(p->GetBank(data), index);
+    }
 }
 
 // This function queries the clock database to determine the most recent
