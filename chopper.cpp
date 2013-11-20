@@ -43,8 +43,7 @@ int main(int argc, char *argv[]){
     // of the output file will be the "chunksize" with an overlap of 
     // "overlap" size with the following chunk.  Time0 represents the
     // beginning of the oldest open chunk, according to the LongTime 
-    // clock.  (It's initialized to -1 here
-    // as a flag that it needs to be set when the data is read).  When
+    // clock.  When
     // the chunk is closed, Time0 is increased by "iterator" to ensure
     // that it increases uniformly.  "maxtime" tells us when the 50 MHz
     // clock rolls over, and is subtracted from times when appropriate.
@@ -52,7 +51,8 @@ int main(int argc, char *argv[]){
     // available so that it does not roll over during the execution of
     // the processor (it will last 5000 years).  Epoch counts the number
     // of times that the real 50 MHz clock has rolled over.
-    uint64_t time0 = -1;
+    uint64_t time0 = 0;
+    int firstevent = -1;
     const double chunksize = 1.0; // Chunk Size in Seconds;
     const double overlap = 0.1; // Overlap Size in Seconds;
     const uint64_t ticks = int((chunksize+overlap)*50000000);
@@ -121,6 +121,10 @@ int main(int argc, char *argv[]){
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                      + hits->TriggerCardData.Bc10_1;
 
+            // Check for pathological case
+            if (time50 == 0)
+                time50 = oldtime;
+
             // Check whether clock has rolled over
             if (time50 < oldtime)
                 epoch++;
@@ -129,10 +133,11 @@ int main(int argc, char *argv[]){
             longtime = time50 + maxtime*epoch;
 
             // Set Time Origin
-            if (time0 == -1){
+            if (firstevent == -1){
                 time0 = longtime;
                 // Make initial database entry
                 Database(index, time10, time50);
+                firstevent = 0;
             }
 
             // Chop
@@ -204,6 +209,10 @@ int GetLastIndex(){
     mysql_query(conn, query);
     MYSQL_RES *result = mysql_store_result(conn);
     MYSQL_ROW row = mysql_fetch_row(result);
+    if (row == NULL){
+        std::cerr << "No data in clock database" << std::endl;
+        return 0;
+    }
     int id = atoi(row[0]) + 1;
     std::cerr << id << std::endl;
     mysql_close(conn);
