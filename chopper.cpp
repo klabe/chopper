@@ -102,9 +102,6 @@ int main(int argc, char *argv[]){
         if (bank_name == EPED_RECORD){
             printf("Found an EPED record!\n");
         }
-        if (bank_name == ZDAB_RECORD){
-            ;
-        }
 
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits != NULL){
