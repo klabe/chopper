@@ -73,6 +73,11 @@ int main(int argc, char *argv[]){
     PZdabWriter* w2;
     int testw2 = -1;
 
+    // Set up the Header Buffer
+    nZDAB* mastheader = NULL;
+    nZDAB* rhdrheader = NULL;
+    nZDAB* trigheader = NULL;
+
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
@@ -85,22 +90,22 @@ int main(int argc, char *argv[]){
             break;
         }
 
-        // Set up Header Buffer
-        nZDAB* mastheader = NULL;
-        nZDAB* rhdrheader = NULL;
-        nZDAB* trigheader = NULL;
+        // Check to fill Header Buffer
         u_int32 bank_name = data->bank_name;
         if (bank_name == MAST_RECORD){
-            printf("Found a MAST record!");
+            printf("Found a MAST record!\n");
             mastheader = data;
         }
         if (bank_name == RHDR_RECORD){
-            printf("Found a run header!");
+            printf("Found a run header!\n");
             rhdrheader = data;
         }
         if (bank_name == TRIG_RECORD){
-            printf("Found a TRIG record!");
+            printf("Found a TRIG record!\n");
             trigheader = data;
+        }
+        if (bank_name == EPED_RECORD){
+            printf("Found an EPED record!\n");
         }
         if (bank_name == ZDAB_RECORD){
             ;
@@ -139,35 +144,36 @@ int main(int argc, char *argv[]){
                 Database(index, time10, time50);
                 firstevent = 0;
             }
+        }
 
-            // Chop
-            if (longtime < time0 + iterator)
-                OutZdab(data, w1, p);
-            else{
-                if (longtime < time0 + ticks){
-                    if(testw2==-1){
-                        w2 = Output(index+1);
-                        if(w2->IsOpen()==0){
-                            std::cerr << "Could not open output file\n";
-                            return -1;
-                        }
-                        OutZdab(mastheader, w2, p);
-                        OutZdab(rhdrheader, w2, p);
-                        OutZdab(trigheader, w2, p);
-                        Database(index, time10, time50);
-                        testw2 = 0;
+        // Chop
+        if (longtime < time0 + iterator)
+            OutZdab(data, w1, p);
+        else{
+            if (longtime < time0 + ticks){
+                if(testw2==-1){
+                    w2 = Output(index+1);
+                    if(w2->IsOpen()==0){
+                        std::cerr << "Could not open output file\n";
+                        return -1;
                     }
-                    OutZdab(data, w1, p);
-                    OutZdab(data, w2, p);
+                    printf("hi\n");
+                    OutZdab(mastheader, w2, p);
+                    OutZdab(rhdrheader, w2, p);
+                    OutZdab(trigheader, w2, p);
+                    Database(index, time10, time50);
+                    testw2 = 0;
                 }
-                else{
-                    index++;
-                    w1->Close();
-                    w2->Close();
-                    w1 = Output(index);
-                    testw2 = -1;
-                    time0 += iterator;
-                }
+                OutZdab(data, w1, p);
+                OutZdab(data, w2, p);
+            }
+            else{
+                index++;
+                w1->Close();
+                w2->Close();
+                w1 = Output(index);
+                testw2 = -1;
+                time0 += iterator;
             }
         }
     }
