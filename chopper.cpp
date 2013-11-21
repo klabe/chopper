@@ -74,7 +74,6 @@ int main(int argc, char *argv[]){
     int testw2 = -1;
 
     // Set up the Header Buffer
-    nZDAB* mastheader = NULL;
     nZDAB* rhdrheader = NULL;
     nZDAB* trigheader = NULL;
 
@@ -92,10 +91,6 @@ int main(int argc, char *argv[]){
 
         // Check to fill Header Buffer
         u_int32 bank_name = data->bank_name;
-        if (bank_name == MAST_RECORD){
-            printf("Found a MAST record!\n");
-            mastheader = data;
-        }
         if (bank_name == RHDR_RECORD){
             printf("Found a run header!\n");
             rhdrheader = data;
@@ -157,8 +152,6 @@ int main(int argc, char *argv[]){
                         std::cerr << "Could not open output file\n";
                         return -1;
                     }
-                    printf("hi\n");
-                    OutZdab(mastheader, w2, p);
                     OutZdab(rhdrheader, w2, p);
                     OutZdab(trigheader, w2, p);
                     Database(index, time10, time50);
