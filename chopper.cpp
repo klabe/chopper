@@ -8,6 +8,7 @@
 
 void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
+void OutHeader(GenericRecordHeader*, PZdabWriter*);
 int GetLastIndex();
 PZdabWriter* Output(int);
 
@@ -74,8 +75,12 @@ int main(int argc, char *argv[]){
     int testw2 = -1;
 
     // Set up the Header Buffer
-    nZDAB* rhdrheader = NULL;
-    nZDAB* trigheader = NULL;
+    const int headertypes = 3;
+    uint32_t Headernames[headertypes] = 
+             { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
+    uint32_t header[headertypes*NWREC];
+    memset(header,0,sizeof(header));
+    std::cerr << "Header Buffer Built" << std::endl;
 
     // Loop over ZDAB Records
     while(1){
@@ -90,19 +95,20 @@ int main(int argc, char *argv[]){
         }
 
         // Check to fill Header Buffer
-        u_int32 bank_name = data->bank_name;
-        if (bank_name == RHDR_RECORD){
-            printf("Found a run header!\n");
-            rhdrheader = data;
-        }
-        if (bank_name == TRIG_RECORD){
-            printf("Found a TRIG record!\n");
-            trigheader = data;
-        }
-        if (bank_name == EPED_RECORD){
-            printf("Found an EPED record!\n");
+        uint32_t bank_name = data->bank_name;
+        for (int i=0; i<headertypes; i++){
+            if (bank_name == Headernames[i]){
+                memset(&header[i*NWREC],0,NWREC*sizeof(uint32_t));
+                GenericRecordHeader* grh = (GenericRecordHeader*) data;
+                unsigned long recLen = grh->RecordLength 
+                                       + sizeof(GenericRecordHeader);
+                std::cerr << "type " << i << " length " << recLen << std::endl;
+                memcpy(&header[i*NWREC], data, recLen*sizeof(uint32_t));
+            }
         }
 
+        // If the event has an associated time, compute every
+        // conceivable time variable.
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits != NULL){
             // Store the old 50MHz Clock Time for comparison
@@ -149,8 +155,9 @@ int main(int argc, char *argv[]){
                         std::cerr << "Could not open output file\n";
                         return -1;
                     }
-                    OutZdab(rhdrheader, w2, p);
-                    OutZdab(trigheader, w2, p);
+                    for(int i=0; i<headertypes; i++){
+                        OutHeader((GenericRecordHeader*) header[i*NWREC], w2);
+                    }
                     Database(index, time10, time50);
                     testw2 = 0;
                 }
@@ -191,6 +198,14 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
             std::cerr << "Unrecognized bank name" << std::endl;
         else
             w->WriteBank(p->GetBank(data), index);
+    }
+}
+
+// This function writes out the header buffer to a file
+void OutHeader(GenericRecordHeader* data, PZdabWriter* w){
+    if (data!=NULL){
+        int index = w->GetIndex(data->RecordID);
+        w->WriteBank((uint32_t *)(data+1), index);
     }
 }
 
