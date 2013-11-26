@@ -78,12 +78,16 @@ int main(int argc, char *argv[]){
     const int headertypes = 3;
     uint32_t Headernames[headertypes] = 
              { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
-    uint32_t header[headertypes*NWREC];
-    memset(header,0,sizeof(header));
+    char* header[headertypes];
+    for(int i = 0; i<headertypes; i++){
+        header[i] = (char*) malloc(NWREC);
+        memset(header[i],0,NWREC*sizeof(char));
+    }
     std::cerr << "Header Buffer Built" << std::endl;
 
     // Loop over ZDAB Records
     while(1){
+        std::cerr << "New record" << std::endl;
         nZDAB* data = p->NextRecord();
         if (data == NULL){
             w1->Close();
@@ -98,12 +102,12 @@ int main(int argc, char *argv[]){
         uint32_t bank_name = data->bank_name;
         for (int i=0; i<headertypes; i++){
             if (bank_name == Headernames[i]){
-                memset(&header[i*NWREC],0,NWREC*sizeof(uint32_t));
+                memset(header[i],0,NWREC*sizeof(char));
                 GenericRecordHeader* grh = (GenericRecordHeader*) data;
                 unsigned long recLen = grh->RecordLength 
                                        + sizeof(GenericRecordHeader);
                 std::cerr << "type " << i << " length " << recLen << std::endl;
-                memcpy(&header[i*NWREC], data, recLen*sizeof(uint32_t));
+                memcpy(header[i], data, recLen*sizeof(char));
             }
         }
 
@@ -156,7 +160,7 @@ int main(int argc, char *argv[]){
                         return -1;
                     }
                     for(int i=0; i<headertypes; i++){
-                        OutHeader((GenericRecordHeader*) header[i*NWREC], w2);
+                        OutHeader((GenericRecordHeader*) header[i], w2);
                     }
                     Database(index, time10, time50);
                     testw2 = 0;
@@ -204,8 +208,11 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
 // This function writes out the header buffer to a file
 void OutHeader(GenericRecordHeader* data, PZdabWriter* w){
     if (data!=NULL){
+        std::cerr << "test0" << std::endl;
         int index = w->GetIndex(data->RecordID);
+        std::cerr << "test1" << std::endl;
         w->WriteBank((uint32_t *)(data+1), index);
+        std::cerr << "test2" << std::endl;
     }
 }
 

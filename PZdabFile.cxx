@@ -402,10 +402,8 @@ u_int32 *PZdabFile::NextBank(u_int32 bank_name)
 PmtEventRecord *PZdabFile::GetPmtRecord(nZDAB *nzdabPtr)
 {
 	PmtEventRecord *pmtEventPtr;
-	
 	// test the bank name
 	if (nzdabPtr->bank_name == ZDAB_RECORD) { // extract 'ZDAB' PMT records
-	
 		if (sVerbose > 2) {
 			DumpHex(nzdabPtr);
 		}
@@ -454,7 +452,6 @@ PmtEventRecord *PZdabFile::GetPmtRecord(nZDAB *nzdabPtr)
 		}
    							
 	} else {
-		
 		if (sVerbose) {
 			if (sVerbose > 1) {
 				DumpHex(nzdabPtr);
