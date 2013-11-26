@@ -8,7 +8,7 @@
 
 void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
-void OutHeader(GenericRecordHeader*, PZdabWriter*);
+void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
 PZdabWriter* Output(int);
 
@@ -87,7 +87,6 @@ int main(int argc, char *argv[]){
 
     // Loop over ZDAB Records
     while(1){
-        std::cerr << "New record" << std::endl;
         nZDAB* data = p->NextRecord();
         if (data == NULL){
             w1->Close();
@@ -160,7 +159,7 @@ int main(int argc, char *argv[]){
                         return -1;
                     }
                     for(int i=0; i<headertypes; i++){
-                        OutHeader((GenericRecordHeader*) header[i], w2);
+                        OutHeader((GenericRecordHeader*) header[i], w2, i);
                     }
                     Database(index, time10, time50);
                     testw2 = 0;
@@ -206,12 +205,27 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
 }
 
 // This function writes out the header buffer to a file
-void OutHeader(GenericRecordHeader* data, PZdabWriter* w){
+void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
     if (data!=NULL){
         std::cerr << "test0" << std::endl;
         int index = w->GetIndex(data->RecordID);
+        if(index < 0){
+            fprintf(stderr,"Did not recognize index %i in record id %lx,"
+                    " record lost\n",index,data->RecordID);
+            if(j==0){
+                index = 2;
+            }
+            if(j==1){
+                index = 4;
+            }
+            if(j==2){
+                index = 3;
+            }
+        }
         std::cerr << "test1" << std::endl;
-        w->WriteBank((uint32_t *)(data+1), index);
+        if(w->WriteBank((uint32_t *)(data+1), index)){
+            fprintf(stderr,"Error writing to zdab file\n");
+        }
         std::cerr << "test2" << std::endl;
     }
 }
