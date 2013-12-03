@@ -106,7 +106,14 @@ int main(int argc, char *argv[]){
                 unsigned long recLen = grh->RecordLength 
                                        + sizeof(GenericRecordHeader);
                 std::cerr << "type " << i << " length " << recLen << std::endl;
+                // For some reason, need to byte swap RHDRs
+                if(i == 0){
+                    SWAP_INT32(data,recLen);
+                }
                 memcpy(header[i], data, recLen*sizeof(char));
+                if(i == 0){
+                    SWAP_INT32(data,recLen);
+                }
             }
         }
 
@@ -213,8 +220,6 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
                     " record lost\n",index,data->RecordID);
             if(j==0){
                 index = 2;
-                // For some reason, RHDRs need byte reversal
-                SWAP_INT32(data,data->RecordLength);
             }
             if(j==1){
                 index = 4;
