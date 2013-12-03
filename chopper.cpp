@@ -207,13 +207,14 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
 // This function writes out the header buffer to a file
 void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
     if (data!=NULL){
-        std::cerr << "test0" << std::endl;
         int index = w->GetIndex(data->RecordID);
         if(index < 0){
             fprintf(stderr,"Did not recognize index %i in record id %lx,"
                     " record lost\n",index,data->RecordID);
             if(j==0){
                 index = 2;
+                // For some reason, RHDRs need byte reversal
+                SWAP_INT32(data,data->RecordLength);
             }
             if(j==1){
                 index = 4;
@@ -222,11 +223,9 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
                 index = 3;
             }
         }
-        std::cerr << "test1" << std::endl;
         if(w->WriteBank((uint32_t *)(data+1), index)){
             fprintf(stderr,"Error writing to zdab file\n");
         }
-        std::cerr << "test2" << std::endl;
     }
 }
 
