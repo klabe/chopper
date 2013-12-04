@@ -104,11 +104,11 @@ int main(int argc, char *argv[]){
                 memset(header[i],0,NWREC*sizeof(char));
                 GenericRecordHeader* grh = (GenericRecordHeader*) data;
                 unsigned long recLen = grh->RecordLength; 
-                SWAP_INT32(data,recLen);
+                SWAP_INT32(data,recLen/sizeof(uint32_t));
                 memcpy(header[i], data+1, recLen*sizeof(char));
-                SWAP_INT32(data,recLen);
-                }
+                SWAP_INT32(data,recLen/sizeof(uint32_t));
             }
+        }
 
         // If the event has an associated time, compute every
         // conceivable time variable.
@@ -201,8 +201,12 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
         int index = PZdabWriter::GetIndex(data->bank_name);
         if (index<0)
             std::cerr << "Unrecognized bank name" << std::endl;
-        else
-            w->WriteBank(p->GetBank(data), index);
+        else{
+            uint32_t *bank = p->GetBank(data);
+            if(index == 0)
+                SWAP_INT32(bank,data->data_words);
+            w->WriteBank(bank, index);
+        }
     }
 }
 
