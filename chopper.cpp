@@ -103,19 +103,12 @@ int main(int argc, char *argv[]){
             if (bank_name == Headernames[i]){
                 memset(header[i],0,NWREC*sizeof(char));
                 GenericRecordHeader* grh = (GenericRecordHeader*) data;
-                unsigned long recLen = grh->RecordLength 
-                                       + sizeof(GenericRecordHeader);
-                std::cerr << "type " << i << " length " << recLen << std::endl;
-                // For some reason, need to byte swap RHDRs
-                if(i == 0){
-                    SWAP_INT32(data,recLen);
-                }
-                memcpy(header[i], data, recLen*sizeof(char));
-                if(i == 0){
-                    SWAP_INT32(data,recLen);
+                unsigned long recLen = grh->RecordLength; 
+                SWAP_INT32(data,recLen);
+                memcpy(header[i], data+1, recLen*sizeof(char));
+                SWAP_INT32(data,recLen);
                 }
             }
-        }
 
         // If the event has an associated time, compute every
         // conceivable time variable.
@@ -168,6 +161,7 @@ int main(int argc, char *argv[]){
                     for(int i=0; i<headertypes; i++){
                         OutHeader((GenericRecordHeader*) header[i], w2, i);
                     }
+                    std::cerr << "Wrote headers" << std::endl;
                     Database(index, time10, time50);
                     testw2 = 0;
                 }
@@ -181,6 +175,7 @@ int main(int argc, char *argv[]){
                 w1 = Output(index);
                 testw2 = -1;
                 time0 += iterator;
+                break;
             }
         }
     }
@@ -228,7 +223,7 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
                 index = 3;
             }
         }
-        if(w->WriteBank((uint32_t *)(data+1), index)){
+        if(w->WriteBank((uint32_t *)(data), index)){
             fprintf(stderr,"Error writing to zdab file\n");
         }
     }
