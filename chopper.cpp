@@ -203,7 +203,8 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
         else{
             uint32_t *bank = p->GetBank(data);
             if(index == 0)
-                SWAP_INT32(bank,4);
+                // Byte swap the part of the record giving nhit
+                SWAP_INT32(bank+3,1);
             w->WriteBank(bank, index);
         }
     }
