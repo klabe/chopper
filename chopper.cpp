@@ -175,7 +175,6 @@ int main(int argc, char *argv[]){
                 w1 = Output(index);
                 testw2 = -1;
                 time0 += iterator;
-                break;
             }
         }
     }
@@ -204,7 +203,7 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
         else{
             uint32_t *bank = p->GetBank(data);
             if(index == 0)
-                SWAP_INT32(bank,data->data_words);
+                SWAP_INT32(bank,4);
             w->WriteBank(bank, index);
         }
     }

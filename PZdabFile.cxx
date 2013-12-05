@@ -750,7 +750,6 @@ u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
 {
 	/* create new buffer for event */
 	u_int32 event_size = sizeof(aPmtEventRecord) + 12 * pmtRecord->NPmtHit;
-    printf("%d\t%d\t%d\t", sizeof(aPmtEventRecord), pmtRecord->NPmtHit,event_size);
 		
 	/* make room for sub-headers */
 	u_int32	*sub_header = &pmtRecord->CalPckType;
