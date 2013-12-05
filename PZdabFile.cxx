@@ -757,6 +757,7 @@ u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
 		sub_header += (*sub_header & SUB_LENGTH_MASK);
 		event_size += (*sub_header & SUB_LENGTH_MASK) * sizeof(u_int32);
 	}
+
 	return(event_size);
 }
 
