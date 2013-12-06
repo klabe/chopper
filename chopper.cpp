@@ -84,8 +84,8 @@ int main(int argc, char *argv[]){
     }
 
     // Loop over ZDAB Records
-    nZDAB* data = p->NextRecord();
-    while(data){
+    nZDAB* data = NULL;
+    while(data = p->NextRecord()){
 
         // Check to fill Header Buffer
         uint32_t bank_name = data->bank_name;
