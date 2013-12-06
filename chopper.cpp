@@ -171,11 +171,17 @@ int main(int argc, char *argv[]){
             else{
                 index++;
                 w1->Close();
+                if(testw2 == -1){
+                    w1 = Output(index);
+                    for(int i=0; i<headertypes; i++)
+                        OutHeader((GenericRecordHeader*) header[i], w1, i);
+                    Database(index, time10, time50);
+                }
                 if(testw2 == 0){
                     w2->Close();
                     testw2 = -1;
+                    w1 = Output(index);
                 }
-                w1 = Output(index);
                 OutZdab(data, w1, p);
                 time0 += iterator;
             }
