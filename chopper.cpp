@@ -173,6 +173,7 @@ int main(int argc, char *argv[]){
                 w1->Close();
                 w2->Close();
                 w1 = Output(index);
+                OutZdab(data, w1, p);
                 testw2 = -1;
                 time0 += iterator;
             }
