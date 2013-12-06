@@ -161,7 +161,6 @@ int main(int argc, char *argv[]){
                     for(int i=0; i<headertypes; i++){
                         OutHeader((GenericRecordHeader*) header[i], w2, i);
                     }
-                    std::cerr << "Wrote headers" << std::endl;
                     Database(index, time10, time50);
                     testw2 = 0;
                 }
