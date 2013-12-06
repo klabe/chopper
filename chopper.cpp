@@ -12,6 +12,12 @@ void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
 PZdabWriter* Output(int);
 
+static const double chunksize = 100.0; // Chunk Size in Seconds;
+static const double overlap = 0.1; // Overlap Size in Seconds;
+static const uint64_t ticks = int((chunksize+overlap)*50000000);
+static const uint64_t increment = int(chunksize*50000000);
+static const uint64_t maxtime = (1UL << 43);
+
 // The general logic here is as follows:
 // We open a zdab file and read in events, looking at their time. The 
 // events are written out into smaller files of fixed time length.  In 
@@ -19,6 +25,21 @@ PZdabWriter* Output(int);
 // are written into two files.  When header records are encountered,
 // they are saved to a buffer, which is written out at the beginning of
 // each new output file.
+
+// Explanation of the various clocks used in this program:
+// Since I'm reading ZDABs, I need to track the 50 MHz clock for accuracy,
+// and the 10 MHz clock for uniqueness.  For a given event, the trigger
+// time will be stored in the variables time10 and time50.  The chopper
+// will start a new file every "chunksize" with a trailing period of overlap
+// of size "overlap".  Time0 represents the beginning of the oldest open
+// chunk, according to the longtime clock.  When the chunk is closed, Time0
+// is increased by "increment" to ensure that it increases uniformly.
+// "maxtime" tells us when the 50 MHz clock rolls over.  Longtime is an 
+// internal 50 MHz clock that uses the full 64 bits available so that it
+// will not roll over during the execution of the program (it will last
+// 5000 years).  Epoch counts the number of time that the real 50 MHz clock
+// has rolled over.
+
 int main(int argc, char *argv[]){
     // Get Input File
     if(argc != 2){
@@ -34,31 +55,9 @@ int main(int argc, char *argv[]){
         return -1;
     }
 
-    // Initialize time information.  I should explain what's going on
-    // here because there are so many times.  Since I'm reading ZDABs
-    // I need to track the 50 MHz clock for accuracy, and the 10 MHz
-    // clock for uniqueness.  For a given event, the trigger time will
-    // be stored in the variables time10 and time50.  The chopper is
-    // designed to output files with overlapping time intervals to aid
-    // in the search of correlated events near edges.  The unique length
-    // of the output file will be the "chunksize" with an overlap of 
-    // "overlap" size with the following chunk.  Time0 represents the
-    // beginning of the oldest open chunk, according to the LongTime 
-    // clock.  When
-    // the chunk is closed, Time0 is increased by "iterator" to ensure
-    // that it increases uniformly.  "maxtime" tells us when the 50 MHz
-    // clock rolls over, and is subtracted from times when appropriate.
-    // LongTime is an internal 50 MHz clock that uses the full 64 bits
-    // available so that it does not roll over during the execution of
-    // the processor (it will last 5000 years).  Epoch counts the number
-    // of times that the real 50 MHz clock has rolled over.
+    // Initialize the various clocks
     uint64_t time0 = 0;
     int firstevent = -1;
-    const double chunksize = 100.0; // Chunk Size in Seconds;
-    const double overlap = 0.1; // Overlap Size in Seconds;
-    const uint64_t ticks = int((chunksize+overlap)*50000000);
-    const uint64_t iterator = int(chunksize*50000000);
-    const uint64_t maxtime = (1UL << 43); 
     uint64_t time50 = 0;
     uint64_t time10 = 0;
     uint64_t longtime = 0;
@@ -85,17 +84,8 @@ int main(int argc, char *argv[]){
     }
 
     // Loop over ZDAB Records
-    while(1){
-        nZDAB* data = p->NextRecord();
-        if (data == NULL){
-            w1->Close();
-            if(testw2 == 0)
-                w2->Close();
-            Database(index, time10, time50);
-            index++;
-            time0 = time50;
-            break;
-        }
+    nZDAB* data = p->NextRecord();
+    while(data){
 
         // Check to fill Header Buffer
         uint32_t bank_name = data->bank_name;
@@ -121,7 +111,7 @@ int main(int argc, char *argv[]){
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
             time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                   + hits->TriggerCardData.Bc50_1;
+                     + hits->TriggerCardData.Bc50_1;
             // Now get the 10MHz Clock Time
             // Method taken from zdab_convert.cpp
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
@@ -134,7 +124,7 @@ int main(int argc, char *argv[]){
             // Check whether clock has rolled over
             if (time50 < oldtime)
                 epoch++;
-            
+
             // Set the Internal Clock
             longtime = time50 + maxtime*epoch;
 
@@ -148,7 +138,7 @@ int main(int argc, char *argv[]){
         }
 
         // Chop
-        if (longtime < time0 + iterator)
+        if (longtime < time0 + increment)
             OutZdab(data, w1, p);
         else{
             if (longtime < time0 + ticks){
@@ -177,15 +167,20 @@ int main(int argc, char *argv[]){
                     Database(index, time10, time50);
                 }
                 if(testw2 == 0){
-                    w2->Close();
+                    w1 = w2;
                     testw2 = -1;
-                    w1 = Output(index);
                 }
                 OutZdab(data, w1, p);
-                time0 += iterator;
+                time0 += increment;
             }
         }
     }
+    w1->Close();
+    if(testw2 == 0)
+        w2->Close();
+    Database(index, time10, time50);
+    index++;
+    time0 = time50;
     return 0;
 }
 
@@ -269,3 +264,4 @@ PZdabWriter* Output(int index){
     PZdabWriter* w = new PZdabWriter(outfilename, 0);
     return w;
 }
+
