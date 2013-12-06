@@ -54,7 +54,7 @@ int main(int argc, char *argv[]){
     // of times that the real 50 MHz clock has rolled over.
     uint64_t time0 = 0;
     int firstevent = -1;
-    const double chunksize = 1.0; // Chunk Size in Seconds;
+    const double chunksize = 100.0; // Chunk Size in Seconds;
     const double overlap = 0.1; // Overlap Size in Seconds;
     const uint64_t ticks = int((chunksize+overlap)*50000000);
     const uint64_t iterator = int(chunksize*50000000);
@@ -83,14 +83,14 @@ int main(int argc, char *argv[]){
         header[i] = (char*) malloc(NWREC);
         memset(header[i],0,NWREC*sizeof(char));
     }
-    std::cerr << "Header Buffer Built" << std::endl;
 
     // Loop over ZDAB Records
     while(1){
         nZDAB* data = p->NextRecord();
         if (data == NULL){
             w1->Close();
-            w2->Close();
+            if(testw2 == 0)
+                w2->Close();
             Database(index, time10, time50);
             index++;
             time0 = time50;
@@ -171,10 +171,12 @@ int main(int argc, char *argv[]){
             else{
                 index++;
                 w1->Close();
-                w2->Close();
+                if(testw2 == 0){
+                    w2->Close();
+                    testw2 = -1;
+                }
                 w1 = Output(index);
                 OutZdab(data, w1, p);
-                testw2 = -1;
                 time0 += iterator;
             }
         }
