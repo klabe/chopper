@@ -5,6 +5,8 @@
 #include <mysql.h>
 #include <sstream>
 #include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
