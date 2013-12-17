@@ -12,7 +12,7 @@ void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
 PZdabWriter* Output(int);
 
-static const double chunksize = 100.0; // Chunk Size in Seconds;
+static const double chunksize = 1.0; // Chunk Size in Seconds;
 static const double overlap = 0.1; // Overlap Size in Seconds;
 static const uint64_t ticks = int((chunksize+overlap)*50000000);
 static const uint64_t increment = int(chunksize*50000000);
