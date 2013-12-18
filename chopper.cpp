@@ -90,15 +90,15 @@ int main(int argc, char *argv[]){
     while(data = p->NextRecord()){
 
         // Check to fill Header Buffer
-        uint32_t bank_name = data->bank_name;
         for (int i=0; i<headertypes; i++){
-            if (bank_name == Headernames[i]){
+            if (data->bank_name == Headernames[i]){
                 memset(header[i],0,NWREC*sizeof(char));
                 GenericRecordHeader* grh = (GenericRecordHeader*) data;
                 unsigned long recLen = grh->RecordLength; 
                 SWAP_INT32(data,recLen/sizeof(uint32_t));
                 memcpy(header[i], data+1, recLen*sizeof(char));
                 SWAP_INT32(data,recLen/sizeof(uint32_t));
+                break;
             }
         }
 
