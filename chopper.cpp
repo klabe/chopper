@@ -12,7 +12,7 @@ void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
-PZdabWriter* Output(int);
+PZdabWriter* Output(const unsigned int);
 
 static const double chunksize = 100.0; // Chunk Size in Seconds;
 static const double overlap = 0.1; // Overlap Size in Seconds;
@@ -259,10 +259,9 @@ int GetLastIndex(){
 
 // This function builds a new output file for each chunk and should be
 // called each time the index in incremented.
-PZdabWriter* Output(int index){
+PZdabWriter* Output(const unsigned int index){
     char outfilename[32];
     sprintf(outfilename, "chopped%i.zdab", index);
-    PZdabWriter* w = new PZdabWriter(outfilename, 0);
-    return w;
+    return new PZdabWriter(outfilename, 0);
 }
 
