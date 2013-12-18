@@ -45,8 +45,8 @@ static const uint64_t maxtime = (1UL << 43);
 int main(int argc, char *argv[]){
     // Get Input File
     if(argc != 2){
-        std::cerr << "Enter filename" << std::endl;
-        return -1;
+        std::cerr << "Error: Need an input file name." << std::endl;
+        return 2;
     }
     char* infilename = argv[1];
     FILE* infile = fopen(infilename, "rb");
