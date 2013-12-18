@@ -54,7 +54,7 @@ int main(int argc, char *argv[]){
     PZdabFile* p = new PZdabFile();
     if (p->Init(infile) < 0){
         std::cerr << "Did not open file" << std::endl;
-        return -1;
+        return 1;
     }
 
     // Initialize the various clocks
@@ -70,7 +70,7 @@ int main(int argc, char *argv[]){
     PZdabWriter* w1  = Output(index);
     if(w1->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
-        return -1;
+        return 1;
     }
     PZdabWriter* w2;
     int testw2 = -1;
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]){
                     w2 = Output(index+1);
                     if(w2->IsOpen()==0){
                         std::cerr << "Could not open output file\n";
-                        return -1;
+                        return 1;
                     }
                     for(int i=0; i<headertypes; i++){
                         OutHeader((GenericRecordHeader*) header[i], w2, i);
