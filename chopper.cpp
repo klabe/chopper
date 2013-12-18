@@ -43,6 +43,11 @@ static const uint64_t maxtime = (1UL << 43);
 // has rolled over.
 
 int main(int argc, char *argv[]){
+    if(overlap >= chunksize){
+        std::cerr << "Overlap length is bigger than chunksize, what!\n";
+        return 255;
+    }
+
     // Get Input File
     if(argc != 2){
         std::cerr << "Error: Need an input file name." << std::endl;
