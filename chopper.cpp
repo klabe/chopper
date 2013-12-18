@@ -107,7 +107,7 @@ int main(int argc, char *argv[]){
         PmtEventRecord* hits = p->GetPmtRecord(data);
         if (hits != NULL){
             // Store the old 50MHz Clock Time for comparison
-            uint64_t oldtime = time50;
+            const uint64_t oldtime = time50;
 
             // Get the current 50MHz Clock Time
             // Implementing Part of Method Get50MHzTime() 
@@ -140,42 +140,41 @@ int main(int argc, char *argv[]){
         }
 
         // Chop
-        if (longtime < time0 + increment)
+        if (longtime < time0 + increment){
             OutZdab(data, w1, p);
-        else{
-            if (longtime < time0 + ticks){
-                if(testw2==-1){
-                    w2 = Output(index+1);
-                    if(w2->IsOpen()==0){
-                        std::cerr << "Could not open output file\n";
-                        return 1;
-                    }
-                    for(int i=0; i<headertypes; i++){
-                        OutHeader((GenericRecordHeader*) header[i], w2, i);
-                    }
-                    Database(index, time10, time50);
-                    testw2 = 0;
-                }
-                OutZdab(data, w1, p);
-                OutZdab(data, w2, p);
-            }
-            else{
-                index++;
-                w1->Close();
-                if(testw2 == -1){
-                    w1 = Output(index);
-                    for(int i=0; i<headertypes; i++)
-                        OutHeader((GenericRecordHeader*) header[i], w1, i);
-                    Database(index, time10, time50);
-                }
-                if(testw2 == 0){
-                    w1 = w2;
-                    testw2 = -1;
-                }
-                OutZdab(data, w1, p);
-                time0 += increment;
-            }
         }
+        else if (longtime < time0 + ticks){
+	    if(testw2==-1){
+		w2 = Output(index+1);
+		if(w2->IsOpen()==0){
+		    std::cerr << "Could not open output file\n";
+		    return 1;
+		}
+		for(int i=0; i<headertypes; i++){
+		    OutHeader((GenericRecordHeader*) header[i], w2, i);
+		}
+		Database(index, time10, time50);
+		testw2 = 0;
+	    }
+	    OutZdab(data, w1, p);
+	    OutZdab(data, w2, p);
+	}
+	else{
+	    index++;
+	    w1->Close();
+	    if(testw2 == -1){
+		w1 = Output(index);
+		for(int i=0; i<headertypes; i++)
+		    OutHeader((GenericRecordHeader*) header[i], w1, i);
+		Database(index, time10, time50);
+	    }
+	    if(testw2 == 0){
+		w1 = w2;
+		testw2 = -1;
+	    }
+	    OutZdab(data, w1, p);
+	    time0 += increment;
+	}
     }
     w1->Close();
     if(testw2 == 0)
