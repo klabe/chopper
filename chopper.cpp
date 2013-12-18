@@ -151,7 +151,7 @@ int main(int argc, char *argv[]){
 	    if(!w2){
 		w2 = Output(index+1);
 		if(w2->IsOpen()==0){
-		    std::cerr << "Could not open output file\n";
+		    std::cerr << "Could not open output file " << index+1 << "\n";
 		    return 1;
 		}
 		for(int i=0; i<headertypes; i++){
@@ -163,18 +163,24 @@ int main(int argc, char *argv[]){
 	    OutZdab(data, w2, p);
 	}
 	else{
+            // XXX This does not handle the case of the event being
+            // XXX already in the next overlap region
 	    index++;
 	    w1->Close();
             w1 = NULL;
-	    if(!w2){
+	    if(w2){
+		w1 = w2;
+		w2 = NULL;
+	    }
+	    else{
 		w1 = Output(index);
+		if(w1->IsOpen()==0){
+		    std::cerr << "Could not open output file " << index << "\n";
+		    return 1;
+		}
 		for(int i=0; i<headertypes; i++)
 		    OutHeader((GenericRecordHeader*) header[i], w1, i);
 		Database(index, time10, time50);
-	    }
-	    else{
-		w1 = w2;
-		w2 = NULL;
 	    }
 	    OutZdab(data, w1, p);
 	    time0 += increment;
