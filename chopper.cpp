@@ -72,8 +72,7 @@ int main(int argc, char *argv[]){
         std::cerr << "Could not open output file" << std::endl;
         return 1;
     }
-    PZdabWriter* w2;
-    int testw2 = -1;
+    PZdabWriter* w2 = NULL;
 
     // Set up the Header Buffer
     const int headertypes = 3;
@@ -144,7 +143,7 @@ int main(int argc, char *argv[]){
             OutZdab(data, w1, p);
         }
         else if (longtime < time0 + ticks){
-	    if(testw2==-1){
+	    if(!w2){
 		w2 = Output(index+1);
 		if(w2->IsOpen()==0){
 		    std::cerr << "Could not open output file\n";
@@ -154,7 +153,6 @@ int main(int argc, char *argv[]){
 		    OutHeader((GenericRecordHeader*) header[i], w2, i);
 		}
 		Database(index, time10, time50);
-		testw2 = 0;
 	    }
 	    OutZdab(data, w1, p);
 	    OutZdab(data, w2, p);
@@ -162,22 +160,23 @@ int main(int argc, char *argv[]){
 	else{
 	    index++;
 	    w1->Close();
-	    if(testw2 == -1){
+            w1 = NULL;
+	    if(!w2){
 		w1 = Output(index);
 		for(int i=0; i<headertypes; i++)
 		    OutHeader((GenericRecordHeader*) header[i], w1, i);
 		Database(index, time10, time50);
 	    }
-	    if(testw2 == 0){
+	    else{
 		w1 = w2;
-		testw2 = -1;
+		w2 = NULL;
 	    }
 	    OutZdab(data, w1, p);
 	    time0 += increment;
 	}
     }
     w1->Close();
-    if(testw2 == 0)
+    if(w2)
         w2->Close();
     Database(index, time10, time50);
     index++;
