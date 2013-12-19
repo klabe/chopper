@@ -228,7 +228,7 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
     if (data!=NULL){
         int index = w->GetIndex(data->RecordID);
         if(index < 0){
-            fprintf(stderr,"Did not recognize index %i in record id %lx,"
+            fprintf(stderr,"Did not recognize index %i in record id %x,"
                     " record lost\n",index,data->RecordID);
             if(j==0){
                 index = 2;
