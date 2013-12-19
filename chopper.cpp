@@ -12,7 +12,7 @@ void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
-PZdabWriter* Output(const unsigned int);
+PZdabWriter* Output(const char * const, const unsigned int);
 
 static const double chunksize = 100.0; // Chunk Size in Seconds;
 static const double overlap = 0.1; // Overlap Size in Seconds;
@@ -49,11 +49,14 @@ int main(int argc, char *argv[]){
     }
 
     // Get Input File
-    if(argc != 2){
-        std::cerr << "Error: Need an input file name." << std::endl;
+    if(argc != 3){
+        fprintf(stderr,
+          "Error: Give an input file name and an output base name.\n");
         return 2;
     }
-    char* infilename = argv[1];
+
+    const char* const infilename = argv[1];
+    const char* const outfilebase = argv[2];
     FILE* infile = fopen(infilename, "rb");
 
     PZdabFile* p = new PZdabFile();
@@ -72,7 +75,7 @@ int main(int argc, char *argv[]){
     int index = GetLastIndex();
 
     // Setup initial output file
-    PZdabWriter* w1  = Output(index);
+    PZdabWriter* w1  = Output(outfilebase, index);
     if(w1->IsOpen() == 0){
         std::cerr << "Could not open output file" << std::endl;
         return 1;
@@ -81,7 +84,7 @@ int main(int argc, char *argv[]){
 
     // Set up the Header Buffer
     const int headertypes = 3;
-    uint32_t Headernames[headertypes] = 
+    const uint32_t Headernames[headertypes] = 
              { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
     char* header[headertypes];
     for(int i = 0; i<headertypes; i++){
@@ -90,8 +93,7 @@ int main(int argc, char *argv[]){
     }
 
     // Loop over ZDAB Records
-    nZDAB* data = NULL;
-    while(data = p->NextRecord()){
+    while(nZDAB * const data = p->NextRecord()){
 
         // Check to fill Header Buffer
         for (int i=0; i<headertypes; i++){
@@ -102,7 +104,6 @@ int main(int argc, char *argv[]){
                 SWAP_INT32(data,recLen/sizeof(uint32_t));
                 memcpy(header[i], data+1, recLen*sizeof(char));
                 SWAP_INT32(data,recLen/sizeof(uint32_t));
-                break;
             }
         }
 
@@ -117,11 +118,11 @@ int main(int argc, char *argv[]){
             // Implementing Part of Method Get50MHzTime() 
             // from PZdabFile.cxx
             time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                     + hits->TriggerCardData.Bc50_1;
+                + hits->TriggerCardData.Bc50_1;
             // Now get the 10MHz Clock Time
             // Method taken from zdab_convert.cpp
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                     + hits->TriggerCardData.Bc10_1;
+                + hits->TriggerCardData.Bc10_1;
 
             // Check for pathological case
             if (time50 == 0)
@@ -148,43 +149,45 @@ int main(int argc, char *argv[]){
             OutZdab(data, w1, p);
         }
         else if (longtime < time0 + ticks){
-	    if(!w2){
-		w2 = Output(index+1);
-		if(w2->IsOpen()==0){
-		    std::cerr << "Could not open output file " << index+1 << "\n";
-		    return 1;
-		}
-		for(int i=0; i<headertypes; i++){
-		    OutHeader((GenericRecordHeader*) header[i], w2, i);
-		}
-		Database(index, time10, time50);
-	    }
-	    OutZdab(data, w1, p);
-	    OutZdab(data, w2, p);
-	}
-	else{
+            if(!w2){
+                w2 = Output(outfilebase, index+1);
+                if(w2->IsOpen()==0){
+                    std::cerr << "Could not open output file " 
+                              << index+1 << "\n";
+                    return 1;
+                }
+                for(int i=0; i<headertypes; i++){
+                    OutHeader((GenericRecordHeader*) header[i], w2, i);
+                }
+                Database(index, time10, time50);
+            }
+            OutZdab(data, w1, p);
+            OutZdab(data, w2, p);
+        }
+        else{
             // XXX This does not handle the case of the event being
             // XXX already in the next overlap region
-	    index++;
-	    w1->Close();
+            index++;
+            w1->Close();
             w1 = NULL;
-	    if(w2){
-		w1 = w2;
-		w2 = NULL;
-	    }
-	    else{
-		w1 = Output(index);
-		if(w1->IsOpen()==0){
-		    std::cerr << "Could not open output file " << index << "\n";
-		    return 1;
-		}
-		for(int i=0; i<headertypes; i++)
-		    OutHeader((GenericRecordHeader*) header[i], w1, i);
-		Database(index, time10, time50);
-	    }
-	    OutZdab(data, w1, p);
-	    time0 += increment;
-	}
+            if(w2){
+                w1 = w2;
+                w2 = NULL;
+            }
+            else{
+                w1 = Output(outfilebase, index);
+                if(w1->IsOpen()==0){
+                    std::cerr << "Could not open output file " 
+                              << index << "\n";
+                    return 1;
+                }
+                for(int i=0; i<headertypes; i++)
+                    OutHeader((GenericRecordHeader*) header[i], w1, i);
+                Database(index, time10, time50);
+            }
+            OutZdab(data, w1, p);
+            time0 += increment;
+        }
     }
     w1->Close();
     if(w2)
@@ -199,8 +202,10 @@ int main(int argc, char *argv[]){
 void Database(int index, uint64_t time10, uint64_t time50){
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
-                             "monitor",0,NULL,0))
+                "monitor",0,NULL,0)){
         std::cerr << "Cannot write to database" << std::endl;
+        return;
+    }
     std::stringstream query;
     query << "INSERT INTO clock VALUES (";
     query << index << "," << time10 << "," << time50 << ")";
@@ -225,24 +230,24 @@ void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
 
 // This function writes out the header buffer to a file
 void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
-    if (data!=NULL){
-        int index = w->GetIndex(data->RecordID);
-        if(index < 0){
-            fprintf(stderr,"Did not recognize index %i in record id %x,"
-                    " record lost\n",index,data->RecordID);
-            if(j==0){
-                index = 2;
-            }
-            if(j==1){
-                index = 4;
-            }
-            if(j==2){
-                index = 3;
-            }
+    if (!data) return;
+
+    int index = PZdabWriter::GetIndex(data->RecordID);
+    if(index < 0){
+        fprintf(stderr,"Did not recognize index %i in record id %x,"
+                " header lost\n", index, data->RecordID);
+        if(j==0){
+            index = 2;
         }
-        if(w->WriteBank((uint32_t *)(data), index)){
-            fprintf(stderr,"Error writing to zdab file\n");
+        if(j==1){
+            index = 4;
         }
+        if(j==2){
+            index = 3;
+        }
+    }
+    if(w->WriteBank((uint32_t *)(data), index)){
+        fprintf(stderr,"Error writing to zdab file\n");
     }
 }
 
@@ -251,8 +256,10 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
 int GetLastIndex(){
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4","snot","looseCable60",
-                             "monitor",0,NULL,0))
-        std::cerr << "Cannot read from database" << std::endl;
+                             "monitor",0,NULL,0)){
+        fprintf(stderr, "Can't read database. Starting with zero!\n");
+        return 0;
+    }
     char* query = "SELECT MAX(id) AS id FROM clock";
     mysql_query(conn, query);
     MYSQL_RES *result = mysql_store_result(conn);
@@ -269,9 +276,9 @@ int GetLastIndex(){
 
 // This function builds a new output file for each chunk and should be
 // called each time the index in incremented.
-PZdabWriter* Output(const unsigned int index){
+PZdabWriter* Output(const char * const base, const unsigned int index){
     char outfilename[32];
-    sprintf(outfilename, "chopped%i.zdab", index);
+    sprintf(outfilename, "%s%i.zdab", base, index);
     return new PZdabWriter(outfilename, 0);
 }
 
