@@ -49,12 +49,14 @@ int main(int argc, char *argv[]){
     }
 
     // Get Input File
-    if(argc != 3){
+    if(argc != 3 && argc != 4){
         fprintf(stderr,
           "Error: Give an input file name and an output base name.\n");
         return 2;
     }
 
+    const bool usedb = argc == 4 && !strcmp(argv[3], "nodb");
+  
     const char* const infilename = argv[1];
     const char* const outfilebase = argv[2];
     FILE* infile = fopen(infilename, "rb");
@@ -72,8 +74,9 @@ int main(int argc, char *argv[]){
     uint64_t time10 = 0;
     uint64_t longtime = 0;
     int epoch = 0;
-    int index = GetLastIndex();
+    int index = usedb?GetLastIndex():0;
 
+    puts("hi");
     // Setup initial output file
     PZdabWriter* w1  = Output(outfilebase, index);
     if(w1->IsOpen() == 0){
@@ -139,7 +142,7 @@ int main(int argc, char *argv[]){
             if (firstevent == -1){
                 time0 = longtime;
                 // Make initial database entry
-                Database(index, time10, time50);
+                if(usedb) Database(index, time10, time50);
                 firstevent = 0;
             }
         }
@@ -159,7 +162,7 @@ int main(int argc, char *argv[]){
                 for(int i=0; i<headertypes; i++){
                     OutHeader((GenericRecordHeader*) header[i], w2, i);
                 }
-                Database(index, time10, time50);
+                if(usedb) Database(index, time10, time50);
             }
             OutZdab(data, w1, p);
             OutZdab(data, w2, p);
@@ -183,7 +186,7 @@ int main(int argc, char *argv[]){
                 }
                 for(int i=0; i<headertypes; i++)
                     OutHeader((GenericRecordHeader*) header[i], w1, i);
-                Database(index, time10, time50);
+                if(usedb) Database(index, time10, time50);
             }
             OutZdab(data, w1, p);
             time0 += increment;
@@ -192,7 +195,7 @@ int main(int argc, char *argv[]){
     w1->Close();
     if(w2)
         w2->Close();
-    Database(index, time10, time50);
+    if(usedb) Database(index, time10, time50);
     index++;
     time0 = time50;
     return 0;
