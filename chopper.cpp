@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
         return 2;
     }
 
-    const bool usedb = argc == 4 && !strcmp(argv[3], "nodb");
+    const bool usedb = !(argc == 4 && !strcmp(argv[3], "nodb"));
   
     const char* const infilename = argv[1];
     const char* const outfilebase = argv[2];
