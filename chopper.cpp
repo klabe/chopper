@@ -45,17 +45,21 @@ static const uint64_t maxtime = (1UL << 43);
 int main(int argc, char *argv[]){
     if(overlap >= chunksize){
         std::cerr << "Overlap length is bigger than chunksize, what!\n";
-        return 255;
+        return 127;
     }
 
     // Get Input File
     if(argc != 3 && argc != 4){
-        fprintf(stderr,
-          "Error: Give an input file name and an output base name.\n");
+        fprintf(stderr, "Error: Give an input file name, an output "
+                        "base name and maybe \"nodb\".\n");
         return 2;
     }
 
     const bool usedb = !(argc == 4 && !strcmp(argv[3], "nodb"));
+    if(usedb && argc == 4){
+      fprintf(stderr, "Did not understand %s\n", argv[3]);
+      return 2;
+    }
   
     const char* const infilename = argv[1];
     const char* const outfilebase = argv[2];
