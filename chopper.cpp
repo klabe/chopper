@@ -12,6 +12,7 @@ void Database(int, uint64_t, uint64_t);
 void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
 void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
+void move(int);
 PZdabWriter* Output(int);
 
 static const double chunksize = 1.0; // Chunk Size in Seconds;
@@ -163,12 +164,14 @@ int main(int argc, char *argv[]){
                 index++;
                 w1->Close();
                 if(testw2 == -1){
+                    move(0);
                     w1 = Output(index);
                     for(int i=0; i<headertypes; i++)
                         OutHeader((GenericRecordHeader*) header[i], w1, i);
                     Database(index, time10, time50);
                 }
                 if(testw2 == 0){
+                    move(-1);
                     w1 = w2;
                     testw2 = -1;
                 }
@@ -178,8 +181,11 @@ int main(int argc, char *argv[]){
         }
     }
     w1->Close();
-    if(testw2 == 0)
+    if(testw2 == 0){
+        move(-1)
         w2->Close();
+    }
+    move(0);
     Database(index, time10, time50);
     index++;
     time0 = time50;
@@ -267,3 +273,12 @@ PZdabWriter* Output(int index){
     return w;
 }
 
+// This function moves a closed chopped file to a new directory
+void move(int j){
+    int index = GetLastIndex() + j -1;
+    char oldname[] = sprintf("chopped%i.zdab", index);
+    char newname[] = sprintf("./closed/chopped%i.zdab", index);
+    int result = rename( oldname, newname);
+    if (result != 0 )
+        std::cerr << "Cannot move closed file" << std::endl;
+}
