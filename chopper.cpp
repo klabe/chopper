@@ -7,15 +7,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
+#include <math.h>
 
-void Database(int, uint64_t, uint64_t);
-void OutZdab(nZDAB*, PZdabWriter*, PZdabFile*);
-void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
-int GetLastIndex();
-PZdabWriter* Output(const char * const, const unsigned int);
+static double chunksize = 1.0; // Chunk Size in Seconds
+static double overlap = 0.1; // Overlap Size in Seconds
 
-static const double chunksize = 1.0; // Chunk Size in Seconds;
-static const double overlap = 0.1; // Overlap Size in Seconds;
+// Whether to use the database or just number starting with zero.
+static bool usedb = true;
+
+// Most output files permitted, where zero means unlimited.
+static unsigned int maxfiles = 0;
+
 static const uint64_t ticks = int((chunksize+overlap)*50000000);
 static const uint64_t increment = int(chunksize*50000000);
 static const uint64_t maxtime = (1UL << 43);
@@ -42,27 +46,197 @@ static const uint64_t maxtime = (1UL << 43);
 // 5000 years).  Epoch counts the number of time that the real 50 MHz clock
 // has rolled over.
 
-int main(int argc, char *argv[]){
-    if(overlap >= chunksize){
-        std::cerr << "Overlap length is bigger than chunksize, what!\n";
-        return 127;
-    }
 
-    // Get Input File
-    if(argc != 3 && argc != 4){
-        fprintf(stderr, "Error: Give an input file name, an output "
-                        "base name and maybe \"nodb\".\n");
-        return 2;
+// This function writes index-time pairs to the clock database
+void Database(int index, uint64_t time10, uint64_t time50)
+{
+    MYSQL* conn = mysql_init(NULL);
+    if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
+                "monitor",0,NULL,0)){
+        std::cerr << "Cannot write to database" << std::endl;
+        return;
     }
+    std::stringstream query;
+    query << "INSERT INTO clock VALUES (";
+    query << index << "," << time10 << "," << time50 << ")";
+    mysql_query(conn, query.str().c_str());
+    mysql_close(conn);
+}
 
-    const bool usedb = !(argc == 4 && !strcmp(argv[3], "nodb"));
-    if(usedb && argc == 4){
-      fprintf(stderr, "Did not understand %s\n", argv[3]);
-      return 2;
+// This function writes out the ZDAB record
+void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p)
+{
+    if (data!=NULL){
+        int index = PZdabWriter::GetIndex(data->bank_name);
+        if (index<0)
+            std::cerr << "Unrecognized bank name" << std::endl;
+        else{
+            uint32_t *bank = p->GetBank(data);
+            if(index==0)
+                SWAP_INT32(bank+3,1);
+            w->WriteBank(bank, index);
+        }
     }
+}
+
+// This function writes out the header buffer to a file
+void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j)
+{
+    if (!data) return;
+
+    int index = PZdabWriter::GetIndex(data->RecordID);
+    if(index < 0){
+        // PZdab for some reason got zero for the header type, 
+        // but I know what it is, so I will set it
+        switch(j){
+           case 0: index=2; break;
+           case 1: index=4; break; 
+           case 2: index=3; break;
+           default: fprintf(stderr, "Not reached\n"); exit(1);
+        }
+    }
+    if(w->WriteBank((uint32_t *)(data), index)){
+        fprintf(stderr,"Error writing to zdab file\n");
+    }
+}
+
+// This function queries the clock database to determine the most recent
+// value of the index.
+int GetLastIndex()
+{
+    MYSQL* conn = mysql_init(NULL);
+    if (! mysql_real_connect(conn, "cps4","snot","looseCable60",
+                             "monitor",0,NULL,0)){
+        fprintf(stderr, "Can't read database. Starting with zero!\n");
+        return 0;
+    }
+    char* query = "SELECT MAX(id) AS id FROM clock";
+    mysql_query(conn, query);
+    MYSQL_RES *result = mysql_store_result(conn);
+    MYSQL_ROW row = mysql_fetch_row(result);
+    if (row == NULL){
+        std::cerr << "No data in clock database" << std::endl;
+        return 0;
+    }
+    int id = atoi(row[0]) + 1;
+    std::cerr << id << std::endl;
+    mysql_close(conn);
+    return id;
+}
+
+// This function builds a new output file for each chunk and should be
+// called each time the index in incremented.
+PZdabWriter* Output(const char * const base, const unsigned int index)
+{
+    char outfilename[32];
+    sprintf(outfilename, "%s%i.zdab", base, index);
+
+    if(!access(outfilename, W_OK)){
+      printf("Overwriting existing %s\n", outfilename);
+      unlink(outfilename);
+    }
+    else if(!access(outfilename, F_OK)){
+      fprintf(stderr, "%s already exists and we can't overwrite it!\n");
+      exit(1);
+    } 
+
+    return new PZdabWriter(outfilename, 0);
+}
+
+static double getcmdline_d(const char opt)
+{
+  char * endptr;
+  errno = 0;
+  const double answer = strtod(optarg, &endptr);
+  if((errno==ERANGE && (fabs(answer) == HUGE_VAL)) ||
+     (errno != 0 && answer == 0) ||
+     endptr == optarg || *endptr != '\0'){
+    fprintf(stderr, "%s (given with -%c) isn't a number I can handle\n",
+            optarg, opt);
+    exit(1);
+  }
+  return answer;
+}
+
+static int getcmdline_l(const char opt)
+{
+  char * endptr;
+  errno = 0;
+  const unsigned int answer = strtol(optarg, &endptr, 10);
+  if((errno == ERANGE && (answer == UINT_MAX)) || 
+     (errno != 0 && answer == 0) || 
+     endptr == optarg || *endptr != '\0'){
+    fprintf(stderr, "%s (given with -%c) isn't a number I can handle\n",
+            optarg, opt);
+    exit(1);
+  }
+  return answer;
+}
+
+static void printhelp()
+{
+  printf(
+  "chopper: Chops a ZDAB file into smaller ones by time.\n"
+  "\n"
+  "Mandatory options:\n"
+  "  -i [string]: Input file\n"
+  "  -o [string]: Base of output files\n"
+  "\n"
+  "Optional options:\n"
+  "  -c [n]: Chunk size in seconds\n"
+  "  -l [n]: Overlap size in seconds\n"
+  "  -t: Do not use database: files will start with #0\n"
+  "  -m [n]: Output maximum of n files, discarding remainder of input\n"
+  "  -h: This help text\n"
+  );
+}
+
+void parse_cmdline(int argc, char ** argv, char * & infilename,
+                   char * & outfilebase)
+{
+  const char * opts = "hi:o:tm:c:l:";
+
+  bool done = false;
   
-    const char* const infilename = argv[1];
-    const char* const outfilebase = argv[2];
+  infilename = outfilebase = NULL;
+
+  while(!done){ 
+    const char ch = getopt(argc, argv, opts);
+    switch(ch){
+      case -1: done = true; break;
+
+      case 'i': infilename = optarg; break;
+      case 'o': outfilebase = optarg; break;
+      case 't': usedb = false; break;
+      case 'm': maxfiles = getcmdline_l(ch); break;
+      case 'c': chunksize = getcmdline_d(ch); break;
+      case 'l': overlap = getcmdline_d(ch); break;
+
+      case 'h': printhelp(); exit(0);
+      default:  printhelp(); exit(1);
+    }
+  }
+
+  if(!infilename)  fprintf(stderr, "Give an input file with -i\n");
+  if(!outfilebase) fprintf(stderr, "Give an output base with -o\n");
+
+  if(!infilename || !outfilebase){
+    printhelp();
+    exit(1);
+  }
+
+  if(overlap > chunksize){
+    fprintf(stderr, "Overlap cannot be bigger than chunksize\n");
+    exit(1);
+  }
+}
+
+int main(int argc, char *argv[])
+{
+    char * infilename = NULL, * outfilebase = NULL;
+
+    parse_cmdline(argc, argv, infilename, outfilebase);
+
     FILE* infile = fopen(infilename, "rb");
 
     PZdabFile* p = new PZdabFile();
@@ -174,6 +348,7 @@ int main(int argc, char *argv[]){
             // XXX This does not handle the case of the event being
             // XXX already in the next overlap region
             index++;
+            if(index > 0) break; // XXX testing
             w1->Close();
             w1 = NULL;
             if(w2){
@@ -199,89 +374,6 @@ int main(int argc, char *argv[]){
     if(w2)
         w2->Close();
     if(usedb) Database(index, time10, time50);
-    index++;
-    time0 = time50;
+
     return 0;
 }
-
-// This function writes index-time pairs to the clock database
-void Database(int index, uint64_t time10, uint64_t time50){
-    MYSQL* conn = mysql_init(NULL);
-    if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
-                "monitor",0,NULL,0)){
-        std::cerr << "Cannot write to database" << std::endl;
-        return;
-    }
-    std::stringstream query;
-    query << "INSERT INTO clock VALUES (";
-    query << index << "," << time10 << "," << time50 << ")";
-    mysql_query(conn, query.str().c_str());
-    mysql_close(conn);
-}
-
-// This function writes out the ZDAB record
-void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p){
-    if (data!=NULL){
-        int index = PZdabWriter::GetIndex(data->bank_name);
-        if (index<0)
-            std::cerr << "Unrecognized bank name" << std::endl;
-        else{
-            uint32_t *bank = p->GetBank(data);
-            if(index==0)
-                SWAP_INT32(bank+3,1);
-            w->WriteBank(bank, index);
-        }
-    }
-}
-
-// This function writes out the header buffer to a file
-void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
-    if (!data) return;
-
-    int index = PZdabWriter::GetIndex(data->RecordID);
-    if(index < 0){
-        // PZdab for some reason got zero for the header type, 
-        // but I know what it is, so I will set it
-        switch(j){
-           case 0: index=2; break;
-           case 1: index=4; break; 
-           case 2: index=3; break;
-           default: fprintf(stderr, "Not reached\n"); exit(1);
-        }
-    }
-    if(w->WriteBank((uint32_t *)(data), index)){
-        fprintf(stderr,"Error writing to zdab file\n");
-    }
-}
-
-// This function queries the clock database to determine the most recent
-// value of the index.
-int GetLastIndex(){
-    MYSQL* conn = mysql_init(NULL);
-    if (! mysql_real_connect(conn, "cps4","snot","looseCable60",
-                             "monitor",0,NULL,0)){
-        fprintf(stderr, "Can't read database. Starting with zero!\n");
-        return 0;
-    }
-    char* query = "SELECT MAX(id) AS id FROM clock";
-    mysql_query(conn, query);
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
-    if (row == NULL){
-        std::cerr << "No data in clock database" << std::endl;
-        return 0;
-    }
-    int id = atoi(row[0]) + 1;
-    std::cerr << id << std::endl;
-    mysql_close(conn);
-    return id;
-}
-
-// This function builds a new output file for each chunk and should be
-// called each time the index in incremented.
-PZdabWriter* Output(const char * const base, const unsigned int index){
-    char outfilename[32];
-    sprintf(outfilename, "%s%i.zdab", base, index);
-    return new PZdabWriter(outfilename, 0);
-}
-
