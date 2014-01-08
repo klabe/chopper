@@ -14,7 +14,7 @@ void OutHeader(GenericRecordHeader*, PZdabWriter*, int);
 int GetLastIndex();
 PZdabWriter* Output(const char * const, const unsigned int);
 
-static const double chunksize = 100.0; // Chunk Size in Seconds;
+static const double chunksize = 1.0; // Chunk Size in Seconds;
 static const double overlap = 0.1; // Overlap Size in Seconds;
 static const uint64_t ticks = int((chunksize+overlap)*50000000);
 static const uint64_t increment = int(chunksize*50000000);
@@ -80,7 +80,6 @@ int main(int argc, char *argv[]){
     int epoch = 0;
     int index = usedb?GetLastIndex():0;
 
-    puts("hi");
     // Setup initial output file
     PZdabWriter* w1  = Output(outfilebase, index);
     if(w1->IsOpen() == 0){
@@ -241,16 +240,13 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j){
 
     int index = PZdabWriter::GetIndex(data->RecordID);
     if(index < 0){
-        fprintf(stderr,"Did not recognize index %i in record id %x,"
-                " header lost\n", index, data->RecordID);
-        if(j==0){
-            index = 2;
-        }
-        if(j==1){
-            index = 4;
-        }
-        if(j==2){
-            index = 3;
+        // PZdab for some reason got zero for the header type, 
+        // but I know what it is, so I will set it
+        switch(j){
+           case 0: index=2; break;
+           case 1: index=4; break; 
+           case 2: index=3; break;
+           default: fprintf(stderr, "Not reached\n"); exit(1);
         }
     }
     if(w->WriteBank((uint32_t *)(data), index)){
