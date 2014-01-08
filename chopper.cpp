@@ -182,7 +182,7 @@ int main(int argc, char *argv[]){
     }
     w1->Close();
     if(testw2 == 0){
-        move(-1)
+        move(-1);
         w2->Close();
     }
     move(0);
@@ -276,8 +276,9 @@ PZdabWriter* Output(int index){
 // This function moves a closed chopped file to a new directory
 void move(int j){
     int index = GetLastIndex() + j -1;
-    char oldname[] = sprintf("chopped%i.zdab", index);
-    char newname[] = sprintf("./closed/chopped%i.zdab", index);
+    char oldname[32], newname[32];
+    sprintf(oldname, "chopped%i.zdab", index);
+    sprintf(newname, "./closed/chopped%i.zdab", index);
     int result = rename( oldname, newname);
     if (result != 0 )
         std::cerr << "Cannot move closed file" << std::endl;
