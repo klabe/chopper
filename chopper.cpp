@@ -138,15 +138,12 @@ static PZdabWriter * Output(const char * const base,
   sprintf(outfilename, "%s%i.zdab", base, index);
 
   if(!access(outfilename, W_OK)){
-    if(clobber){
-      printf("Overwriting existing %s\n", outfilename);
-      unlink(outfilename);
-    }
-    else{
+    if(!clobber){
       fprintf(stderr, "%s already exists and you told me not to "
               "overwrite it!\n", outfilename);
       exit(1);
     }
+    unlink(outfilename);
   }
   else if(!access(outfilename, F_OK)){
     fprintf(stderr, "%s already exists and we can't overwrite it!\n",
@@ -361,7 +358,7 @@ int main(int argc, char *argv[])
  
       // Set time origin on first event
       if(time0 == 0){
-        printf("Initializing time origin\n"); // Should only print once!
+        puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
         if(usedb) Database(index, time10, time50);
