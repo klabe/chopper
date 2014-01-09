@@ -10,9 +10,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <math.h>
-
-static double chunksize = 1.0; // Chunk Size in Seconds
-static double overlap = 0.1; // Overlap Size in Seconds
+#include <limits.h>
 
 // Whether to use the database or just number starting with zero.
 static bool usedb = true;
@@ -20,8 +18,6 @@ static bool usedb = true;
 // Most output files permitted, where zero means unlimited.
 static unsigned int maxfiles = 0;
 
-static const uint64_t ticks = int((chunksize+overlap)*50000000);
-static const uint64_t increment = int(chunksize*50000000);
 static const uint64_t maxtime = (1UL << 43);
 
 // The general logic here is as follows:
@@ -186,19 +182,24 @@ static void printhelp()
   "  -c [n]: Chunk size in seconds\n"
   "  -l [n]: Overlap size in seconds\n"
   "  -t: Do not use database: files will start with #0\n"
-  "  -m [n]: Output maximum of n files, discarding remainder of input\n"
+  "  -m [n]: Set maximum number of output files, discarding remainder"
+  "          of input.  Zero means unlimited.\n"
   "  -h: This help text\n"
   );
 }
 
 void parse_cmdline(int argc, char ** argv, char * & infilename,
-                   char * & outfilebase)
+                   char * & outfilebase, uint64_t & ticks,
+                   uint64_t & increment)
 {
   const char * opts = "hi:o:tm:c:l:";
 
   bool done = false;
   
   infilename = outfilebase = NULL;
+
+  double chunksize = 1.0; // Chunk Size in Seconds
+  double overlap = 0.1; // Overlap Size in Seconds
 
   while(!done){ 
     const char ch = getopt(argc, argv, opts);
@@ -229,13 +230,19 @@ void parse_cmdline(int argc, char ** argv, char * & infilename,
     fprintf(stderr, "Overlap cannot be bigger than chunksize\n");
     exit(1);
   }
+
+  ticks = int((chunksize+overlap)*50000000); // 50 MHz clock
+  increment = int(chunksize*50000000);
 }
 
 int main(int argc, char *argv[])
 {
     char * infilename = NULL, * outfilebase = NULL;
 
-    parse_cmdline(argc, argv, infilename, outfilebase);
+    uint64_t ticks, increment;
+
+    parse_cmdline(argc, argv,
+                  infilename, outfilebase, ticks, increment);
 
     FILE* infile = fopen(infilename, "rb");
 
@@ -273,8 +280,9 @@ int main(int argc, char *argv[])
     }
 
     // Loop over ZDAB Records
+    uint64_t eventn = 0;
     while(nZDAB * const data = p->NextRecord()){
-
+ 
         // Check to fill Header Buffer
         for (int i=0; i<headertypes; i++){
             if (data->bank_name == Headernames[i]){
@@ -330,6 +338,7 @@ int main(int argc, char *argv[])
         }
         else if (longtime < time0 + ticks){
             if(!w2){
+                if(maxfiles > 0 && index+2 >= maxfiles) break;
                 w2 = Output(outfilebase, index+1);
                 if(w2->IsOpen()==0){
                     std::cerr << "Could not open output file " 
@@ -348,7 +357,6 @@ int main(int argc, char *argv[])
             // XXX This does not handle the case of the event being
             // XXX already in the next overlap region
             index++;
-            if(index > 0) break; // XXX testing
             w1->Close();
             w1 = NULL;
             if(w2){
@@ -356,6 +364,7 @@ int main(int argc, char *argv[])
                 w2 = NULL;
             }
             else{
+                if(maxfiles > 0 && index+1 >= maxfiles) break;
                 w1 = Output(outfilebase, index);
                 if(w1->IsOpen()==0){
                     std::cerr << "Could not open output file " 
@@ -369,10 +378,11 @@ int main(int argc, char *argv[])
             OutZdab(data, w1, p);
             time0 += increment;
         }
+        eventn++;
     }
-    w1->Close();
-    if(w2)
-        w2->Close();
+            fprintf(stderr, " %d ", eventn);
+    if(w1) w1->Close();
+    if(w2) w2->Close();
     if(usedb) Database(index, time10, time50);
 
     return 0;
