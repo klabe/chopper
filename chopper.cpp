@@ -268,7 +268,7 @@ int GetLastIndex(){
 // called each time the index in incremented.
 PZdabWriter* Output(int index){
     char outfilename[32];
-    sprintf(outfilename, "%i.zdab", index);
+    sprintf(outfilename, "%i", index);
     PZdabWriter* w = new PZdabWriter(outfilename, 0);
     return w;
 }
@@ -278,8 +278,8 @@ void move(int j){
     int index = GetLastIndex() + j -1;
     char oldname[32];
     char newname[32];
-    sprintf(oldname, "%i.zdab", index);
-    sprintf(newname, "./closed/%i.zdab", index);
+    sprintf(oldname, "%i", index);
+    sprintf(newname, "./closed/%i", index);
     int result = rename( oldname, newname);
     if (result != 0 )
         std::cerr << "Cannot move closed file" << std::endl;
