@@ -13,6 +13,9 @@
 // Whether to use the database or just number starting with zero.
 static bool usedb = true;
 
+// Whether to overwrite existing output
+static bool clobber = true;
+
 // Most output files permitted, where zero means unlimited.
 static unsigned int maxfiles = 0;
 
@@ -135,11 +138,19 @@ static PZdabWriter * Output(const char * const base,
   sprintf(outfilename, "%s%i.zdab", base, index);
 
   if(!access(outfilename, W_OK)){
-    printf("Overwriting existing %s\n", outfilename);
-    unlink(outfilename);
+    if(clobber){
+      printf("Overwriting existing %s\n", outfilename);
+      unlink(outfilename);
+    }
+    else{
+      fprintf(stderr, "%s already exists and you told me not to "
+              "overwrite it!\n", outfilename);
+      exit(1);
+    }
   }
   else if(!access(outfilename, F_OK)){
-    fprintf(stderr, "%s already exists and we can't overwrite it!\n");
+    fprintf(stderr, "%s already exists and we can't overwrite it!\n",
+            outfilename);
     exit(1);
   } 
 
@@ -195,6 +206,8 @@ static void printhelp()
   "  -u: User name\n"
   "  -p: Password\n"
   "\n"
+  "Misc/debugging options\n"
+  "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -m [n]: Set maximum number of output files, discarding remainder"
   "          of input.  Zero means unlimited.\n"
   "  -h: This help text\n"
@@ -205,7 +218,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
                           uint64_t & increment)
 {
-  const char * const opts = "hi:o:tm:c:l:s:u:p:";
+  const char * const opts = "hi:o:tm:c:l:s:u:p:n";
 
   bool done = false;
   
@@ -229,6 +242,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 's': sqlserver = optarg; break;
       case 'u': sqluser = optarg; break;
       case 'p': sqlpass = optarg; break;
+  
+      case 'n': clobber = false; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -252,6 +267,35 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   increment = int(chunksize*50000000);
 }
 
+static void compute_times(const PmtEventRecord * const hits, 
+                          uint64_t & time10, uint64_t & time50,
+                          uint64_t & longtime, int & epoch,
+                          uint64_t & time0)
+{
+  // Store the old 50MHz Clock Time for comparison
+  const uint64_t oldtime = time50;
+
+  // Get the current 50MHz Clock Time
+  // Implementing Part of Method Get50MHzTime() 
+  // from PZdabFile.cxx
+  time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+    + hits->TriggerCardData.Bc50_1;
+
+  // Check for pathological case
+  if (time50 == 0) time50 = oldtime;
+
+  // Check whether clock has rolled over
+  if (time50 < oldtime) epoch++;
+
+  // Set the Internal Clock
+  longtime = time50 + maxtime*epoch;
+
+  // Now get the 10MHz Clock Time
+  // Method taken from zdab_convert.cpp
+  time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
+                   + hits->TriggerCardData.Bc10_1;
+}
+
 int main(int argc, char *argv[])
 {
   char * infilename = NULL, * outfilebase = NULL;
@@ -271,7 +315,6 @@ int main(int argc, char *argv[])
 
   // Initialize the various clocks
   uint64_t time0 = 0;
-  int firstevent = -1;
   uint64_t time50 = 0;
   uint64_t time10 = 0;
   uint64_t longtime = 0;
@@ -314,37 +357,15 @@ int main(int argc, char *argv[])
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
-    PmtEventRecord* hits = zfile->GetPmtRecord(zrec);
-    if (hits){
-      // Store the old 50MHz Clock Time for comparison
-      const uint64_t oldtime = time50;
-
-      // Get the current 50MHz Clock Time
-      // Implementing Part of Method Get50MHzTime() 
-      // from PZdabFile.cxx
-      time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-        + hits->TriggerCardData.Bc50_1;
-
-      // Check for pathological case
-      if (time50 == 0) time50 = oldtime;
-
-      // Check whether clock has rolled over
-      if (time50 < oldtime) epoch++;
-
-      // Set the Internal Clock
-      longtime = time50 + maxtime*epoch;
-
-      // Now get the 10MHz Clock Time
-      // Method taken from zdab_convert.cpp
-      time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-        + hits->TriggerCardData.Bc10_1;
-
-      // Set Time Origin
-      if (firstevent == -1){
+    if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+      compute_times(hits, time10, time50, longtime, epoch, time0);
+ 
+      // Set time origin on first event
+      if(time0 == 0){
+        printf("Initializing time origin\n"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
         if(usedb) Database(index, time10, time50);
-        firstevent = 0;
       }
     }
 
