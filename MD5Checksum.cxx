@@ -85,7 +85,7 @@ char *MD5Checksum::GetMD5(char *filename)
         const int kBuffSize = 16384;
         BYTE buff[kBuffSize];
         MD5Checksum md5;
-        while (num = fread(buff, 1, kBuffSize, fp)) {
+        while ((num = fread(buff, 1, kBuffSize, fp))) {
             md5.Update(buff, num);
         }
         fclose(fp);
