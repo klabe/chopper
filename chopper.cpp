@@ -1,9 +1,7 @@
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
 #include <string>
-#include <iostream>
 #include <mysql.h>
-#include <sstream>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +16,7 @@ static bool usedb = true;
 // Most output files permitted, where zero means unlimited.
 static unsigned int maxfiles = 0;
 
+// Tells us whtn the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
 // The general logic here is as follows:
@@ -42,21 +41,27 @@ static const uint64_t maxtime = (1UL << 43);
 // program (it will last 5000 years). Epoch counts the number of time
 // that the real 50 MHz clock has rolled over.
 
+static char * sqlserver = "cps4",
+            * sqluser   = "snot",
+            * sqlpass   = "looseCable60";
+
+static const char * const sqldb = "monitor";
 
 // This function writes index-time pairs to the clock database
 static void Database(const int index, const uint64_t time10,
                      const uint64_t time50)
 {
     MYSQL* conn = mysql_init(NULL);
-    if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
-                "monitor",0,NULL,0)){
-        fprintf(stderr, "Cannot write to database\n");
+    if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
+                            0, NULL, 0)){
+        fprintf(stderr, "Cannot connect to database\n");
         return;
     }
-    std::stringstream query;
-    query << "INSERT INTO clock VALUES (";
-    query << index << "," << time10 << "," << time50 << ")";
-    mysql_query(conn, query.str().c_str());
+
+    char query[256];
+    sprintf(query, "INSERT INTO clock VALUES (%d, %ld, %ld)",
+            index, time10, time50);
+    mysql_query(conn, query);
     mysql_close(conn);
 }
 
@@ -64,17 +69,14 @@ static void Database(const int index, const uint64_t time10,
 static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
                     PZdabFile * const zfile)
 {
-    if (data!=NULL){
-        int index = PZdabWriter::GetIndex(data->bank_name);
-        if (index<0)
-            fprintf(stderr, "Unrecognized bank name\n");
-        else{
-            uint32_t * const bank = zfile->GetBank(data);
-            if(index==0)
-                SWAP_INT32(bank+3,1);
-            zwrite->WriteBank(bank, index);
-        }
-    }
+  if(!data) return;
+  const int index = PZdabWriter::GetIndex(data->bank_name);
+  if(index < 0) fprintf(stderr, "Unrecognized bank name\n");
+  else{
+    uint32_t * const bank = zfile->GetBank(data);
+    if(index==0) SWAP_INT32(bank+3,1);
+    zwrite->WriteBank(bank, index);
+  }
 }
 
 // This function writes out the header buffer to a file
@@ -103,9 +105,9 @@ static void OutHeader(const GenericRecordHeader * const hdr,
 static int GetLastIndex()
 {
     MYSQL * const conn = mysql_init(NULL);
-    if (!mysql_real_connect(conn, "cps4","snot","looseCable60",
-                            "monitor",0,NULL,0)){
-        fprintf(stderr, "Can't read database. Starting with zero!\n");
+    if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
+                            0, NULL, 0)){
+        fprintf(stderr,"Can't connect to database. Starting with 0!\n");
         return 0;
     }
 
@@ -183,10 +185,16 @@ static void printhelp()
   "  -i [string]: Input file\n"
   "  -o [string]: Base of output files\n"
   "\n"
-  "Optional options:\n"
+  "Adjust physics parameters:\n"
   "  -c [n]: Chunk size in seconds\n"
   "  -l [n]: Overlap size in seconds\n"
+  "\n"
+  "Database options:\n"
   "  -t: Do not use database: files will start with #0\n"
+  "  -s: Server hostname\n"
+  "  -u: User name\n"
+  "  -p: Password\n"
+  "\n"
   "  -m [n]: Set maximum number of output files, discarding remainder"
   "          of input.  Zero means unlimited.\n"
   "  -h: This help text\n"
@@ -197,7 +205,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
                           uint64_t & increment)
 {
-  const char * const opts = "hi:o:tm:c:l:";
+  const char * const opts = "hi:o:tm:c:l:s:u:p:";
 
   bool done = false;
   
@@ -213,10 +221,14 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
-      case 't': usedb = false; break;
       case 'm': maxfiles = getcmdline_l(ch); break;
       case 'c': chunksize = getcmdline_d(ch); break;
       case 'l': overlap = getcmdline_d(ch); break;
+
+      case 't': usedb = false; break;
+      case 's': sqlserver = optarg; break;
+      case 'u': sqluser = optarg; break;
+      case 'p': sqlpass = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
