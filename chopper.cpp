@@ -276,7 +276,8 @@ PZdabWriter* Output(int index){
 // This function moves a closed chopped file to a new directory
 void move(int j){
     int index = GetLastIndex() + j -1;
-    char oldname[32], newname[32];
+    char oldname[32];
+    char newname[32];
     sprintf(oldname, "chopped%i.zdab", index);
     sprintf(newname, "./closed/chopped%i.zdab", index);
     int result = rename( oldname, newname);
