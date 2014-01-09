@@ -28,28 +28,29 @@ static const uint64_t maxtime = (1UL << 43);
 // they are saved to a buffer, which is written out at the beginning of
 // each new output file.
 
-// Explanation of the various clocks used in this program:
-// Since I'm reading ZDABs, I need to track the 50 MHz clock for accuracy,
-// and the 10 MHz clock for uniqueness.  For a given event, the trigger
-// time will be stored in the variables time10 and time50.  The chopper
-// will start a new file every "chunksize" with a trailing period of overlap
-// of size "overlap".  Time0 represents the beginning of the oldest open
-// chunk, according to the longtime clock.  When the chunk is closed, Time0
-// is increased by "increment" to ensure that it increases uniformly.
-// "maxtime" tells us when the 50 MHz clock rolls over.  Longtime is an 
-// internal 50 MHz clock that uses the full 64 bits available so that it
-// will not roll over during the execution of the program (it will last
-// 5000 years).  Epoch counts the number of time that the real 50 MHz clock
-// has rolled over.
+// Explanation of the various clocks used in this program: Since I'm
+// reading ZDABs, I need to track the 50 MHz clock for accuracy, and
+// the 10 MHz clock for uniqueness. For a given event, the trigger
+// time will be stored in the variables time10 and time50. The chopper
+// will start a new file every "chunksize" with a trailing period of
+// overlap of size "overlap". Time0 represents the beginning of the
+// oldest open chunk, according to the longtime clock. When the chunk is
+// closed, Time0 is increased by "increment" to ensure that it increases
+// uniformly. "maxtime" tells us when the 50 MHz clock rolls over.
+// Longtime is an internal 50 MHz clock that uses the full 64 bits
+// available so that it will not roll over during the execution of the
+// program (it will last 5000 years). Epoch counts the number of time
+// that the real 50 MHz clock has rolled over.
 
 
 // This function writes index-time pairs to the clock database
-void Database(int index, uint64_t time10, uint64_t time50)
+static void Database(const int index, const uint64_t time10,
+                     const uint64_t time50)
 {
     MYSQL* conn = mysql_init(NULL);
     if (! mysql_real_connect(conn, "cps4", "snot", "looseCable60",
                 "monitor",0,NULL,0)){
-        std::cerr << "Cannot write to database" << std::endl;
+        fprintf(stderr, "Cannot write to database\n");
         return;
     }
     std::stringstream query;
@@ -60,27 +61,29 @@ void Database(int index, uint64_t time10, uint64_t time50)
 }
 
 // This function writes out the ZDAB record
-void OutZdab(nZDAB* data, PZdabWriter* w, PZdabFile* p)
+static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
+                    PZdabFile * const zfile)
 {
     if (data!=NULL){
         int index = PZdabWriter::GetIndex(data->bank_name);
         if (index<0)
-            std::cerr << "Unrecognized bank name" << std::endl;
+            fprintf(stderr, "Unrecognized bank name\n");
         else{
-            uint32_t *bank = p->GetBank(data);
+            uint32_t * const bank = zfile->GetBank(data);
             if(index==0)
                 SWAP_INT32(bank+3,1);
-            w->WriteBank(bank, index);
+            zwrite->WriteBank(bank, index);
         }
     }
 }
 
 // This function writes out the header buffer to a file
-void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j)
+static void OutHeader(const GenericRecordHeader * const hdr,
+                      PZdabWriter* const w, const int j)
 {
-    if (!data) return;
+    if (!hdr) return;
 
-    int index = PZdabWriter::GetIndex(data->RecordID);
+    int index = PZdabWriter::GetIndex(hdr->RecordID);
     if(index < 0){
         // PZdab for some reason got zero for the header type, 
         // but I know what it is, so I will set it
@@ -91,38 +94,40 @@ void OutHeader(GenericRecordHeader* data, PZdabWriter* w, int j)
            default: fprintf(stderr, "Not reached\n"); exit(1);
         }
     }
-    if(w->WriteBank((uint32_t *)(data), index)){
+    if(w->WriteBank((uint32_t *)hdr, index))
         fprintf(stderr,"Error writing to zdab file\n");
-    }
 }
 
 // This function queries the clock database to determine the most recent
 // value of the index.
-int GetLastIndex()
+static int GetLastIndex()
 {
-    MYSQL* conn = mysql_init(NULL);
-    if (! mysql_real_connect(conn, "cps4","snot","looseCable60",
-                             "monitor",0,NULL,0)){
+    MYSQL * const conn = mysql_init(NULL);
+    if (!mysql_real_connect(conn, "cps4","snot","looseCable60",
+                            "monitor",0,NULL,0)){
         fprintf(stderr, "Can't read database. Starting with zero!\n");
         return 0;
     }
-    char* query = "SELECT MAX(id) AS id FROM clock";
+
+    const char * const query = "SELECT MAX(id) AS id FROM clock";
+
     mysql_query(conn, query);
-    MYSQL_RES *result = mysql_store_result(conn);
-    MYSQL_ROW row = mysql_fetch_row(result);
+    MYSQL_RES * const result = mysql_store_result(conn);
+    const MYSQL_ROW row = mysql_fetch_row(result);
     if (row == NULL){
-        std::cerr << "No data in clock database" << std::endl;
+        fprintf(stderr, "No data in clock database\n");
         return 0;
     }
-    int id = atoi(row[0]) + 1;
-    std::cerr << id << std::endl;
+    const int id = atoi(row[0]) + 1;
+    fprintf(stderr, "id %d\n", id);  // XXX needed?
     mysql_close(conn);
     return id;
 }
 
 // This function builds a new output file for each chunk and should be
 // called each time the index in incremented.
-PZdabWriter* Output(const char * const base, const unsigned int index)
+static PZdabWriter * Output(const char * const base,
+                            const unsigned int index)
 {
     char outfilename[32];
     sprintf(outfilename, "%s%i.zdab", base, index);
@@ -188,11 +193,11 @@ static void printhelp()
   );
 }
 
-void parse_cmdline(int argc, char ** argv, char * & infilename,
-                   char * & outfilebase, uint64_t & ticks,
-                   uint64_t & increment)
+static void parse_cmdline(int argc, char ** argv, char * & infilename,
+                          char * & outfilebase, uint64_t & ticks,
+                          uint64_t & increment)
 {
-  const char * opts = "hi:o:tm:c:l:";
+  const char * const opts = "hi:o:tm:c:l:";
 
   bool done = false;
   
@@ -248,8 +253,8 @@ int main(int argc, char *argv[])
 
     PZdabFile* p = new PZdabFile();
     if (p->Init(infile) < 0){
-        std::cerr << "Did not open file" << std::endl;
-        return 1;
+        fprintf(stderr, "Did not open file\n");
+        exit(1);
     }
 
     // Initialize the various clocks
@@ -264,8 +269,8 @@ int main(int argc, char *argv[])
     // Setup initial output file
     PZdabWriter* w1  = Output(outfilebase, index);
     if(w1->IsOpen() == 0){
-        std::cerr << "Could not open output file" << std::endl;
-        return 1;
+        fprintf(stderr, "Could not open output file\n");
+        exit(1);
     }
     PZdabWriter* w2 = NULL;
 
@@ -281,23 +286,23 @@ int main(int argc, char *argv[])
 
     // Loop over ZDAB Records
     uint64_t eventn = 0;
-    while(nZDAB * const data = p->NextRecord()){
+    while(nZDAB * const zrec = p->NextRecord()){
  
         // Check to fill Header Buffer
         for (int i=0; i<headertypes; i++){
-            if (data->bank_name == Headernames[i]){
+            if (zrec->bank_name == Headernames[i]){
                 memset(header[i],0,NWREC*sizeof(char));
-                GenericRecordHeader* grh = (GenericRecordHeader*) data;
+                GenericRecordHeader* grh = (GenericRecordHeader*) zrec;
                 unsigned long recLen = grh->RecordLength; 
-                SWAP_INT32(data,recLen/sizeof(uint32_t));
-                memcpy(header[i], data+1, recLen*sizeof(char));
-                SWAP_INT32(data,recLen/sizeof(uint32_t));
+                SWAP_INT32(zrec,recLen/sizeof(uint32_t));
+                memcpy(header[i], zrec+1, recLen*sizeof(char));
+                SWAP_INT32(zrec,recLen/sizeof(uint32_t));
             }
         }
 
         // If the event has an associated time, compute every
         // conceivable time variable.
-        PmtEventRecord* hits = p->GetPmtRecord(data);
+        PmtEventRecord* hits = p->GetPmtRecord(zrec);
         if (hits != NULL){
             // Store the old 50MHz Clock Time for comparison
             const uint64_t oldtime = time50;
@@ -307,21 +312,20 @@ int main(int argc, char *argv[])
             // from PZdabFile.cxx
             time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                 + hits->TriggerCardData.Bc50_1;
+
+            // Check for pathological case
+            if (time50 == 0) time50 = oldtime;
+
+            // Check whether clock has rolled over
+            if (time50 < oldtime) epoch++;
+
+            // Set the Internal Clock
+            longtime = time50 + maxtime*epoch;
+
             // Now get the 10MHz Clock Time
             // Method taken from zdab_convert.cpp
             time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                 + hits->TriggerCardData.Bc10_1;
-
-            // Check for pathological case
-            if (time50 == 0)
-                time50 = oldtime;
-
-            // Check whether clock has rolled over
-            if (time50 < oldtime)
-                epoch++;
-
-            // Set the Internal Clock
-            longtime = time50 + maxtime*epoch;
 
             // Set Time Origin
             if (firstevent == -1){
@@ -334,24 +338,24 @@ int main(int argc, char *argv[])
 
         // Chop
         if (longtime < time0 + increment){
-            OutZdab(data, w1, p);
+            OutZdab(zrec, w1, p);
         }
         else if (longtime < time0 + ticks){
             if(!w2){
                 if(maxfiles > 0 && index+2 >= maxfiles) break;
                 w2 = Output(outfilebase, index+1);
-                if(w2->IsOpen()==0){
-                    std::cerr << "Could not open output file " 
-                              << index+1 << "\n";
-                    return 1;
+                if(!w2->IsOpen()){
+                    fprintf(stderr, "Could not open output file %d\n",
+                            index+1);
+                    exit(1);
                 }
                 for(int i=0; i<headertypes; i++){
                     OutHeader((GenericRecordHeader*) header[i], w2, i);
                 }
                 if(usedb) Database(index, time10, time50);
             }
-            OutZdab(data, w1, p);
-            OutZdab(data, w2, p);
+            OutZdab(zrec, w1, p);
+            OutZdab(zrec, w2, p);
         }
         else{
             // XXX This does not handle the case of the event being
@@ -366,24 +370,24 @@ int main(int argc, char *argv[])
             else{
                 if(maxfiles > 0 && index+1 >= maxfiles) break;
                 w1 = Output(outfilebase, index);
-                if(w1->IsOpen()==0){
-                    std::cerr << "Could not open output file " 
-                              << index << "\n";
-                    return 1;
+                if(!w1->IsOpen()){
+                    fprintf(stderr, "Could not open output file %d\n",
+                            index);
+                    exit(1);
                 }
                 for(int i=0; i<headertypes; i++)
                     OutHeader((GenericRecordHeader*) header[i], w1, i);
                 if(usedb) Database(index, time10, time50);
             }
-            OutZdab(data, w1, p);
+            OutZdab(zrec, w1, p);
             time0 += increment;
         }
         eventn++;
     }
-            fprintf(stderr, " %d ", eventn);
     if(w1) w1->Close();
     if(w2) w2->Close();
     if(usedb) Database(index, time10, time50);
 
+    printf("Done. %d events processed\n", eventn);
     return 0;
 }
