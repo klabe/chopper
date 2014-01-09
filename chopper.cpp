@@ -51,18 +51,18 @@ static const char * const sqldb = "monitor";
 static void Database(const int index, const uint64_t time10,
                      const uint64_t time50)
 {
-    MYSQL* conn = mysql_init(NULL);
-    if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
-                            0, NULL, 0)){
-        fprintf(stderr, "Cannot connect to database\n");
-        return;
-    }
+  MYSQL* conn = mysql_init(NULL);
+  if(!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
+                         0, NULL, 0)){
+    fprintf(stderr, "Cannot connect to database\n");
+    return;
+  }
 
-    char query[256];
-    sprintf(query, "INSERT INTO clock VALUES (%d, %ld, %ld)",
-            index, time10, time50);
-    mysql_query(conn, query);
-    mysql_close(conn);
+  char query[256];
+  sprintf(query, "INSERT INTO clock VALUES (%d, %ld, %ld)",
+          index, time10, time50);
+  mysql_query(conn, query);
+  mysql_close(conn);
 }
 
 // This function writes out the ZDAB record
@@ -83,47 +83,47 @@ static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 static void OutHeader(const GenericRecordHeader * const hdr,
                       PZdabWriter* const w, const int j)
 {
-    if (!hdr) return;
+  if (!hdr) return;
 
-    int index = PZdabWriter::GetIndex(hdr->RecordID);
-    if(index < 0){
-        // PZdab for some reason got zero for the header type, 
-        // but I know what it is, so I will set it
-        switch(j){
-           case 0: index=2; break;
-           case 1: index=4; break; 
-           case 2: index=3; break;
-           default: fprintf(stderr, "Not reached\n"); exit(1);
-        }
+  int index = PZdabWriter::GetIndex(hdr->RecordID);
+  if(index < 0){
+    // PZdab for some reason got zero for the header type, 
+    // but I know what it is, so I will set it
+    switch(j){
+      case 0: index=2; break;
+      case 1: index=4; break; 
+      case 2: index=3; break;
+      default: fprintf(stderr, "Not reached\n"); exit(1);
     }
-    if(w->WriteBank((uint32_t *)hdr, index))
-        fprintf(stderr,"Error writing to zdab file\n");
+  }
+  if(w->WriteBank((uint32_t *)hdr, index))
+    fprintf(stderr,"Error writing to zdab file\n");
 }
 
 // This function queries the clock database to determine the most recent
 // value of the index.
 static int GetLastIndex()
 {
-    MYSQL * const conn = mysql_init(NULL);
-    if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
-                            0, NULL, 0)){
-        fprintf(stderr,"Can't connect to database. Starting with 0!\n");
-        return 0;
-    }
+  MYSQL * const conn = mysql_init(NULL);
+  if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
+        0, NULL, 0)){
+    fprintf(stderr,"Can't connect to database. Starting with 0!\n");
+    return 0;
+  }
 
-    const char * const query = "SELECT MAX(id) AS id FROM clock";
+  const char * const query = "SELECT MAX(id) AS id FROM clock";
 
-    mysql_query(conn, query);
-    MYSQL_RES * const result = mysql_store_result(conn);
-    const MYSQL_ROW row = mysql_fetch_row(result);
-    if (row == NULL){
-        fprintf(stderr, "No data in clock database\n");
-        return 0;
-    }
-    const int id = atoi(row[0]) + 1;
-    fprintf(stderr, "id %d\n", id);  // XXX needed?
-    mysql_close(conn);
-    return id;
+  mysql_query(conn, query);
+  MYSQL_RES * const result = mysql_store_result(conn);
+  const MYSQL_ROW row = mysql_fetch_row(result);
+  if(!row){
+    fprintf(stderr, "No data in clock database\n");
+    return 0;
+  }
+  const int id = atoi(row[0]) + 1;
+  fprintf(stderr, "id %d\n", id);  // XXX needed?
+  mysql_close(conn);
+  return id;
 }
 
 // This function builds a new output file for each chunk and should be
@@ -131,19 +131,19 @@ static int GetLastIndex()
 static PZdabWriter * Output(const char * const base,
                             const unsigned int index)
 {
-    char outfilename[32];
-    sprintf(outfilename, "%s%i.zdab", base, index);
+  char outfilename[32];
+  sprintf(outfilename, "%s%i.zdab", base, index);
 
-    if(!access(outfilename, W_OK)){
-      printf("Overwriting existing %s\n", outfilename);
-      unlink(outfilename);
-    }
-    else if(!access(outfilename, F_OK)){
-      fprintf(stderr, "%s already exists and we can't overwrite it!\n");
-      exit(1);
-    } 
+  if(!access(outfilename, W_OK)){
+    printf("Overwriting existing %s\n", outfilename);
+    unlink(outfilename);
+  }
+  else if(!access(outfilename, F_OK)){
+    fprintf(stderr, "%s already exists and we can't overwrite it!\n");
+    exit(1);
+  } 
 
-    return new PZdabWriter(outfilename, 0);
+  return new PZdabWriter(outfilename, 0);
 }
 
 static double getcmdline_d(const char opt)
@@ -254,152 +254,152 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 int main(int argc, char *argv[])
 {
-    char * infilename = NULL, * outfilebase = NULL;
+  char * infilename = NULL, * outfilebase = NULL;
 
-    uint64_t ticks, increment;
+  uint64_t ticks, increment;
 
-    parse_cmdline(argc, argv,
-                  infilename, outfilebase, ticks, increment);
+  parse_cmdline(argc, argv,
+      infilename, outfilebase, ticks, increment);
 
-    FILE* infile = fopen(infilename, "rb");
+  FILE* infile = fopen(infilename, "rb");
 
-    PZdabFile* p = new PZdabFile();
-    if (p->Init(infile) < 0){
-        fprintf(stderr, "Did not open file\n");
-        exit(1);
-    }
+  PZdabFile* zfile = new PZdabFile();
+  if (zfile->Init(infile) < 0){
+    fprintf(stderr, "Did not open file\n");
+    exit(1);
+  }
 
-    // Initialize the various clocks
-    uint64_t time0 = 0;
-    int firstevent = -1;
-    uint64_t time50 = 0;
-    uint64_t time10 = 0;
-    uint64_t longtime = 0;
-    int epoch = 0;
-    int index = usedb?GetLastIndex():0;
+  // Initialize the various clocks
+  uint64_t time0 = 0;
+  int firstevent = -1;
+  uint64_t time50 = 0;
+  uint64_t time10 = 0;
+  uint64_t longtime = 0;
+  int epoch = 0;
+  int index = usedb?GetLastIndex():0;
 
-    // Setup initial output file
-    PZdabWriter* w1  = Output(outfilebase, index);
-    if(w1->IsOpen() == 0){
-        fprintf(stderr, "Could not open output file\n");
-        exit(1);
-    }
-    PZdabWriter* w2 = NULL;
+  // Setup initial output file
+  PZdabWriter* w1  = Output(outfilebase, index);
+  if(w1->IsOpen() == 0){
+    fprintf(stderr, "Could not open output file\n");
+    exit(1);
+  }
+  PZdabWriter* w2 = NULL;
 
-    // Set up the Header Buffer
-    const int headertypes = 3;
-    const uint32_t Headernames[headertypes] = 
-             { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
-    char* header[headertypes];
-    for(int i = 0; i<headertypes; i++){
-        header[i] = (char*) malloc(NWREC);
+  // Set up the Header Buffer
+  const int headertypes = 3;
+  const uint32_t Headernames[headertypes] = 
+  { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
+  char* header[headertypes];
+  for(int i = 0; i<headertypes; i++){
+    header[i] = (char*) malloc(NWREC);
+    memset(header[i],0,NWREC*sizeof(char));
+  }
+
+  // Loop over ZDAB Records
+  uint64_t eventn = 0;
+  while(nZDAB * const zrec = zfile->NextRecord()){
+
+    // Check to fill Header Buffer
+    for (int i=0; i<headertypes; i++){
+      if (zrec->bank_name == Headernames[i]){
         memset(header[i],0,NWREC*sizeof(char));
+        GenericRecordHeader* grh = (GenericRecordHeader*) zrec;
+        unsigned long recLen = grh->RecordLength; 
+        SWAP_INT32(zrec,recLen/sizeof(uint32_t));
+        memcpy(header[i], zrec+1, recLen*sizeof(char));
+        SWAP_INT32(zrec,recLen/sizeof(uint32_t));
+      }
     }
 
-    // Loop over ZDAB Records
-    uint64_t eventn = 0;
-    while(nZDAB * const zrec = p->NextRecord()){
- 
-        // Check to fill Header Buffer
-        for (int i=0; i<headertypes; i++){
-            if (zrec->bank_name == Headernames[i]){
-                memset(header[i],0,NWREC*sizeof(char));
-                GenericRecordHeader* grh = (GenericRecordHeader*) zrec;
-                unsigned long recLen = grh->RecordLength; 
-                SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-                memcpy(header[i], zrec+1, recLen*sizeof(char));
-                SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-            }
-        }
+    // If the record has an associated time, compute all the time
+    // variables.  Non-hit records don't have times.
+    PmtEventRecord* hits = zfile->GetPmtRecord(zrec);
+    if (hits){
+      // Store the old 50MHz Clock Time for comparison
+      const uint64_t oldtime = time50;
 
-        // If the event has an associated time, compute every
-        // conceivable time variable.
-        PmtEventRecord* hits = p->GetPmtRecord(zrec);
-        if (hits != NULL){
-            // Store the old 50MHz Clock Time for comparison
-            const uint64_t oldtime = time50;
+      // Get the current 50MHz Clock Time
+      // Implementing Part of Method Get50MHzTime() 
+      // from PZdabFile.cxx
+      time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+        + hits->TriggerCardData.Bc50_1;
 
-            // Get the current 50MHz Clock Time
-            // Implementing Part of Method Get50MHzTime() 
-            // from PZdabFile.cxx
-            time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                + hits->TriggerCardData.Bc50_1;
+      // Check for pathological case
+      if (time50 == 0) time50 = oldtime;
 
-            // Check for pathological case
-            if (time50 == 0) time50 = oldtime;
+      // Check whether clock has rolled over
+      if (time50 < oldtime) epoch++;
 
-            // Check whether clock has rolled over
-            if (time50 < oldtime) epoch++;
+      // Set the Internal Clock
+      longtime = time50 + maxtime*epoch;
 
-            // Set the Internal Clock
-            longtime = time50 + maxtime*epoch;
+      // Now get the 10MHz Clock Time
+      // Method taken from zdab_convert.cpp
+      time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
+        + hits->TriggerCardData.Bc10_1;
 
-            // Now get the 10MHz Clock Time
-            // Method taken from zdab_convert.cpp
-            time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                + hits->TriggerCardData.Bc10_1;
-
-            // Set Time Origin
-            if (firstevent == -1){
-                time0 = longtime;
-                // Make initial database entry
-                if(usedb) Database(index, time10, time50);
-                firstevent = 0;
-            }
-        }
-
-        // Chop
-        if (longtime < time0 + increment){
-            OutZdab(zrec, w1, p);
-        }
-        else if (longtime < time0 + ticks){
-            if(!w2){
-                if(maxfiles > 0 && index+2 >= maxfiles) break;
-                w2 = Output(outfilebase, index+1);
-                if(!w2->IsOpen()){
-                    fprintf(stderr, "Could not open output file %d\n",
-                            index+1);
-                    exit(1);
-                }
-                for(int i=0; i<headertypes; i++){
-                    OutHeader((GenericRecordHeader*) header[i], w2, i);
-                }
-                if(usedb) Database(index, time10, time50);
-            }
-            OutZdab(zrec, w1, p);
-            OutZdab(zrec, w2, p);
-        }
-        else{
-            // XXX This does not handle the case of the event being
-            // XXX already in the next overlap region
-            index++;
-            w1->Close();
-            w1 = NULL;
-            if(w2){
-                w1 = w2;
-                w2 = NULL;
-            }
-            else{
-                if(maxfiles > 0 && index+1 >= maxfiles) break;
-                w1 = Output(outfilebase, index);
-                if(!w1->IsOpen()){
-                    fprintf(stderr, "Could not open output file %d\n",
-                            index);
-                    exit(1);
-                }
-                for(int i=0; i<headertypes; i++)
-                    OutHeader((GenericRecordHeader*) header[i], w1, i);
-                if(usedb) Database(index, time10, time50);
-            }
-            OutZdab(zrec, w1, p);
-            time0 += increment;
-        }
-        eventn++;
+      // Set Time Origin
+      if (firstevent == -1){
+        time0 = longtime;
+        // Make initial database entry
+        if(usedb) Database(index, time10, time50);
+        firstevent = 0;
+      }
     }
-    if(w1) w1->Close();
-    if(w2) w2->Close();
-    if(usedb) Database(index, time10, time50);
 
-    printf("Done. %d events processed\n", eventn);
-    return 0;
+    // Chop
+    if (longtime < time0 + increment){
+      OutZdab(zrec, w1, zfile);
+    }
+    else if (longtime < time0 + ticks){
+      if(!w2){
+        if(maxfiles > 0 && index+2 >= maxfiles) break;
+        w2 = Output(outfilebase, index+1);
+        if(!w2->IsOpen()){
+          fprintf(stderr, "Could not open output file %d\n",
+              index+1);
+          exit(1);
+        }
+        for(int i=0; i<headertypes; i++){
+          OutHeader((GenericRecordHeader*) header[i], w2, i);
+        }
+        if(usedb) Database(index, time10, time50);
+      }
+      OutZdab(zrec, w1, zfile);
+      OutZdab(zrec, w2, zfile);
+    }
+    else{
+      // XXX This does not handle the case of the event being
+      // XXX already in the next overlap region
+      index++;
+      w1->Close();
+      w1 = NULL;
+      if(w2){
+        w1 = w2;
+        w2 = NULL;
+      }
+      else{
+        if(maxfiles > 0 && index+1 >= maxfiles) break;
+        w1 = Output(outfilebase, index);
+        if(!w1->IsOpen()){
+          fprintf(stderr, "Could not open output file %d\n",
+              index);
+          exit(1);
+        }
+        for(int i=0; i<headertypes; i++)
+          OutHeader((GenericRecordHeader*) header[i], w1, i);
+        if(usedb) Database(index, time10, time50);
+      }
+      OutZdab(zrec, w1, zfile);
+      time0 += increment;
+    }
+    eventn++;
+  }
+  if(w1) w1->Close();
+  if(w2) w2->Close();
+  if(usedb) Database(index, time10, time50);
+
+  printf("Done. %d events processed\n", eventn);
+  return 0;
 }
