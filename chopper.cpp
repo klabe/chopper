@@ -17,7 +17,7 @@ static bool usedb = true;
 static bool clobber = true;
 
 // Most output files permitted, where zero means unlimited.
-static unsigned int maxfiles = 0;
+static int maxfiles = 0;
 
 // Tells us whtn the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
@@ -269,8 +269,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 static void compute_times(const PmtEventRecord * const hits, 
                           uint64_t & time10, uint64_t & time50,
-                          uint64_t & longtime, int & epoch,
-                          uint64_t & time0)
+                          uint64_t & longtime, int & epoch)
 {
   // Store the old 50MHz Clock Time for comparison
   const uint64_t oldtime = time50;
@@ -358,7 +357,7 @@ int main(int argc, char *argv[])
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
-      compute_times(hits, time10, time50, longtime, epoch, time0);
+      compute_times(hits, time10, time50, longtime, epoch);
  
       // Set time origin on first event
       if(time0 == 0){
@@ -421,6 +420,6 @@ int main(int argc, char *argv[])
   if(w2) w2->Close();
   if(usedb) Database(index, time10, time50);
 
-  printf("Done. %d events processed\n", eventn);
+  printf("Done. %lu events processed\n", eventn);
   return 0;
 }
