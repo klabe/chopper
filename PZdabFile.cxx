@@ -83,7 +83,7 @@ void PZdabFile::Free()
 int PZdabFile::Init( FILE *inFile )
 {
 	mFile = inFile;
-	if( inFile && !fseek( inFile, 0L, SEEK_SET ) ) {
+	if( inFile ) {
 		mWordOffset = 0;
 		mBlockCount = 0;
 		mRecordCount= 0;
