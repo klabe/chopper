@@ -205,7 +205,7 @@ static void printhelp()
   "\n"
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
-  "  -m [n]: Set maximum number of output files, discarding remainder"
+  "  -m [n]: Set maximum number of output files, discarding remainder\n"
   "          of input.  Zero means unlimited.\n"
   "  -h: This help text\n"
   );
@@ -260,8 +260,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  ticks = int((chunksize+overlap)*50000000); // 50 MHz clock
-  increment = int(chunksize*50000000);
+  ticks = uint64_t((chunksize+overlap)*50000000); // 50 MHz clock
+  increment = uint64_t(chunksize*50000000);
 }
 
 static void compute_times(const PmtEventRecord * const hits, 
@@ -328,25 +328,24 @@ int main(int argc, char *argv[])
   // Set up the Header Buffer
   const int headertypes = 3;
   const uint32_t Headernames[headertypes] = 
-  { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
+    { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
   char* header[headertypes];
   for(int i = 0; i<headertypes; i++){
     header[i] = (char*) malloc(NWREC);
-    memset(header[i],0,NWREC*sizeof(char));
+    memset(header[i],0,NWREC);
   }
 
   // Loop over ZDAB Records
-  uint64_t eventn = 0;
+  uint64_t eventn = 0, recordn = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
 
     // Check to fill Header Buffer
     for (int i=0; i<headertypes; i++){
       if (zrec->bank_name == Headernames[i]){
-        memset(header[i],0,NWREC*sizeof(char));
-        GenericRecordHeader* grh = (GenericRecordHeader*) zrec;
-        unsigned long recLen = grh->RecordLength; 
+        memset(header[i],0,NWREC);
+        unsigned long recLen=((GenericRecordHeader*)zrec)->RecordLength;
         SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-        memcpy(header[i], zrec+1, recLen*sizeof(char));
+        memcpy(header[i], zrec+1, recLen);
         SWAP_INT32(zrec,recLen/sizeof(uint32_t));
       }
     }
@@ -354,6 +353,7 @@ int main(int argc, char *argv[])
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+      eventn++;
       compute_times(hits, time10, time50, longtime, epoch);
  
       // Set time origin on first event
@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
     }
     else if (longtime < time0 + ticks){
       if(!w2){
-        if(maxfiles > 0 && index+2 >= maxfiles) break;
+        if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
         w2 = Output(outfilebase, index+1);
         if(!w2->IsOpen()){
           fprintf(stderr, "Could not open output file %d\n",
@@ -397,7 +397,7 @@ int main(int argc, char *argv[])
         w2 = NULL;
       }
       else{
-        if(maxfiles > 0 && index+1 >= maxfiles) break;
+        if(maxfiles > 0 && index+1 >= maxfiles) { eventn--; break; }
         w1 = Output(outfilebase, index);
         if(!w1->IsOpen()){
           fprintf(stderr, "Could not open output file %d\n",
@@ -411,12 +411,13 @@ int main(int argc, char *argv[])
       OutZdab(zrec, w1, zfile);
       time0 += increment;
     }
-    eventn++;
+    recordn++;
   }
   if(w1) w1->Close();
   if(w2) w2->Close();
   if(usedb) Database(index, time10, time50);
 
-  printf("Done. %lu events processed\n", eventn);
+  printf("Done. %lu record%s, %lu event%s processed\n",
+         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
   return 0;
 }
