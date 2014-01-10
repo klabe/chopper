@@ -10,6 +10,9 @@
 #include <math.h>
 #include <limits.h>
 
+static double chunksize = 1.0; // Chunk Size in Seconds
+static double overlap = 0.1; // Overlap Size in Seconds
+
 // Whether to use the database or just number starting with zero.
 static bool usedb = true;
 
@@ -134,8 +137,15 @@ static int GetLastIndex()
 static PZdabWriter * Output(const char * const base,
                             const unsigned int index)
 {
-  char outfilename[32];
-  sprintf(outfilename, "%s%i.zdab", base, index);
+  const int maxlen = 1024;
+  char outfilename[maxlen];
+  
+  if(snprintf(outfilename, maxlen, "%s_%i_%.2f_%.2f.zdab",
+           base, index, chunksize, overlap) >= maxlen){
+    outfilename[maxlen-1] = 0; // or does snprintf do this already?
+    fprintf(stderr, "WARNING: Output filename truncated to %s\n",
+            outfilename);
+  }
 
   if(!access(outfilename, W_OK)){
     if(!clobber){
@@ -220,9 +230,6 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   bool done = false;
   
   infilename = outfilebase = NULL;
-
-  double chunksize = 1.0; // Chunk Size in Seconds
-  double overlap = 0.1; // Overlap Size in Seconds
 
   while(!done){ 
     const char ch = getopt(argc, argv, opts);
