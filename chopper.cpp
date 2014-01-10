@@ -133,7 +133,9 @@ static int GetLastIndex()
 }
 
 // This function builds a new output file for each chunk and should be
-// called each time the index in incremented.
+// called each time the index in incremented.  If it can't open 
+// the file, it aborts the program, so the return pointer does not
+// need to be checked.
 static PZdabWriter * Output(const char * const base,
                             const unsigned int index)
 {
@@ -161,7 +163,13 @@ static PZdabWriter * Output(const char * const base,
     exit(1);
   } 
 
-  return new PZdabWriter(outfilename, 0);
+  PZdabWriter * const ret = new PZdabWriter(outfilename, 0);
+
+  if(!ret || !ret->IsOpen()){
+    fprintf(stderr, "Could not open output file %s\n", outfilename);
+    exit(1);
+  }
+  return ret;
 }
 
 static double getcmdline_d(const char opt)
@@ -326,10 +334,6 @@ int main(int argc, char *argv[])
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, index);
-  if(w1->IsOpen() == 0){
-    fprintf(stderr, "Could not open output file\n");
-    exit(1);
-  }
   PZdabWriter* w2 = NULL;
 
   // Set up the Header Buffer
@@ -380,11 +384,6 @@ int main(int argc, char *argv[])
       if(!w2){
         if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
         w2 = Output(outfilebase, index+1);
-        if(!w2->IsOpen()){
-          fprintf(stderr, "Could not open output file %d\n",
-              index+1);
-          exit(1);
-        }
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
@@ -406,11 +405,6 @@ int main(int argc, char *argv[])
       else{
         if(maxfiles > 0 && index+1 >= maxfiles) { eventn--; break; }
         w1 = Output(outfilebase, index);
-        if(!w1->IsOpen()){
-          fprintf(stderr, "Could not open output file %d\n",
-              index);
-          exit(1);
-        }
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
         if(usedb) Database(index, time10, time50);
