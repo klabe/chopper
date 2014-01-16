@@ -420,12 +420,12 @@ int main(int argc, char *argv[])
       int deadsec = 0;
       while(longtime > time0 + ticks + deadsec*increment){
         w1->Close();
+        index++;
         if(maxfiles > 0 && index+1 >= maxfiles) {eventn--; break; }
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
         if(usedb) Database(index, time10, time0+deadsec*increment);
-        index++;
         deadsec++;
       }
       time0 = time0 + deadsec*increment;
