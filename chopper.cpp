@@ -177,10 +177,10 @@ static PZdabWriter * Output(const char * const base,
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, const unsigned int index)
+static void Close(const char* const base, const unsigned int index, 
+                  PZdabWriter* const w)
 {
-  w1->Close();
-  w1 = NULL;
+  w->Close();
 
   const int maxlen = 1024;
   char closedfilename[maxlen];
@@ -429,7 +429,8 @@ int main(int argc, char *argv[])
     // promote that file to the current chunk.  If there is no
     // overlap file, open a new chunk.
     else{
-      Close(outfilebase, index);
+      Close(outfilebase, index, w1);
+      w1 = NULL;
       index++;
       if(w2){
         w1 = w2;
@@ -446,7 +447,8 @@ int main(int argc, char *argv[])
     // Now check for empty chunks
       int deadsec = 0;
       while(longtime > time0 + ticks + deadsec*increment){
-        Close(outfilebase, index);
+        Close(outfilebase, index, w1);
+        w1 = NULL;
         index++;
         if(maxfiles > 0 && index+1 >= maxfiles) {eventn--; break; }
         w1 = Output(outfilebase, index);
@@ -463,7 +465,7 @@ int main(int argc, char *argv[])
         if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
         w2 = Output(outfilebase, index+1);
         for(int i=0; i<headertypes; i++){
-          OutHeaders((GenericRecordHeader*) header[i], w2, i);
+          OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
         if(usedb) Database(index, time10, time0);
         OutZdab(zrec, w1, zfile);
@@ -472,12 +474,8 @@ int main(int argc, char *argv[])
     }
     recordn++;
   }
-  if(w1) Close(outfilebase, index);
-  if(w2){
-    w1 = w2;
-    index++;
-    Close(outfilebase, index);
-  }
+  if(w1) Close(outfilebase, index, w1);
+  if(w2) Close(outfilebase, index+1, w2);
 
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
