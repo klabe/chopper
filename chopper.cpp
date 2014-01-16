@@ -53,6 +53,9 @@ static char * sqlserver = "cps4",
 static const char * const sqldb = "monitor";
 
 // This function writes index-time pairs to the clock database
+// The entry has the following meaning:
+// The 50MHz clock shows the start of the time interval in which events
+// were allowed in.  The 10MHz clock is set to the time of the first event
 static void Database(const int index, const uint64_t time10,
                      const uint64_t time50)
 {
@@ -376,9 +379,11 @@ int main(int argc, char *argv[])
     }
 
     // Chop
+    // Within the unique chunk
     if (longtime < time0 + increment){
       OutZdab(zrec, w1, zfile);
     }
+    // Within the overlap interval
     else if (longtime < time0 + ticks){
       if(!w2){
         if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
@@ -391,9 +396,11 @@ int main(int argc, char *argv[])
       OutZdab(zrec, w1, zfile);
       OutZdab(zrec, w2, zfile);
     }
+    // Past the overlap region
+    // First, close old chunk and, if there is an open overlap,
+    // promote that file to the current chunk.  If there is no
+    // overlap file, open a new chunk.
     else{
-      // XXX This does not handle the case of the event being
-      // XXX already in the next overlap region
       index++;
       w1->Close();
       w1 = NULL;
@@ -408,14 +415,38 @@ int main(int argc, char *argv[])
           OutHeader((GenericRecordHeader*) header[i], w1, i);
         if(usedb) Database(index, time10, time0);
       }
-      OutZdab(zrec, w1, zfile);
       time0 += increment;
+    // Now check for empty chunks
+      int deadsec = 0;
+      while(longtime > time0 + ticks + deadsec*increment){
+        w1->Close();
+        if(maxfiles > 0 && index+1 >= maxfiles) {eventn--; break; }
+        w1 = Output(outfilebase, index);
+        for(int i=0; i<headertypes; i++)
+          OutHeader((GenericRecordHeader*) header[i], w1, i);
+        if(usedb) Database(index, time10, time0+deadsec*increment);
+        index++;
+        deadsec++;
+      }
+      time0 = time0 + deadsec*increment;
+    // Lastly, check whether the event is in an overlap or not
+      if (longtime < time0 + increment)
+        OutZdab(zrec, w1, zfile);
+      else{
+        if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
+        w2 = Output(outfilebase, index+1);
+        for(int i=0; i<headertypes; i++){
+          OutHeaders((GenericRecordHeader*) header[i], w2, i);
+        }
+        if(usedb) Database(index, time10, time0);
+        OutZdab(zrec, w1, zfile);
+        OutZdab(zrec, w2, zfile);
+      }
     }
     recordn++;
   }
   if(w1) w1->Close();
   if(w2) w2->Close();
-  if(usedb) Database(index, time10, time0);
 
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
