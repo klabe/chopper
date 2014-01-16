@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
-        if(usedb) Database(index, time10, time50);
+        if(usedb) Database(index, time10, time0);
       }
     }
 
@@ -386,7 +386,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
-        if(usedb) Database(index, time10, time50);
+        if(usedb) Database(index, time10, time0);
       }
       OutZdab(zrec, w1, zfile);
       OutZdab(zrec, w2, zfile);
@@ -406,7 +406,7 @@ int main(int argc, char *argv[])
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(usedb) Database(index, time10, time50);
+        if(usedb) Database(index, time10, time0);
       }
       OutZdab(zrec, w1, zfile);
       time0 += increment;
@@ -415,7 +415,7 @@ int main(int argc, char *argv[])
   }
   if(w1) w1->Close();
   if(w2) w2->Close();
-  if(usedb) Database(index, time10, time50);
+  if(usedb) Database(index, time10, time0);
 
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
