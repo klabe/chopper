@@ -174,6 +174,34 @@ static PZdabWriter * Output(const char * const base,
   return ret;
 }
 
+// This function closes the completed primary chunk and  moves the file
+// to the appropriate directory.  It should be used here in place of the 
+// PZdabWriter Close() call. 
+static void Close(const char* const base, const unsigned int index)
+{
+  w1->Close();
+  w1 = NULL;
+
+  const int maxlen = 1024;
+  char closedfilename[maxlen];
+
+  snprintf(closedfilename, maxlen, "%s_%i_%.2f_%.2f.zdab",
+          base, index, chunksize, overlap);
+  if(!access(closedfilename, F_OK)){
+    fprintf(stderr, "%s cannot be found!\n", closedfilename);
+    exit(1);
+  }
+  
+  char newname[maxlen+6];
+  snprintf(newname, maxlen+6, "closed/%s", closedfilename);
+  if(!rename(closedfilename, newname)){
+    fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
+    exit(1);
+  }
+}
+                  
+
+
 static double getcmdline_d(const char opt)
 {
   char * endptr;
@@ -401,9 +429,8 @@ int main(int argc, char *argv[])
     // promote that file to the current chunk.  If there is no
     // overlap file, open a new chunk.
     else{
+      Close(outfilebase, index);
       index++;
-      w1->Close();
-      w1 = NULL;
       if(w2){
         w1 = w2;
         w2 = NULL;
@@ -419,7 +446,7 @@ int main(int argc, char *argv[])
     // Now check for empty chunks
       int deadsec = 0;
       while(longtime > time0 + ticks + deadsec*increment){
-        w1->Close();
+        Close(outfilebase, index);
         index++;
         if(maxfiles > 0 && index+1 >= maxfiles) {eventn--; break; }
         w1 = Output(outfilebase, index);
@@ -445,8 +472,12 @@ int main(int argc, char *argv[])
     }
     recordn++;
   }
-  if(w1) w1->Close();
-  if(w2) w2->Close();
+  if(w1) Close(outfilebase, index);
+  if(w2){
+    w1 = w2;
+    index++;
+    Close(outfilebase, index);
+  }
 
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
