@@ -187,14 +187,14 @@ static void Close(const char* const base, const unsigned int index,
 
   snprintf(closedfilename, maxlen, "%s_%i_%.2f_%.2f.zdab",
           base, index, chunksize, overlap);
-  if(!access(closedfilename, F_OK)){
+  if(access(closedfilename, F_OK)){
     fprintf(stderr, "%s cannot be found!\n", closedfilename);
     exit(1);
   }
   
-  char newname[maxlen+6];
-  snprintf(newname, maxlen+6, "closed/%s", closedfilename);
-  if(!rename(closedfilename, newname)){
+  char newname[maxlen+7];
+  snprintf(newname, maxlen+7, "closed/%s", closedfilename);
+  if(rename(closedfilename, newname)){
     fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
     exit(1);
   }
