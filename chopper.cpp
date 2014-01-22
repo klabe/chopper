@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <math.h>
 #include <limits.h>
+#include <ofstream>
 
 static double chunksize = 1.0; // Chunk Size in Seconds
 static double overlap = 0.1; // Overlap Size in Seconds
@@ -198,10 +199,13 @@ static void Close(const char* const base, const unsigned int index,
     fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
     exit(1);
   }
+
+  ofstrem myfile;
+  myfile.open("chopper.run.log", ios::app);
+  myfile << index << newline;
+  myfile.close();
 }
                   
-
-
 static double getcmdline_d(const char opt)
 {
   char * endptr;
