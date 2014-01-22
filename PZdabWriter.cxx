@@ -590,8 +590,9 @@ int PZdabWriter::Flush()
 int PZdabWriter::WritePhysicalRecord()
 {
     if (ipos < NWREC - 1) {
-        mbuf[ipos] = NWREC - ipos - 1;
-        mbuf[ipos+1] = 5;
+        mbuf[ipos] = NWREC - ipos - 1; // Length of this padding record
+        mbuf[ipos+1] = 5; // RecordID of a padding record
+        memset(mbuf+ipos+2, 0, sizeof(u_int32)*(NWREC - ipos - 2));
         SWAP_INT32(mbuf+ipos, 2);
     } else if (ipos < NWREC) {
         mbuf[ipos] = 0; // write a 1-word padding record

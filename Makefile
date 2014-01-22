@@ -1,10 +1,11 @@
-CFLAGS = -Wno-write-strings -DSWAP_BYTES -g -fdiagnostics-show-option -I/usr/include/mysql -L/usr/lib64/mysql -lmysqlclient
+CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
+         -fdiagnostics-show-option -I/usr/include/mysql \
+         -L/usr/lib64/mysql -lmysqlclient
 
 CC = g++
 
-CHOPPER_SOURCES = chopper.cpp PZdabFile.cxx PZdabWriter.cxx MD5Checksum.cxx 
-
-# PThread.cxx PThreadInt.cxx CUtils.cxx error_ph.c
+CHOPPER_SOURCES = chopper.cpp PZdabFile.cxx PZdabWriter.cxx \
+                  MD5Checksum.cxx 
 
 all: chopper 
 
