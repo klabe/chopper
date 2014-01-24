@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <math.h>
 #include <limits.h>
-#include <ofstream>
+#include <fstream>
 
 static double chunksize = 1.0; // Chunk Size in Seconds
 static double overlap = 0.1; // Overlap Size in Seconds
@@ -200,9 +200,9 @@ static void Close(const char* const base, const unsigned int index,
     exit(1);
   }
 
-  ofstrem myfile;
-  myfile.open("chopper.run.log", ios::app);
-  myfile << index << newline;
+  std::ofstream myfile;
+  myfile.open("chopper.run.log", std::fstream::app);
+  myfile << index << "\n";
   myfile.close();
 }
                   
