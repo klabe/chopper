@@ -758,6 +758,12 @@ u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
     SWAP_INT32(sub_header, 1);
 	while (*sub_header & SUB_NOT_LAST) {
         u_int32 jump = (*sub_header & SUB_LENGTH_MASK);
+        if( jump > MAX_BUFFSIZE/4 ){
+            printf("Error: wanted to jump past the end of the buffer");
+            return(0);
+        }
+        if( jump > event_size )
+            printf("Warning: jump to subrecord suspiciously far");
         SWAP_INT32(sub_header, 1);
 		sub_header += jump;
         SWAP_INT32(sub_header, 1);
