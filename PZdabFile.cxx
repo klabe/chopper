@@ -746,6 +746,8 @@ u_int32 *PZdabFile::GetExtendedData(PmtEventRecord *pmtRecord, int subType)
 
 // GetSize - get the size of a PMT event record (including sub-fields)
 // pmtRecord - pointer to pmt record in native format
+// KL - 2/19/14 - Add Byte-swapping and un-swapping so chopper will read
+// subrecords (i.e., CAEN data) correctly.
 u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
 {
 	/* create new buffer for event */
@@ -753,11 +755,16 @@ u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
 		
 	/* make room for sub-headers */
 	u_int32	*sub_header = &pmtRecord->CalPckType;
+    SWAP_INT32(sub_header, 1);
 	while (*sub_header & SUB_NOT_LAST) {
-		sub_header += (*sub_header & SUB_LENGTH_MASK);
+        u_int32 jump = (*sub_header & SUB_LENGTH_MASK);
+        SWAP_INT32(sub_header, 1);
+		sub_header += jump;
+        SWAP_INT32(sub_header, 1);
 		event_size += (*sub_header & SUB_LENGTH_MASK) * sizeof(u_int32);
 	}
 
+    SWAP_INT32(sub_header, 1);
 	return(event_size);
 }
 
