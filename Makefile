@@ -1,6 +1,5 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
-         -fdiagnostics-show-option -I/usr/include/mysql \
-         -L/usr/lib64/mysql -lmysqlclient
+         -fdiagnostics-show-option 
 
 CC = g++
 
