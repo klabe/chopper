@@ -12,7 +12,7 @@
 
 static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
-static char* subrun = "." // Default output directory
+static char* subrun = "."; // Default output directory
 
 // Whether to write out metadata as macro files for each chunk
 static bool macro = true;
@@ -56,6 +56,7 @@ static const uint64_t maxtime = (1UL << 43);
 static void WriteMacro(const int index, const uint64_t time10,
                        const uint64_t time50)
 {
+  const char* filename = NULL;
   std::ofstream file;
   file.open ("filename.mac");
   file << "/PhysicsList/OmitMuonicProcesses true";
@@ -73,16 +74,15 @@ static void WriteMacro(const int index, const uint64_t time10,
   file << "/rat/proc fitter";
   file << "/rat/procset method \"quad\"";
   file << "/rat/proc filter";
-  file << "/rat/procset chunk" << ($CHUNK);
-  file << "/rat/procset start" << ($TIME50);
+  file << "/rat/procset chunk" << chunksize;
+  file << "/rat/procset start" << time50;
   file << "/rat/proc monitor";
-  file << "/rat/procset chunk" << ($CHUNK);
-  file << "/rat/procset index" << ($TIME50);
+  file << "/rat/procset chunk" << chunksize;
+  file << "/rat/procset start" << time50;
   file << "/rat/proc outroot";
   file << "/rat/procset filter \"true\"";
-  file << "/rat/procset file" << FILE.root;
-  file << "\n";
-  file << "/rat/inzdab/read " << DIR/processed/$FILE;
+  file << "/rat/procset file \"" << filename << ".root\"\n";
+  file << "/rat/inzdab/read " << filename;
   file.close();
 }
 
