@@ -134,8 +134,7 @@ static PZdabWriter * Output(const char * const base,
   const int maxlen = 1024;
   char outfilename[maxlen];
   
-  if(snprintf(outfilename, maxlen, "%s_%i_%.2f_%.2f.zdab",
-           base, index, chunksize, overlap) >= maxlen){
+  if(snprintf(outfilename, maxlen, "%s_%i.zdab", base, index) >= maxlen){
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
@@ -172,34 +171,33 @@ static void Close(const char* const base, const unsigned int index,
 {
   w->Close();
 
-  const int maxlen = 1024;
-  char closedfilename[maxlen];
+  if(macro){
+    const int maxlen = 1024;
+    char closedfilename[maxlen];
 
-  snprintf(closedfilename, maxlen, "%s_%i_%.2f_%.2f.zdab",
-          base, index, chunksize, overlap);
-  if(access(closedfilename, F_OK)){
-    fprintf(stderr, "%s cannot be found!\n", closedfilename);
-    exit(1);
-  }
+    snprintf(closedfilename, maxlen, "%s_%i.zdab", base, index);
+    if(access(closedfilename, F_OK)){
+      fprintf(stderr, "%s cannot be found!\n", closedfilename);
+      exit(1);
+    }
   
-  char newname[maxlen+7];
-  snprintf(newname, maxlen+7, "closed/%s", closedfilename);
-  if(rename(closedfilename, newname)){
-    fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
-    exit(1);
+    char newname[maxlen];
+    snprintf(newname, maxlen, "%s/%s", subrun, closedfilename);
+    if(rename(closedfilename, newname)){
+      fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
+      exit(1);
+    }
+
+    std::ofstream jobqueue;
+    jobqueue.open("jobqueue.txt", std::fstream::app);
+    jobqueue << "rat filename.mac -l rat.run.subrun.index.log; rm file.zdab; rm filename.mac \n";
+    jobqueue.close();
   }
 
   std::ofstream myfile;
   myfile.open("chopper.run.log", std::fstream::app);
   myfile << index << "\n";
   myfile.close();
-
-  if(macro){
-      std::ofstream jobqueue;
-      jobqueue.open("filename.txt", std::fstream::app);
-      jobqueue << "JOB HERE \n";
-      jobqueue.close();
-  }
 }
 
 // Function to assist in parsing the input variables                  
