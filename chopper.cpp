@@ -201,7 +201,8 @@ static void Close(const char* const base, const unsigned int index,
       jobqueue.close();
   }
 }
-                  
+
+// Function to assist in parsing the input variables                  
 static double getcmdline_d(const char opt)
 {
   char * endptr;
@@ -217,6 +218,7 @@ static double getcmdline_d(const char opt)
   return answer;
 }
 
+// Another function to assist in parsing the input variables
 static int getcmdline_l(const char opt)
 {
   char * endptr;
@@ -232,6 +234,7 @@ static int getcmdline_l(const char opt)
   return answer;
 }
 
+// Prints the Command Line help text
 static void printhelp()
 {
   printf(
@@ -255,6 +258,7 @@ static void printhelp()
   );
 }
 
+// This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
                           uint64_t & increment)
@@ -302,6 +306,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   increment = uint64_t(chunksize*50000000);
 }
 
+// This function calculates the time of an event as measured by the
+// various clocks we are interested in.
 static void compute_times(const PmtEventRecord * const hits, 
                           uint64_t & time10, uint64_t & time50,
                           uint64_t & longtime, int & epoch)
@@ -330,6 +336,7 @@ static void compute_times(const PmtEventRecord * const hits,
                    + hits->TriggerCardData.Bc10_1;
 }
 
+// MAIN FUCTION 
 int main(int argc, char *argv[])
 {
   char * infilename = NULL, * outfilebase = NULL;
