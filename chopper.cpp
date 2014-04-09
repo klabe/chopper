@@ -10,8 +10,9 @@
 #include <limits.h>
 #include <fstream>
 
-static double chunksize = 1.0; // Chunk Size in Seconds
-static double overlap = 0.1; // Overlap Size in Seconds
+static double chunksize = 1.0; // Default Chunk Size in Seconds
+static double overlap = 0.1; // Default Overlap Size in Seconds
+static char* subrun = "." // Default output directory
 
 // Whether to write out metadata as macro files for each chunk
 static bool macro = true;
@@ -55,32 +56,34 @@ static const uint64_t maxtime = (1UL << 43);
 static void WriteMacro(const int index, const uint64_t time10,
                        const uint64_t time50)
 {
-/PhysicsList/OmitMuonicProcesses true
-/PhysicsList/OmitHadronicProcesses true
-/PhysicsList/OmitCerenkov true
-/PhysicsList/Optical/OmitBoundaryEffects true
-/PhysicsList/OmitHadronicPhysicsList true
-/rat/db/set DETECTOR geo_file "geo/empty.geo"
-
-/run/initialize
-/rat/proc calibratePMT
-/rat/proc count
-/rat/proc update 10
-/rat/proc burst
-/rat/proc fBurstTrigName "Burst"
-/rat/proc fitter
-/rat/procset method "quad"
-/rat/proc filter
-/rat/procset chunk ($CHUNK)
-/rat/procset start ($TIME50)
-/rat/proc monitor
-/rat/procset chunk ($CHUNK)
-/rat/procset index ($TIME50)
-/rat/proc outroot
-/rat/procset filter "true"
-/rat/procset file "$FILE.root"
-
-/rat/inzdab/read $DIR/processed/$FILE
+  std::ofstream file;
+  file.open ("filename.mac");
+  file << "/PhysicsList/OmitMuonicProcesses true";
+  file << "/PhysicsList/OmitHadronicProcesses true";
+  file << "/PhysicsList/OmitCerenkov true";
+  file << "/PhysicsList/Optical/OmitBoundaryEffects true";
+  file << "/PhysicsList/OmitHadronicPhysicsList true";
+  file << "/rat/db/set DETECTOR geo_file \"geo/empty.geo\" \n";
+  file << "/run/initialize";
+  file << "/rat/proc calibratePM";
+  file << "/rat/proc count";
+  file << "/rat/proc update 10";
+  file << "/rat/proc burst";
+  file << "/rat/proc fBurstTrigName \"Burst\"";
+  file << "/rat/proc fitter";
+  file << "/rat/procset method \"quad\"";
+  file << "/rat/proc filter";
+  file << "/rat/procset chunk" << ($CHUNK);
+  file << "/rat/procset start" << ($TIME50);
+  file << "/rat/proc monitor";
+  file << "/rat/procset chunk" << ($CHUNK);
+  file << "/rat/procset index" << ($TIME50);
+  file << "/rat/proc outroot";
+  file << "/rat/procset filter \"true\"";
+  file << "/rat/procset file" << FILE.root;
+  file << "\n";
+  file << "/rat/inzdab/read " << DIR/processed/$FILE;
+  file.close();
 }
 
 // This function writes out the ZDAB record
@@ -187,6 +190,13 @@ static void Close(const char* const base, const unsigned int index,
   myfile.open("chopper.run.log", std::fstream::app);
   myfile << index << "\n";
   myfile.close();
+
+  if(macro){
+      std::ofstream jobqueue;
+      jobqueue.open("filename.txt", std::fstream::app);
+      jobqueue << "JOB HERE \n";
+      jobqueue.close();
+  }
 }
                   
 static double getcmdline_d(const char opt)
