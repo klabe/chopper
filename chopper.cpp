@@ -51,6 +51,9 @@ static int maxfiles = 0;
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
+// Maximum time allowed between events without a complaint
+static const uint64_t maxjump = 10*50000000 // 50 MHz time
+
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
 // The inputs have the following meaning:
@@ -314,10 +317,11 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // various clocks we are interested in.
 static void compute_times(const PmtEventRecord * const hits, 
                           uint64_t & time10, uint64_t & time50,
-                          uint64_t & longtime, int & epoch)
+                          uint64_t & longtime, int & epoch, int & orphan)
 {
-  // Store the old 50MHz Clock Time for comparison
-  const uint64_t oldtime = time50;
+  // Store the old 10MHz and 50MHz Clock Time for comparison
+  const uint64_t oldtime50 = time50;
+  const uint64_t oldtime10 = time10;
 
   // Get the current 50MHz Clock Time
   // Implementing Part of Method Get50MHzTime() 
@@ -326,10 +330,21 @@ static void compute_times(const PmtEventRecord * const hits,
     + hits->TriggerCardData.Bc50_1;
 
   // Check for pathological case
-  if (time50 == 0) time50 = oldtime;
+  if (time50 == 0){
+    time50 = oldtime50;
+    orphan++
+  }
 
-  // Check whether clock has rolled over
-  if (time50 < oldtime) epoch++;
+  // Check for time running backward:
+  if (time50 < oldtime50){
+
+    // Is it reasonable that the clock rolled over?
+    if (1) {
+      epoch++;
+    }
+    else{
+      fprintf(stderr, "ALARM: Time running backward!");
+    }
 
   // Set the Internal Clock
   longtime = time50 + maxtime*epoch;
@@ -382,6 +397,7 @@ int main(int argc, char *argv[])
 
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
+  int orphan = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
 
     // Check to fill Header Buffer
@@ -399,7 +415,7 @@ int main(int argc, char *argv[])
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
       eventn++;
-      compute_times(hits, time10, time50, longtime, epoch);
+      compute_times(hits, time10, time50, longtime, epoch, orphan);
  
       // Set time origin on first event
       if(time0 == 0){
