@@ -1,7 +1,6 @@
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
 #include <string>
-#include <mysql.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +13,8 @@
 static double chunksize = 1.0; // Chunk Size in Seconds
 static double overlap = 0.1; // Overlap Size in Seconds
 
-// Whether to use the database or just number starting with zero.
-static bool usedb = true;
+// Whether to write out metadata as macro files for each chunk
+static bool macro = true;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -23,7 +22,7 @@ static bool clobber = true;
 // Most output files permitted, where zero means unlimited.
 static int maxfiles = 0;
 
-// Tells us whtn the 50MHz clock rolls over
+// Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
 // The general logic here is as follows:
@@ -48,30 +47,14 @@ static const uint64_t maxtime = (1UL << 43);
 // program (it will last 5000 years). Epoch counts the number of time
 // that the real 50 MHz clock has rolled over.
 
-static char * sqlserver = "cps4",
-            * sqluser   = "snot",
-            * sqlpass   = "looseCable60";
-static const char * const sqldb = "monitor";
-
-// This function writes index-time pairs to the clock database
-// The entry has the following meaning:
+// This function writes macro files needed to correctly interpret the
+// chopped files with RAT.  It can be suppressed with the -t flag.
+// The inputs have the following meaning:
 // The 50MHz clock shows the start of the time interval in which events
 // were allowed in.  The 10MHz clock is set to the time of the first event
-static void Database(const int index, const uint64_t time10,
-                     const uint64_t time50)
+static void WriteMacro(const int index, const uint64_t time10,
+                       const uint64_t time50)
 {
-  MYSQL* conn = mysql_init(NULL);
-  if(!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
-                         0, NULL, 0)){
-    fprintf(stderr, "Cannot connect to database\n");
-    return;
-  }
-
-  char query[256];
-  sprintf(query, "INSERT INTO clock VALUES (%d, %ld, %ld)",
-          index, time10, time50);
-  mysql_query(conn, query);
-  mysql_close(conn);
 }
 
 // This function writes out the ZDAB record
@@ -107,32 +90,6 @@ static void OutHeader(const GenericRecordHeader * const hdr,
   }
   if(w->WriteBank((uint32_t *)hdr, index))
     fprintf(stderr,"Error writing to zdab file\n");
-}
-
-// This function queries the clock database to determine the most recent
-// value of the index.
-static int GetLastIndex()
-{
-  MYSQL * const conn = mysql_init(NULL);
-  if (!mysql_real_connect(conn, sqlserver, sqluser, sqlpass, sqldb,
-        0, NULL, 0)){
-    fprintf(stderr,"Can't connect to database. Starting with 0!\n");
-    return 0;
-  }
-
-  const char * const query = "SELECT MAX(id) AS id FROM clock";
-
-  mysql_query(conn, query);
-  MYSQL_RES * const result = mysql_store_result(conn);
-  const MYSQL_ROW row = mysql_fetch_row(result);
-  if(!row){
-    fprintf(stderr, "No data in clock database\n");
-    return 0;
-  }
-  const int id = atoi(row[0]) + 1;
-  fprintf(stderr, "id %d\n", id);  // XXX needed?
-  mysql_close(conn);
-  return id;
 }
 
 // This function builds a new output file for each chunk and should be
@@ -279,7 +236,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'c': chunksize = getcmdline_d(ch); break;
       case 'l': overlap = getcmdline_d(ch); break;
 
-      case 't': macros = false; break;
+      case 't': macro = false; break;
       case 'n': clobber = false; break;
 
       case 'h': printhelp(); exit(0);
@@ -355,7 +312,7 @@ int main(int argc, char *argv[])
   uint64_t time10 = 0;
   uint64_t longtime = 0;
   int epoch = 0;
-  int index = usedb?GetLastIndex():0;
+  int index = 0;
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, index);
@@ -397,7 +354,7 @@ int main(int argc, char *argv[])
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
-        if(usedb) Database(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0);
       }
     }
 
@@ -414,7 +371,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
-        if(usedb) Database(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0);
       }
       OutZdab(zrec, w1, zfile);
       OutZdab(zrec, w2, zfile);
@@ -436,7 +393,7 @@ int main(int argc, char *argv[])
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(usedb) Database(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0);
       }
       time0 += increment;
     // Now check for empty chunks
@@ -449,7 +406,7 @@ int main(int argc, char *argv[])
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(usedb) Database(index, time10, time0+deadsec*increment);
+        if(macro) WriteMacro(index, time10, time0+deadsec*increment);
         deadsec++;
       }
       time0 = time0 + deadsec*increment;
@@ -462,7 +419,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
-        if(usedb) Database(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0);
         OutZdab(zrec, w1, zfile);
         OutZdab(zrec, w2, zfile);
       }
