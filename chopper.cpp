@@ -1,3 +1,28 @@
+// The Chopper
+// K Labe and M Strait, U Chicago, 2013-2014.
+
+// The general logic here is as follows:
+// We open a zdab file and read in events, looking at their time. The 
+// events are written out into smaller files of fixed time length.  In 
+// addition, we allow for a nonzero overlap interval, in which events
+// are written into two files.  When header records are encountered,
+// they are saved to a buffer, which is written out at the beginning of
+// each new output file.
+
+// Explanation of the various clocks used in this program: Since I'm
+// reading ZDABs, I need to track the 50 MHz clock for accuracy, and
+// the 10 MHz clock for uniqueness. For a given event, the trigger
+// time will be stored in the variables time10 and time50. The chopper
+// will start a new file every "chunksize" with a trailing period of
+// overlap of size "overlap". Time0 represents the beginning of the
+// oldest open chunk, according to the longtime clock. When the chunk is
+// closed, Time0 is increased by "increment" to ensure that it increases
+// uniformly. "maxtime" tells us when the 50 MHz clock rolls over.
+// Longtime is an internal 50 MHz clock that uses the full 64 bits
+// available so that it will not roll over during the execution of the
+// program (it will last 5000 years). Epoch counts the number of times
+// that the real 50 MHz clock has rolled over.
+
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
 #include <string>
@@ -26,28 +51,6 @@ static int maxfiles = 0;
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
-// The general logic here is as follows:
-// We open a zdab file and read in events, looking at their time. The 
-// events are written out into smaller files of fixed time length.  In 
-// addition, we allow for a nonzero overlap interval, in which events
-// are written into two files.  When header records are encountered,
-// they are saved to a buffer, which is written out at the beginning of
-// each new output file.
-
-// Explanation of the various clocks used in this program: Since I'm
-// reading ZDABs, I need to track the 50 MHz clock for accuracy, and
-// the 10 MHz clock for uniqueness. For a given event, the trigger
-// time will be stored in the variables time10 and time50. The chopper
-// will start a new file every "chunksize" with a trailing period of
-// overlap of size "overlap". Time0 represents the beginning of the
-// oldest open chunk, according to the longtime clock. When the chunk is
-// closed, Time0 is increased by "increment" to ensure that it increases
-// uniformly. "maxtime" tells us when the 50 MHz clock rolls over.
-// Longtime is an internal 50 MHz clock that uses the full 64 bits
-// available so that it will not roll over during the execution of the
-// program (it will last 5000 years). Epoch counts the number of time
-// that the real 50 MHz clock has rolled over.
-
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
 // The inputs have the following meaning:
@@ -59,29 +62,29 @@ static void WriteMacro(const int index, const uint64_t time10,
   const char* filename = NULL;
   std::ofstream file;
   file.open ("filename.mac");
-  file << "/PhysicsList/OmitMuonicProcesses true";
-  file << "/PhysicsList/OmitHadronicProcesses true";
-  file << "/PhysicsList/OmitCerenkov true";
-  file << "/PhysicsList/Optical/OmitBoundaryEffects true";
-  file << "/PhysicsList/OmitHadronicPhysicsList true";
-  file << "/rat/db/set DETECTOR geo_file \"geo/empty.geo\" \n";
-  file << "/run/initialize";
-  file << "/rat/proc calibratePM";
-  file << "/rat/proc count";
-  file << "/rat/proc update 10";
-  file << "/rat/proc burst";
-  file << "/rat/proc fBurstTrigName \"Burst\"";
-  file << "/rat/proc fitter";
-  file << "/rat/procset method \"quad\"";
-  file << "/rat/proc filter";
-  file << "/rat/procset chunk" << chunksize;
-  file << "/rat/procset start" << time50;
-  file << "/rat/proc monitor";
-  file << "/rat/procset chunk" << chunksize;
-  file << "/rat/procset start" << time50;
-  file << "/rat/proc outroot";
-  file << "/rat/procset filter \"true\"";
-  file << "/rat/procset file \"" << filename << ".root\"\n";
+  file << "/PhysicsList/OmitMuonicProcesses true\n";
+  file << "/PhysicsList/OmitHadronicProcesses true\n";
+  file << "/PhysicsList/OmitCerenkov true\n";
+  file << "/PhysicsList/Optical/OmitBoundaryEffects true\n";
+  file << "/PhysicsList/OmitHadronicPhysicsList true\n";
+  file << "/rat/db/set DETECTOR geo_file \"geo/empty.geo\" \n\n";
+  file << "/run/initialize\n";
+  file << "/rat/proc calibratePMT\n";
+  file << "/rat/proc count\n";
+  file << "/rat/proc update 10\n";
+  file << "/rat/proc burst\n";
+  file << "/rat/proc fBurstTrigName \"Burst\"\n";
+  file << "/rat/proc fitter\n";
+  file << "/rat/procset method \"quad\"\n";
+  file << "/rat/proc filter\n";
+  file << "/rat/procset chunk" << chunksize << "\n";
+  file << "/rat/procset start" << time50 << "\n";
+  file << "/rat/proc monitor\n";
+  file << "/rat/procset chunk" << chunksize << "\n";
+  file << "/rat/procset start" << time50 << "\n";
+  file << "/rat/proc outroot\n";
+  file << "/rat/procset filter \"true\"\n";
+  file << "/rat/procset file \"" << filename << ".root\"\n\n";
   file << "/rat/inzdab/read " << filename;
   file.close();
 }
