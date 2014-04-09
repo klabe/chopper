@@ -329,6 +329,17 @@ static void compute_times(const PmtEventRecord * const hits,
   time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
     + hits->TriggerCardData.Bc50_1;
 
+  // Get the current 10MHz Clock Time
+  // Method taken from zdab_convert.cpp
+  time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
+                   + hits->TriggerCardData.Bc10_1;
+
+  // Check for consistency between clocks
+  const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
+  if (dd > 50000000){
+    fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.")
+  }
+
   // Check for pathological case
   if (time50 == 0){
     time50 = oldtime50;
@@ -337,22 +348,26 @@ static void compute_times(const PmtEventRecord * const hits,
 
   // Check for time running backward:
   if (time50 < oldtime50){
-
     // Is it reasonable that the clock rolled over?
-    if (1) {
+    if ((oldtime50 > maxtime - maxjump) && dd < 50000000 ) {
       epoch++;
     }
     else{
       fprintf(stderr, "ALARM: Time running backward!");
+      // Assume for now that the clock is wrong
+      time50 = oldtime50;
     }
+  }
+
+  // Check that the clock has not jumped ahead too far:
+  if (time50 - oldtime50 > maxjump){
+    fprintf(stderr, "ALARM: Large time gap between events!");
+    // Assume for now that the time is wrong
+    time50 = oldtime50;
+  }
 
   // Set the Internal Clock
   longtime = time50 + maxtime*epoch;
-
-  // Now get the 10MHz Clock Time
-  // Method taken from zdab_convert.cpp
-  time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                   + hits->TriggerCardData.Bc10_1;
 }
 
 // MAIN FUCTION 
