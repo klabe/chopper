@@ -249,13 +249,8 @@ static void printhelp()
   "  -c [n]: Chunk size in seconds\n"
   "  -l [n]: Overlap size in seconds\n"
   "\n"
-  "Database options:\n"
-  "  -t: Do not use database: files will start with #0\n"
-  "  -s: Server hostname\n"
-  "  -u: User name\n"
-  "  -p: Password\n"
-  "\n"
   "Misc/debugging options\n"
+  "  -t: Do not write out processing macros\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -m [n]: Set maximum number of output files, discarding remainder\n"
   "          of input.  Zero means unlimited.\n"
@@ -284,11 +279,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'c': chunksize = getcmdline_d(ch); break;
       case 'l': overlap = getcmdline_d(ch); break;
 
-      case 't': usedb = false; break;
-      case 's': sqlserver = optarg; break;
-      case 'u': sqluser = optarg; break;
-      case 'p': sqlpass = optarg; break;
-  
+      case 't': macros = false; break;
       case 'n': clobber = false; break;
 
       case 'h': printhelp(); exit(0);
