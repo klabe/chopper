@@ -57,11 +57,14 @@ static const uint64_t maxtime = (1UL << 43);
 // The 50MHz clock shows the start of the time interval in which events
 // were allowed in.  The 10MHz clock is set to the time of the first event
 static void WriteMacro(const int index, const uint64_t time10,
-                       const uint64_t time50)
+                       const uint64_t time50, const char* base)
 {
-  const char* filename = NULL;
+  char* filename = NULL;
+  char* macname = NULL;
+  snprintf(filename, 1024, "%s/%s_%i.zdab", subrun, base, index);
+  snprintf(macname, 1024, "%s/mac/%i.mac", subrun, index);
   std::ofstream file;
-  file.open ("filename.mac");
+  file.open (macname);
   file << "/PhysicsList/OmitMuonicProcesses true\n";
   file << "/PhysicsList/OmitHadronicProcesses true\n";
   file << "/PhysicsList/OmitCerenkov true\n";
@@ -81,7 +84,8 @@ static void WriteMacro(const int index, const uint64_t time10,
   file << "/rat/procset start" << time50 << "\n";
   file << "/rat/proc monitor\n";
   file << "/rat/procset chunk" << chunksize << "\n";
-  file << "/rat/procset start" << time50 << "\n";
+  file << "/rat/procset time50" << time50 << "\n";
+  file << "/rat/procset time10" << time10 << "\n";
   file << "/rat/proc outroot\n";
   file << "/rat/procset filter \"true\"\n";
   file << "/rat/procset file \"" << filename << ".root\"\n\n";
@@ -188,9 +192,11 @@ static void Close(const char* const base, const unsigned int index,
       exit(1);
     }
 
+    char* job;
+    snprintf(job, 2048, "rat %s/mac/%i.mac -l rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, index, newname, subrun, index);
     std::ofstream jobqueue;
     jobqueue.open("jobqueue.txt", std::fstream::app);
-    jobqueue << "rat filename.mac -l rat.run.subrun.index.log; rm file.zdab; rm filename.mac \n";
+    jobqueue << job;
     jobqueue.close();
   }
 
@@ -400,7 +406,7 @@ int main(int argc, char *argv[])
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
-        if(macro) WriteMacro(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0, outfilebase);
       }
     }
 
@@ -417,7 +423,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
-        if(macro) WriteMacro(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0, outfilebase);
       }
       OutZdab(zrec, w1, zfile);
       OutZdab(zrec, w2, zfile);
@@ -439,7 +445,7 @@ int main(int argc, char *argv[])
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(macro) WriteMacro(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0, outfilebase);
       }
       time0 += increment;
     // Now check for empty chunks
@@ -452,7 +458,7 @@ int main(int argc, char *argv[])
         w1 = Output(outfilebase, index);
         for(int i=0; i<headertypes; i++)
           OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(macro) WriteMacro(index, time10, time0+deadsec*increment);
+        if(macro) WriteMacro(index, time10, time0+deadsec*increment, outfilebase);
         deadsec++;
       }
       time0 = time0 + deadsec*increment;
@@ -465,7 +471,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<headertypes; i++){
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
-        if(macro) WriteMacro(index, time10, time0);
+        if(macro) WriteMacro(index, time10, time0, outfilebase);
         OutZdab(zrec, w1, zfile);
         OutZdab(zrec, w2, zfile);
       }
