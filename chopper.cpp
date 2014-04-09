@@ -234,6 +234,7 @@ static void printhelp()
   "\n"
   "Misc/debugging options\n"
   "  -t: Do not write out processing macros\n"
+  "  -s: Specify the subrun directory\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -m [n]: Set maximum number of output files, discarding remainder\n"
   "          of input.  Zero means unlimited.\n"
@@ -245,7 +246,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
                           uint64_t & increment)
 {
-  const char * const opts = "hi:o:tm:c:l:s:u:p:n";
+  const char * const opts = "hi:o:tm:c:l:s:n";
 
   bool done = false;
   
@@ -264,6 +265,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 't': macro = false; break;
       case 'n': clobber = false; break;
+      case 's': subrun = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
