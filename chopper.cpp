@@ -55,6 +55,32 @@ static const uint64_t maxtime = (1UL << 43);
 static void WriteMacro(const int index, const uint64_t time10,
                        const uint64_t time50)
 {
+/PhysicsList/OmitMuonicProcesses true
+/PhysicsList/OmitHadronicProcesses true
+/PhysicsList/OmitCerenkov true
+/PhysicsList/Optical/OmitBoundaryEffects true
+/PhysicsList/OmitHadronicPhysicsList true
+/rat/db/set DETECTOR geo_file "geo/empty.geo"
+
+/run/initialize
+/rat/proc calibratePMT
+/rat/proc count
+/rat/proc update 10
+/rat/proc burst
+/rat/proc fBurstTrigName "Burst"
+/rat/proc fitter
+/rat/procset method "quad"
+/rat/proc filter
+/rat/procset chunk ($CHUNK)
+/rat/procset start ($TIME50)
+/rat/proc monitor
+/rat/procset chunk ($CHUNK)
+/rat/procset index ($TIME50)
+/rat/proc outroot
+/rat/procset filter "true"
+/rat/procset file "$FILE.root"
+
+/rat/inzdab/read $DIR/processed/$FILE
 }
 
 // This function writes out the ZDAB record
