@@ -54,6 +54,9 @@ static const uint64_t maxtime = (1UL << 43);
 // Maximum time allowed between events without a complaint
 static const uint64_t maxjump = 10*50000000 // 50 MHz time
 
+// Maximum time drift allowed between two clocks without a complaint
+static const uint64_t maxdrift = 5000 // 50 MHz ticks (1 us)
+
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
 // The inputs have the following meaning:
@@ -336,7 +339,7 @@ static void compute_times(const PmtEventRecord * const hits,
 
   // Check for consistency between clocks
   const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
-  if (dd > 50000000){
+  if (dd > maxdrift){
     fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.")
   }
 
@@ -349,7 +352,7 @@ static void compute_times(const PmtEventRecord * const hits,
   // Check for time running backward:
   if (time50 < oldtime50){
     // Is it reasonable that the clock rolled over?
-    if ((oldtime50 > maxtime - maxjump) && dd < 50000000 ) {
+    if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift ) {
       epoch++;
     }
     else{
