@@ -65,10 +65,11 @@ static const uint64_t maxdrift = 5000; // 50 MHz ticks (1 us)
 static void WriteMacro(const int index, const uint64_t time10,
                        const uint64_t time50, const char* base)
 {
-  char* filename = NULL;
-  char* macname = NULL;
-  snprintf(filename, 1024, "%s/%s_%i.zdab", subrun, base, index);
-  snprintf(macname, 1024, "%s/mac/%i.mac", subrun, index);
+  const int maxlength = 1024;
+  char filename[maxlength];
+  char macname[maxlength];
+  snprintf(filename, maxlength, "%s/%s_%i.zdab", subrun, base, index);
+  snprintf(macname, maxlength, "%s/mac/%i.mac", subrun, index);
   std::ofstream file;
   file.open (macname);
   file << "/PhysicsList/OmitMuonicProcesses true\n";
@@ -320,57 +321,68 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // various clocks we are interested in.
 static void compute_times(const PmtEventRecord * const hits, 
                           uint64_t & time10, uint64_t & time50,
-                          uint64_t & longtime, int & epoch, int & orphan)
+                          uint64_t & longtime, int & epoch,
+                          uint64_t & eventn, int & orphan)
 {
-  // Store the old 10MHz and 50MHz Clock Time for comparison
-  const uint64_t oldtime50 = time50;
-  const uint64_t oldtime10 = time10;
-
-  // Get the current 50MHz Clock Time
-  // Implementing Part of Method Get50MHzTime() 
-  // from PZdabFile.cxx
-  time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-    + hits->TriggerCardData.Bc50_1;
-
-  // Get the current 10MHz Clock Time
-  // Method taken from zdab_convert.cpp
-  time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                   + hits->TriggerCardData.Bc10_1;
-
-  // Check for consistency between clocks
-  const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
-  if (dd > maxdrift){
-    fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.");
+  if(eventn == 0){
+    time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+                     + hits->TriggerCardData.Bc50_1;
+    time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
+                     + hits->TriggerCardData.Bc10_1;
+    if(time50 == 0) orphan++;
+    longtime = time50;
   }
+  else{
+    // Store the old 10MHz and 50MHz Clock Time for comparison
+    const uint64_t oldtime50 = time50;
+    const uint64_t oldtime10 = time10;
 
-  // Check for pathological case
-  if (time50 == 0){
-    time50 = oldtime50;
-    orphan++;
-  }
+    // Get the current 50MHz Clock Time
+    // Implementing Part of Method Get50MHzTime() 
+    // from PZdabFile.cxx
+    time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+                     + hits->TriggerCardData.Bc50_1;
 
-  // Check for time running backward:
-  if (time50 < oldtime50){
-    // Is it reasonable that the clock rolled over?
-    if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift ) {
-      epoch++;
+    // Get the current 10MHz Clock Time
+    // Method taken from zdab_convert.cpp
+    time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
+                     + hits->TriggerCardData.Bc10_1;
+
+    // Check for consistency between clocks
+    const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
+    if (dd > maxdrift){
+      fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.");
     }
-    else{
-      fprintf(stderr, "ALARM: Time running backward!");
-      // Assume for now that the clock is wrong
+
+    // Check for pathological case
+    if (time50 == 0){
+      time50 = oldtime50;
+      orphan++;
+    }
+
+    // Check for time running backward:
+    if (time50 < oldtime50){
+      // Is it reasonable that the clock rolled over?
+      if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift ) {
+        epoch++;
+      }
+      else{
+        fprintf(stderr, "ALARM: Time running backward!");
+        // Assume for now that the clock is wrong
+        time50 = oldtime50;
+      }
+    }
+
+    // Check that the clock has not jumped ahead too far:
+    if (time50 - oldtime50 > maxjump){
+      fprintf(stderr, "ALARM: Large time gap between events!");
+      // Assume for now that the time is wrong
       time50 = oldtime50;
     }
-  }
 
-  // Check that the clock has not jumped ahead too far:
-  if (time50 - oldtime50 > maxjump){
-    fprintf(stderr, "ALARM: Large time gap between events!");
-    // Assume for now that the time is wrong
-    time50 = oldtime50;
+    // Set the Internal Clock
+    longtime = time50 + maxtime*epoch;
   }
-
-  // Set the Internal Clock
-  longtime = time50 + maxtime*epoch;
 }
 
 // MAIN FUCTION 
@@ -433,10 +445,10 @@ int main(int argc, char *argv[])
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
       eventn++;
-      compute_times(hits, time10, time50, longtime, epoch, orphan);
+      compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
  
       // Set time origin on first event
-      if(time0 == 0){
+      if(eventn == 0){
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
