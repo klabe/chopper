@@ -201,8 +201,8 @@ static void Close(const char* const base, const unsigned int index,
       exit(1);
     }
 
-    char job[2048];
-    snprintf(job, 2048, "rat %s/mac/%i.mac -l %s/log/rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, subrun, index, newname, subrun, index);
+    char job[maxlength];
+    snprintf(job, 2048, "job %s, %i, %s", subrun, index, newname);
     std::ofstream jobqueue;
     jobqueue.open("jobqueue.txt", std::fstream::app);
     jobqueue << job;
