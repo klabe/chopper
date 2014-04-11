@@ -324,7 +324,7 @@ static void compute_times(const PmtEventRecord * const hits,
                           uint64_t & longtime, int & epoch,
                           uint64_t & eventn, int & orphan)
 {
-  if(eventn == 0){
+  if(eventn == 1){
     time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                      + hits->TriggerCardData.Bc50_1;
     time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
@@ -349,9 +349,9 @@ static void compute_times(const PmtEventRecord * const hits,
                      + hits->TriggerCardData.Bc10_1;
 
     // Check for consistency between clocks
-    const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
+    const uint64_t dd = std::abs((oldtime10 - time10)*5 - (oldtime50 - time50));
     if (dd > maxdrift){
-      fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.");
+      fprintf(stderr, "ALARM: The Clocks jumped by %i ticks!\n", dd);
     }
 
     // Check for pathological case
@@ -367,7 +367,7 @@ static void compute_times(const PmtEventRecord * const hits,
         epoch++;
       }
       else{
-        fprintf(stderr, "ALARM: Time running backward!");
+        fprintf(stderr, "ALARM: Time running backward!\n");
         // Assume for now that the clock is wrong
         time50 = oldtime50;
       }
@@ -375,7 +375,7 @@ static void compute_times(const PmtEventRecord * const hits,
 
     // Check that the clock has not jumped ahead too far:
     if (time50 - oldtime50 > maxjump){
-      fprintf(stderr, "ALARM: Large time gap between events!");
+      fprintf(stderr, "ALARM: Large time gap between events!\n");
       // Assume for now that the time is wrong
       time50 = oldtime50;
     }
@@ -448,7 +448,7 @@ int main(int argc, char *argv[])
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
  
       // Set time origin on first event
-      if(eventn == 0){
+      if(eventn == 1){
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
         // Make initial database entry
