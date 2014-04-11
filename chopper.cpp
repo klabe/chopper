@@ -52,10 +52,10 @@ static int maxfiles = 0;
 static const uint64_t maxtime = (1UL << 43);
 
 // Maximum time allowed between events without a complaint
-static const uint64_t maxjump = 10*50000000 // 50 MHz time
+static const uint64_t maxjump = 10*50000000; // 50 MHz time
 
 // Maximum time drift allowed between two clocks without a complaint
-static const uint64_t maxdrift = 5000 // 50 MHz ticks (1 us)
+static const uint64_t maxdrift = 5000; // 50 MHz ticks (1 us)
 
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
@@ -340,13 +340,13 @@ static void compute_times(const PmtEventRecord * const hits,
   // Check for consistency between clocks
   const uint64_t dd = (oldtime10 - time10)*5 - (oldtime50 - time50);
   if (dd > maxdrift){
-    fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.")
+    fprintf(stderr, "ALARM: The Clocks jumped by more than 1 second.");
   }
 
   // Check for pathological case
   if (time50 == 0){
     time50 = oldtime50;
-    orphan++
+    orphan++;
   }
 
   // Check for time running backward:
