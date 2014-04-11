@@ -66,9 +66,11 @@ static void WriteMacro(const int index, const uint64_t time10,
                        const uint64_t time50, const char* base)
 {
   const int maxlength = 1024;
-  char filename[maxlength];
+  char infilename[maxlength];
+  char outfilename[maxlength];
   char macname[maxlength];
-  snprintf(filename, maxlength, "%s/%s_%i.zdab", subrun, base, index);
+  snprintf(infilename, maxlength, "%s/zdab/%s_%i.zdab", subrun, base, index);
+  snprintf(outfilename, maxlength, "%s/root/%s_%i.root", subrun, base, index);
   snprintf(macname, maxlength, "%s/mac/%i.mac", subrun, index);
   std::ofstream file;
   file.open (macname);
@@ -95,8 +97,8 @@ static void WriteMacro(const int index, const uint64_t time10,
   file << "/rat/procset time10" << time10 << "\n";
   file << "/rat/proc outroot\n";
   file << "/rat/procset filter \"true\"\n";
-  file << "/rat/procset file \"" << filename << ".root\"\n\n";
-  file << "/rat/inzdab/read " << filename;
+  file << "/rat/procset file " << outfilename << "\n\n";
+  file << "/rat/inzdab/read " << infilename;
   file.close();
 }
 
@@ -193,14 +195,14 @@ static void Close(const char* const base, const unsigned int index,
     }
   
     char newname[maxlen];
-    snprintf(newname, maxlen, "%s/%s", subrun, closedfilename);
+    snprintf(newname, maxlen, "%s/zdab/%s", subrun, closedfilename);
     if(rename(closedfilename, newname)){
       fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
       exit(1);
     }
 
     char job[2048];
-    snprintf(job, 2048, "rat %s/mac/%i.mac -l %s/rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, subrun, index, newname, subrun, index);
+    snprintf(job, 2048, "rat %s/mac/%i.mac -l %s/log/rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, subrun, index, newname, subrun, index);
     std::ofstream jobqueue;
     jobqueue.open("jobqueue.txt", std::fstream::app);
     jobqueue << job;
