@@ -202,7 +202,7 @@ static void Close(const char* const base, const unsigned int index,
     }
 
     char job[maxlen];
-    snprintf(job, maxlen, "job %s, %i, %s", subrun, index, newname);
+    snprintf(job, maxlen, "./job %s %i %s", subrun, index, newname);
     std::ofstream jobqueue;
     jobqueue.open("jobqueue.txt", std::fstream::app);
     jobqueue << job;
