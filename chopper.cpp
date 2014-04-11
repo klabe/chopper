@@ -83,7 +83,7 @@ static void WriteMacro(const int index, const uint64_t time10,
   file << "/run/initialize\n";
   file << "/rat/proc calibratePMT\n";
   file << "/rat/proc count\n";
-  file << "/rat/proc update 10\n";
+  file << "/rat/procset update 10\n";
   file << "/rat/proc burst\n";
   file << "/rat/proc fBurstTrigName \"Burst\"\n";
   file << "/rat/proc fitter\n";
