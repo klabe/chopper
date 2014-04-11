@@ -34,10 +34,12 @@
 #include <math.h>
 #include <limits.h>
 #include <fstream>
+#include <signal.h>
 
 static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
 static char* subrun = "."; // Default output directory
+static bool waitnow = false; // Must we wait for queue to be rebuilt?
 
 // Whether to write out metadata as macro files for each chunk
 static bool macro = true;
@@ -185,6 +187,9 @@ static void Close(const char* const base, const unsigned int index,
   w->Close();
 
   if(macro){
+    while(waitnow){
+      usleep(100000);
+    }
     const int maxlen = 1024;
     char closedfilename[maxlen];
 
@@ -387,9 +392,19 @@ static void compute_times(const PmtEventRecord * const hits,
   }
 }
 
+// This function is called when a SIGUSR1 or SIGUSR2 arrive.
+// These signals are sent by runjobs when it is going to rebuild
+// the jobqueue and needs chopper to wait.
+void setwaitnow(int sig){
+  waitnow = sig == SIGUSR1;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
+  signal(SIGUSR1, setwaitnow);
+  signal(SIGUSR2, setwaitnow);
+
   char * infilename = NULL, * outfilebase = NULL;
 
   uint64_t ticks, increment;
