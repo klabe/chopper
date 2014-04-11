@@ -200,7 +200,7 @@ static void Close(const char* const base, const unsigned int index,
     }
 
     char job[2048];
-    snprintf(job, 2048, "rat %s/mac/%i.mac -l rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, index, newname, subrun, index);
+    snprintf(job, 2048, "rat %s/mac/%i.mac -l %s/rat.%s.%i.log; rm %s; rm %s/mac/%i.mac \n", subrun, index, subrun, subrun, index, newname, subrun, index);
     std::ofstream jobqueue;
     jobqueue.open("jobqueue.txt", std::fstream::app);
     jobqueue << job;
