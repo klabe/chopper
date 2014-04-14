@@ -359,6 +359,7 @@ static void compute_times(const PmtEventRecord * const hits,
     const int dd = std::abs(int((oldtime10 - time10)*5) - int(oldtime50 - time50));
     if (dd > maxdrift){
       fprintf(stderr, "ALARM: The Clocks jumped by %i ticks!\n", dd);
+      system("");
     }
 
     // Check for pathological case
@@ -375,6 +376,7 @@ static void compute_times(const PmtEventRecord * const hits,
       }
       else{
         fprintf(stderr, "ALARM: Time running backward!\n");
+        system("");
         // Assume for now that the clock is wrong
         time50 = oldtime50;
       }
@@ -383,6 +385,7 @@ static void compute_times(const PmtEventRecord * const hits,
     // Check that the clock has not jumped ahead too far:
     if (time50 - oldtime50 > maxjump){
       fprintf(stderr, "ALARM: Large time gap between events!\n");
+      system("");
       // Assume for now that the time is wrong
       time50 = oldtime50;
     }
