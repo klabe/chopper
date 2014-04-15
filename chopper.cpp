@@ -356,7 +356,9 @@ static void compute_times(const PmtEventRecord * const hits,
                      + hits->TriggerCardData.Bc10_1;
 
     // Check for consistency between clocks
-    const int dd = std::abs(int((oldtime10 - time10)*5) - int(oldtime50 - time50));
+    const int dd = ( (oldtime10 - time10)*5 > oldtime50 - time50 ? 
+                     (oldtime10 - time10)*5 - (oldtime50 - time50) :
+                     (oldtime50 - time50) - (oldtime10 - time10)*5 );
     if (dd > maxdrift){
       fprintf(stderr, "ALARM: The Clocks jumped by %i ticks!\n", dd);
       system("");
