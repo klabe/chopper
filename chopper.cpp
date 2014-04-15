@@ -91,12 +91,12 @@ static void WriteMacro(const int index, const uint64_t time10,
   file << "/rat/proc fitter\n";
   file << "/rat/procset method \"quad\"\n";
   file << "/rat/proc filter\n";
-  file << "/rat/procset chunk" << chunksize << "\n";
-  file << "/rat/procset start" << time50 << "\n";
+  file << "/rat/procset chunk " << chunksize << "\n";
+  file << "/rat/procset start " << time50 << "\n";
   file << "/rat/proc monitor\n";
-  file << "/rat/procset chunk" << chunksize << "\n";
-  file << "/rat/procset time50" << time50 << "\n";
-  file << "/rat/procset time10" << time10 << "\n";
+  file << "/rat/procset chunk " << chunksize << "\n";
+  file << "/rat/procset time50 " << time50 << "\n";
+  file << "/rat/procset time10 " << time10 << "\n";
   file << "/rat/proc outroot\n";
   file << "/rat/procset filter \"true\"\n";
   file << "/rat/procset file " << outfilename << "\n\n";
