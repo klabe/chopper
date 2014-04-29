@@ -40,6 +40,7 @@ static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
 static char* subrun = "."; // Default output directory
 static bool waitnow = false; // Must we wait for queue to be rebuilt?
+static const int NHITCUT = 10;
 
 // Whether to write out metadata as macro files for each chunk
 static bool macro = true;
@@ -494,7 +495,8 @@ int main(int argc, char *argv[])
     // Chop
     // Within the unique chunk
     if (longtime < time0 + increment){
-      OutZdab(zrec, w1, zfile);
+      if(nhit > NHITCUT)
+        OutZdab(zrec, w1, zfile);
     }
     // Within the overlap interval
     else if (longtime < time0 + ticks){
@@ -506,8 +508,10 @@ int main(int argc, char *argv[])
         }
         if(macro) WriteMacro(index, time10, time0, outfilebase);
       }
-      OutZdab(zrec, w1, zfile);
-      OutZdab(zrec, w2, zfile);
+      if(nhit > NHITCUT){
+        OutZdab(zrec, w1, zfile);
+        OutZdab(zrec, w2, zfile);
+      }
     }
     // Past the overlap region
     // First, close old chunk and, if there is an open overlap,
@@ -545,7 +549,8 @@ int main(int argc, char *argv[])
       time0 = time0 + deadsec*increment;
     // Lastly, check whether the event is in an overlap or not
       if (longtime < time0 + increment)
-        OutZdab(zrec, w1, zfile);
+        if(nhit>NHITCUT)
+          OutZdab(zrec, w1, zfile);
       else{
         if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
         w2 = Output(outfilebase, index+1);
@@ -553,8 +558,10 @@ int main(int argc, char *argv[])
           OutHeader((GenericRecordHeader*) header[i], w2, i);
         }
         if(macro) WriteMacro(index, time10, time0, outfilebase);
-        OutZdab(zrec, w1, zfile);
-        OutZdab(zrec, w2, zfile);
+        if(nhit>NHITCUT){
+          OutZdab(zrec, w1, zfile);
+          OutZdab(zrec, w2, zfile);
+        }
       }
     }
     recordn++;
