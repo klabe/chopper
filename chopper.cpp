@@ -453,6 +453,7 @@ int main(int argc, char *argv[])
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
   int orphan = 0;
+  int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
 
     // Check to fill Header Buffer
@@ -464,6 +465,15 @@ int main(int argc, char *argv[])
         memcpy(header[i], zrec+1, recLen);
         SWAP_INT32(zrec,recLen/sizeof(uint32_t));
       }
+    }
+
+    // Check that the record is a ZDAB_RECORD
+    // If so, grab the nhit
+    if(zrec->bank_name == ZDAB_RECORD){
+      PmtEventRecord *pmtEventPtr;
+      pmtEventPtr = (PmtEventRecord*)(zrec + 1);
+      SWAP_PMT_RECORD( pmtEventPtr );
+      nhit = pmtEventPtr->NPmtHit;
     }
 
     // If the record has an associated time, compute all the time
