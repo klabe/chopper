@@ -410,6 +410,64 @@ void setwaitnow(int sig){
   waitnow = sig == SIGUSR1;
 }
 
+// Burst Buffer Functions //
+static const int EVENTNUM = 1000; // Maximum Burst buffer depth
+static const int EVENTSIZE = 3840*sizeof(uint32_t)/sizeof(char); // Maximum Event size in words
+static const int NHITBCUT = 50; // Nhit Cut on Burst events
+static const int BurstLength = 10; // Burst length in seconds
+static const int BurstTicks = BurstLength*50000000; // length in ticks
+static const int BurstSize = 100; // Number of events constituting a burst
+
+// This function drops old events from the buffer once they expire
+void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
+            uint64_t Bursttime[EVENTNUM], int bursthead){
+  // The case that the buffer is empty
+  if(bursthead==-1) return;
+  // Normal Case
+  while(Bursttime[bursthead] < longtime - BurstTicks){
+    Bursttime[bursthead] = 0;
+    for (int j =0; j < EVENTSIZE; j++){
+      Burstev[bursthead][j] = 0;
+    }
+    if(bursthead<EVENTNUM-1){
+      bursthead++;
+    }
+    else{
+      bursthead=0;
+    }
+  }
+}
+
+// This function adds a new event to the buffer
+void AddEv(nZDAB* zrec, uint64_t longtime, 
+           char burstev[EVENTNUM][EVENTSIZE],
+           uint64_t bursttime[EVENTNUM], int bursthead, int bursttail){
+  // Check whether we will overflow the buffer
+  if(bursthead==bursttail){
+    fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
+  }
+  // Write the event to the buffer
+  else{
+    // For first event, set pointers appropriately
+    if(bursttail==-1){
+      bursttail=0;
+      bursthead=0;
+    }
+    unsigned long reclen=((GenericRecordHeader*)zrec)->RecordLength;
+    memcpy(burstev[bursttail], zrec, reclen);
+    bursttime[bursttail] = longtime;
+    bursttail++;
+  }
+  // Check whether a burst has started
+  int burstlength = 0;
+  if(bursthead<bursttail)
+    burstlength = bursttail-bursthead;
+  else
+    burstlength = EVENTNUM + bursttail - bursthead;
+  if(burstlength>BurstSize){
+  }
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -453,6 +511,12 @@ int main(int argc, char *argv[])
     memset(header[i],0,NWREC);
   }
 
+  // Set up the Burst Buffer
+  char burstev[EVENTNUM][EVENTSIZE]={0};
+  uint64_t bursttime[EVENTNUM]={0};
+  int bursthead = -1; // This points to the beginning of the burst buffer
+  int bursttail = -1; // This points to the end of the burst buffer
+
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
   int orphan = 0;
@@ -492,6 +556,11 @@ int main(int argc, char *argv[])
         time0 = longtime;
         // Make initial macro file
         if(macro) WriteMacro(index, time10, time0, outfilebase);
+      }
+      // Burst Detection Here
+      if(nhit > NHITBCUT){
+        DropEv(longtime, burstev, bursttime, bursthead);
+        AddEv(zrec, longtime, burstev, bursttime, bursthead, bursttail);
       }
     }
 
