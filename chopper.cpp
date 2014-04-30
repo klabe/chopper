@@ -477,6 +477,7 @@ int main(int argc, char *argv[])
       pmtEventPtr = (PmtEventRecord*)(zrec + 1);
       SWAP_PMT_RECORD( pmtEventPtr );
       nhit = pmtEventPtr->NPmtHit;
+      SWAP_PMT_RECORD( pmtEventPtr );
     }
 
     // If the record has an associated time, compute all the time
