@@ -40,7 +40,7 @@ static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
 static char* subrun = "."; // Default output directory
 static bool waitnow = false; // Must we wait for queue to be rebuilt?
-static const int NHITCUT = 10;
+static const int NHITCUT = 30;
 
 // Whether to write out metadata as macro files for each chunk
 static bool macro = true;
@@ -365,24 +365,26 @@ static void compute_times(const PmtEventRecord * const hits,
                      (oldtime50 - time50) - (oldtime10 - time10)*5 );
     if (dd > maxdrift){
       fprintf(stderr, "ALARM: The Clocks jumped by %i ticks!\n", dd);
-      system("");
+      //system("");
     }
 
     // Check for pathological case
     if (time50 == 0){
       time50 = oldtime50;
       orphan++;
+      return;
     }
 
     // Check for time running backward:
     if (time50 < oldtime50){
       // Is it reasonable that the clock rolled over?
-      if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift ) {
+      if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift && (oldtime50 > maxtime - maxjump) ) {
+        fprintf(stderr, "New Epoch\n");
         epoch++;
       }
       else{
         fprintf(stderr, "ALARM: Time running backward!\n");
-        system("");
+        //system("");
         // Assume for now that the clock is wrong
         time50 = oldtime50;
       }
@@ -391,7 +393,7 @@ static void compute_times(const PmtEventRecord * const hits,
     // Check that the clock has not jumped ahead too far:
     if (time50 - oldtime50 > maxjump){
       fprintf(stderr, "ALARM: Large time gap between events!\n");
-      system("");
+      //system("");
       // Assume for now that the time is wrong
       time50 = oldtime50;
     }
@@ -487,7 +489,7 @@ int main(int argc, char *argv[])
       if(eventn == 1){
         puts("Initializing time origin"); // Should only print once!
         time0 = longtime;
-        // Make initial database entry
+        // Make initial macro file
         if(macro) WriteMacro(index, time10, time0, outfilebase);
       }
     }
@@ -499,73 +501,85 @@ int main(int argc, char *argv[])
         OutZdab(zrec, w1, zfile);
     }
     // Within the overlap interval
-    else if (longtime < time0 + ticks){
-      if(!w2){
-        if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
-        w2 = Output(outfilebase, index+1);
-        for(int i=0; i<headertypes; i++){
-          OutHeader((GenericRecordHeader*) header[i], w2, i);
-        }
-        if(macro) WriteMacro(index, time10, time0, outfilebase);
-      }
-      if(nhit > NHITCUT){
-        OutZdab(zrec, w1, zfile);
-        OutZdab(zrec, w2, zfile);
-      }
-    }
-    // Past the overlap region
-    // First, close old chunk and, if there is an open overlap,
-    // promote that file to the current chunk.  If there is no
-    // overlap file, open a new chunk.
     else{
-      Close(outfilebase, index, w1);
-      w1 = NULL;
-      index++;
-      if(w2){
-        w1 = w2;
-        w2 = NULL;
-      }
-      else{
-        if(maxfiles > 0 && index+1 >= maxfiles) { eventn--; break; }
-        w1 = Output(outfilebase, index);
-        for(int i=0; i<headertypes; i++)
-          OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(macro) WriteMacro(index, time10, time0, outfilebase);
-      }
-      time0 += increment;
-    // Now check for empty chunks
-      int deadsec = 0;
-      while(longtime > time0 + ticks + deadsec*increment){
-        Close(outfilebase, index, w1);
-        w1 = NULL;
-        index++;
-        if(maxfiles > 0 && index+1 >= maxfiles) {eventn--; break; }
-        w1 = Output(outfilebase, index);
-        for(int i=0; i<headertypes; i++)
-          OutHeader((GenericRecordHeader*) header[i], w1, i);
-        if(macro) WriteMacro(index, time10, time0+deadsec*increment, outfilebase);
-        deadsec++;
-      }
-      time0 = time0 + deadsec*increment;
-    // Lastly, check whether the event is in an overlap or not
-      if (longtime < time0 + increment)
-        if(nhit>NHITCUT)
-          OutZdab(zrec, w1, zfile);
-      else{
-        if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
-        w2 = Output(outfilebase, index+1);
-        for(int i=0; i<headertypes; i++){
-          OutHeader((GenericRecordHeader*) header[i], w2, i);
+      if (longtime < time0 + ticks){
+        if(!w2){
+          if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
+          w2 = Output(outfilebase, index+1);
+          for(int i=0; i<headertypes; i++){
+            OutHeader((GenericRecordHeader*) header[i], w2, i);
+          }
+          if(macro) WriteMacro(index, time10, time0, outfilebase);
         }
-        if(macro) WriteMacro(index, time10, time0, outfilebase);
-        if(nhit>NHITCUT){
+        if(nhit > NHITCUT){
           OutZdab(zrec, w1, zfile);
           OutZdab(zrec, w2, zfile);
         }
       }
-    }
+    // Past the overlap region
+    // First, close old chunk and, if there is an open overlap,
+    // promote that file to the current chunk.  If there is no
+    // overlap file, open a new chunk.
+      else{
+        Close(outfilebase, index, w1);
+        w1 = NULL;
+        index++;
+        if(w2){
+          w1 = w2;
+          w2 = NULL;
+        }
+        else{
+          if(maxfiles > 0 && index+1 >= maxfiles) { eventn--; break; }
+          w1 = Output(outfilebase, index);
+          for(int i=0; i<headertypes; i++)
+            OutHeader((GenericRecordHeader*) header[i], w1, i);
+          if(macro) WriteMacro(index, time10, time0, outfilebase);
+        }
+        time0 += increment;
+    // Now check for empty chunks
+        int deadsec = 0;
+        while(longtime > time0 + ticks + deadsec*increment){
+          Close(outfilebase, index, w1);
+          w1 = NULL;
+          index++;
+          if(maxfiles > 0 && index+1 >= maxfiles){
+            eventn--;
+            printf("Done.  %lu record%s, %lu event%s processed\n",
+                   recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
+            return 0;
+          }
+          w1 = Output(outfilebase, index);
+          for(int i=0; i<headertypes; i++)
+            OutHeader((GenericRecordHeader*) header[i], w1, i);
+          if(macro) WriteMacro(index, time10, time0+deadsec*increment, outfilebase);
+          deadsec++;
+        }
+        time0 = time0 + deadsec*increment;
+    // Lastly, check whether the event is in an overlap or not
+        if (longtime < time0 + increment)
+          if(nhit>NHITCUT)
+            OutZdab(zrec, w1, zfile);
+        else{
+          if(maxfiles > 0 && index+2 >= maxfiles){
+            eventn--;
+            printf("Done. %lu record%s, %lu event%s processed\n", 
+                   recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
+            return 0;
+          }
+          w2 = Output(outfilebase, index+1);
+          for(int i=0; i<headertypes; i++){
+            OutHeader((GenericRecordHeader*) header[i], w2, i);
+          }
+          if(macro) WriteMacro(index, time10, time0, outfilebase);
+          if(nhit>NHITCUT){
+            OutZdab(zrec, w1, zfile);
+            OutZdab(zrec, w2, zfile);
+          }
+        }
+      }
+    } // End of the Chopping Loop for one event
     recordn++;
-  }
+  } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, index, w1);
   if(w2) Close(outfilebase, index+1, w2);
 
