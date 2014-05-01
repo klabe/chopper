@@ -518,8 +518,16 @@ int main(int argc, char *argv[])
   }
 
   // Set up the Burst Buffer
-  char burstev[EVENTNUM][EVENTSIZE]={0};
-  uint64_t bursttime[EVENTNUM]={0};
+  char burstev[EVENTNUM][EVENTSIZE];
+  for(int i=0; i<EVENTNUM; i++){
+    for(int j=0; j<EVENTSIZE; j++){
+      burstev[i][j]=0;
+    }
+  }
+  uint64_t bursttime[EVENTNUM];
+  for(int i=0; i<EVENTNUM; i++){
+    bursttime[i]=0;
+  }
   int bursthead = -1; // This points to the beginning of the burst buffer
   int bursttail = -1; // This points to the end of the burst buffer
 
