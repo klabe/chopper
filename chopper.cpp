@@ -411,12 +411,17 @@ void setwaitnow(int sig){
 }
 
 // Burst Buffer Functions //
+////////////////////////////////////////////////////////////////////////
 static const int EVENTNUM = 1000; // Maximum Burst buffer depth
 static const int EVENTSIZE = 3840*sizeof(uint32_t)/sizeof(char); // Maximum Event size in words
 static const int NHITBCUT = 50; // Nhit Cut on Burst events
 static const int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
 static const int BurstSize = 100; // Number of events constituting a burst
+bool burst = false; // Flags ongoing bursts
+int burstindex = 0; // Number of bursts observed
+static const int ENDWINDOW = 1*50000000; // integration window for determining whether burst has ended
+static const int EndRate = 10; // Rate below which burst ends
 
 // This function drops old events from the buffer once they expire
 void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
@@ -438,8 +443,16 @@ void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
   }
 }
 
+// This fuction adds events to an open Burst File
+void AddEvBFile(){
+}
+
+// This function closes a Burst File
+void CloseBFile(){
+}
+
 // This function adds a new event to the buffer
-void AddEv(nZDAB* zrec, uint64_t longtime, 
+void AddEvBuf(nZDAB* zrec, uint64_t longtime, 
            char burstev[EVENTNUM][EVENTSIZE],
            uint64_t bursttime[EVENTNUM], int bursthead, int bursttail){
   // Check whether we will overflow the buffer
@@ -458,15 +471,8 @@ void AddEv(nZDAB* zrec, uint64_t longtime,
     bursttime[bursttail] = longtime;
     bursttail++;
   }
-  // Check whether a burst has started
-  int burstlength = 0;
-  if(bursthead<bursttail)
-    burstlength = bursttail-bursthead;
-  else
-    burstlength = EVENTNUM + bursttail - bursthead;
-  if(burstlength>BurstSize){
-  }
 }
+////////////////////////////////////////////////////////////////////////
 
 // MAIN FUCTION 
 int main(int argc, char *argv[])
@@ -560,7 +566,41 @@ int main(int argc, char *argv[])
       // Burst Detection Here
       if(nhit > NHITBCUT){
         DropEv(longtime, burstev, bursttime, bursthead);
-        AddEv(zrec, longtime, burstev, bursttime, bursthead, bursttail);
+        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail);
+
+        // Calculate the current burst queue length
+        int burstlength = 0;
+        if(bursthead<bursttail)
+          burstlength = bursttail-bursthead;
+        else
+          burstlength = EVENTNUM + bursttail - bursthead;
+
+        // If we are not in the midst of a burst
+        if(!burst){
+          if(burstlength>BurstSize){
+            burst=true;
+            PZdabWriter* b = Output("Burst", burstindex);
+            for(int i=0; i<headertypes; i++){
+              OutHeader((GenericRecordHeader*) header[i], b, i);
+            }
+            int k = bursthead;
+            while(bursttime[k] < longtime - ENDWINDOW){
+              AddEvBFile();
+              DropEv(longtime, burstev, bursttime, bursthead);
+            }
+          }
+        }
+        // If we are in the midst of a burst
+        else{
+          if(burstlength<EndRate){
+            CloseBFile();
+            burst=false;
+          }
+          else{
+            AddEvBFile();
+          }
+        }
+
       }
     }
 
