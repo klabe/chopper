@@ -412,8 +412,8 @@ void setwaitnow(int sig){
 
 // Burst Buffer Functions //
 ////////////////////////////////////////////////////////////////////////
-static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static const int EVENTSIZE = 3840*sizeof(uint32_t)/sizeof(char); // Maximum Event size in words
+static const int EVENTNUM = 500; // Maximum Burst buffer depth
+static const int EVENTSIZE = 3840*sizeof(uint32_t);// Maximum Event size 
 static const int NHITBCUT = 50; // Nhit Cut on Burst events
 static const int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
@@ -427,7 +427,8 @@ static const int EndRate = 10; // Rate below which burst ends
 void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
             uint64_t Bursttime[EVENTNUM], int bursthead){
   // The case that the buffer is empty
-  if(bursthead==-1) return;
+  if(bursthead==-1)
+    return;
   // Normal Case
   while(Bursttime[bursthead] < longtime - BurstTicks){
     Bursttime[bursthead] = 0;
@@ -611,7 +612,6 @@ int main(int argc, char *argv[])
 
       }
     }
-
     // Chop
     // Within the unique chunk
     if (longtime < time0 + increment){
