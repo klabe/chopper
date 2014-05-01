@@ -431,7 +431,7 @@ void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
   // Normal Case
   while(Bursttime[bursthead] < longtime - BurstTicks){
     Bursttime[bursthead] = 0;
-    for (int j =0; j < EVENTSIZE; j++){
+    for(int j =0; j < EVENTSIZE; j++){
       Burstev[bursthead][j] = 0;
     }
     if(bursthead<EVENTNUM-1){
@@ -538,7 +538,7 @@ int main(int argc, char *argv[])
   while(nZDAB * const zrec = zfile->NextRecord()){
 
     // Check to fill Header Buffer
-    for (int i=0; i<headertypes; i++){
+    for(int i=0; i<headertypes; i++){
       if (zrec->bank_name == Headernames[i]){
         memset(header[i],0,NWREC);
         unsigned long recLen=((GenericRecordHeader*)zrec)->RecordLength;
