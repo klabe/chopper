@@ -540,6 +540,7 @@ int main(int argc, char *argv[])
   }
   int bursthead = -1; // This points to the beginning of the burst buffer
   int bursttail = -1; // This points to the end of the burst buffer
+  int bcount = 0;
 
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
@@ -587,6 +588,7 @@ int main(int argc, char *argv[])
 
         // Calculate the current burst queue length
         int burstlength = 0;
+        int starttick = 0;
         if(bursthead!=-1){
           if(bursthead<bursttail)
             burstlength = bursttail-bursthead;
@@ -598,7 +600,9 @@ int main(int argc, char *argv[])
         if(!burst){
           if(burstlength>BurstSize){
             burst=true;
-            fprintf(stderr, "Burst has begun!\n");
+            bcount=burstlength;
+            starttick=longtime;
+            fprintf(stderr, "Burst %i has begun!\n", burstindex);
             b = Output("Burst", burstindex);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
@@ -612,11 +616,16 @@ int main(int argc, char *argv[])
         }
         // If we are in the midst of a burst
         else{
+          bcount++;
           if(burstlength<EndRate){
             b->Close();
             burst=false;
-            fprintf(stderr, "Burst has ended.\n");
+            int btime = longtime - starttick;
+            float btimesec = btime/50000000.;
+            fprintf(stderr, "Burst %i has ended.  It contains %i events"
+                  " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
             burstindex++;
+            bcount=0;
           }
           else{
             AddEvBFile(bursthead, burstev, b);
