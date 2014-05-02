@@ -429,13 +429,16 @@ void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
   if(bursthead==-1)
     return;
   // Normal Case
-  while(Bursttime[bursthead] < longtime - BurstTicks && bursthead==-1){
+  while(Bursttime[bursthead] < longtime - BurstTicks && bursthead!=-1){
     Bursttime[bursthead] = 0;
     for(int j =0; j < NWREC*sizeof(uint32_t); j++){
       Burstev[bursthead][j] = 0;
     }
     // Advance the head
-    bursthead=bursthead++%EVENTNUM;
+    if(bursthead < EVENTNUM -1)
+      bursthead++;
+    else
+      bursthead=0;
     // Reset to empty state if we have emptied the queue
     if(bursthead==bursttail){
       bursthead=-1;
@@ -445,8 +448,13 @@ void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(int & index){
-  index=index++%EVENTNUM; 
+void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
+  if(b->WriteBank((uint32_t *)burstev[index], kZDABindex))
+    fprintf(stderr, "Error writing zdab to burst file\n");
+  if(index < EVENTNUM - 1)
+    index++;
+  else
+    index=0;
 }
 
 // This function closes a Burst File
@@ -468,9 +476,14 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       bursthead=0;
     }
     unsigned long reclen=((GenericRecordHeader*)zrec)->RecordLength;
+    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     memcpy(burstev[bursttail], zrec, reclen);
+    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     bursttime[bursttail] = longtime;
-    bursttail=bursttail++%EVENTNUM;
+    if(bursttail<EVENTNUM - 1)
+      bursttail++;
+    else
+      bursttail=0;
   }
 }
 ////////////////////////////////////////////////////////////////////////
@@ -507,6 +520,7 @@ int main(int argc, char *argv[])
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, index);
   PZdabWriter* w2 = NULL;
+  PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
   const int headertypes = 3;
@@ -583,19 +597,19 @@ int main(int argc, char *argv[])
           else
             burstlength = EVENTNUM + bursttail - bursthead;
          }
-         fprintf(stderr,"%i\n",burstlength);
+         fprintf(stderr,"%i: \t %i \t %i \n",burstlength, bursthead, bursttail);
 
         // If we are not in the midst of a burst
         if(!burst){
           if(burstlength>BurstSize){
             burst=true;
-            PZdabWriter* b = Output("Burst", burstindex);
+            b = Output("Burst", burstindex);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
             }
             int k = bursthead;
             while(bursttime[k] < longtime - ENDWINDOW){
-              AddEvBFile(k);
+              AddEvBFile(k, burstev, b);
               DropEv(longtime, burstev, bursttime, bursthead, bursttail);
             }
           }
@@ -607,7 +621,7 @@ int main(int argc, char *argv[])
             burst=false;
           }
           else{
-            AddEvBFile(bursthead);
+            AddEvBFile(bursthead, burstev, b);
           }
         }
 
