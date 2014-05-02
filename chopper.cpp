@@ -412,8 +412,7 @@ void setwaitnow(int sig){
 
 // Burst Buffer Functions //
 ////////////////////////////////////////////////////////////////////////
-static const int EVENTNUM = 500; // Maximum Burst buffer depth
-static const int EVENTSIZE = 3840*sizeof(uint32_t);// Maximum Event size 
+static const int EVENTNUM = 1000; // Maximum Burst buffer depth
 static const int NHITBCUT = 50; // Nhit Cut on Burst events
 static const int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
@@ -424,15 +423,15 @@ static const int ENDWINDOW = 1*50000000; // integration window for determining w
 static const int EndRate = 10; // Rate below which burst ends
 
 // This function drops old events from the buffer once they expire
-void DropEv(uint64_t longtime, char Burstev[EVENTNUM][EVENTSIZE],
-            uint64_t Bursttime[EVENTNUM], int bursthead){
+void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
+            int bursthead){
   // The case that the buffer is empty
   if(bursthead==-1)
     return;
   // Normal Case
   while(Bursttime[bursthead] < longtime - BurstTicks){
     Bursttime[bursthead] = 0;
-    for(int j =0; j < EVENTSIZE; j++){
+    for(int j =0; j < NWREC*sizeof(uint32_t); j++){
       Burstev[bursthead][j] = 0;
     }
     if(bursthead<EVENTNUM-1){
@@ -453,11 +452,10 @@ void CloseBFile(){
 }
 
 // This function adds a new event to the buffer
-void AddEvBuf(nZDAB* zrec, uint64_t longtime, 
-           char burstev[EVENTNUM][EVENTSIZE],
-           uint64_t bursttime[EVENTNUM], int bursthead, int bursttail){
+void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
+              uint64_t bursttime[EVENTNUM], int bursthead, int bursttail){
   // Check whether we will overflow the buffer
-  if(bursthead==bursttail){
+  if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
   }
   // Write the event to the buffer
@@ -519,11 +517,10 @@ int main(int argc, char *argv[])
   }
 
   // Set up the Burst Buffer
-  char burstev[EVENTNUM][EVENTSIZE];
+  char* burstev[EVENTNUM];
   for(int i=0; i<EVENTNUM; i++){
-    for(int j=0; j<EVENTSIZE; j++){
-      burstev[i][j]=0;
-    }
+    burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+    memset(burstev[i],0,NWREC*sizeof(uint32_t));
   }
   uint64_t bursttime[EVENTNUM];
   for(int i=0; i<EVENTNUM; i++){
@@ -579,10 +576,12 @@ int main(int argc, char *argv[])
 
         // Calculate the current burst queue length
         int burstlength = 0;
-        if(bursthead<bursttail)
-          burstlength = bursttail-bursthead;
-        else
-          burstlength = EVENTNUM + bursttail - bursthead;
+        if(bursthead!=-1){
+          if(bursthead<bursttail)
+            burstlength = bursttail-bursthead;
+          else
+            burstlength = EVENTNUM + bursttail - bursthead;
+         }
 
         // If we are not in the midst of a burst
         if(!burst){
@@ -595,6 +594,7 @@ int main(int argc, char *argv[])
             int k = bursthead;
             while(bursttime[k] < longtime - ENDWINDOW){
               AddEvBFile();
+              k++;
               DropEv(longtime, burstev, bursttime, bursthead);
             }
           }
