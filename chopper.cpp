@@ -413,10 +413,10 @@ void setwaitnow(int sig){
 // Burst Buffer Functions //
 ////////////////////////////////////////////////////////////////////////
 static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static const int NHITBCUT = 50; // Nhit Cut on Burst events
+static const int NHITBCUT = 40; // Nhit Cut on Burst events
 static const int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
-static const int BurstSize = 100; // Number of events constituting a burst
+static const int BurstSize = 50; // Number of events constituting a burst
 bool burst = false; // Flags ongoing bursts
 int burstindex = 0; // Number of bursts observed
 static const int ENDWINDOW = 1*50000000; // integration window for determining whether burst has ended
@@ -424,27 +424,29 @@ static const int EndRate = 10; // Rate below which burst ends
 
 // This function drops old events from the buffer once they expire
 void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
-            int bursthead){
+            int & bursthead, int & bursttail){
   // The case that the buffer is empty
   if(bursthead==-1)
     return;
   // Normal Case
-  while(Bursttime[bursthead] < longtime - BurstTicks){
+  while(Bursttime[bursthead] < longtime - BurstTicks && bursthead==-1){
     Bursttime[bursthead] = 0;
     for(int j =0; j < NWREC*sizeof(uint32_t); j++){
       Burstev[bursthead][j] = 0;
     }
-    if(bursthead<EVENTNUM-1){
-      bursthead++;
-    }
-    else{
-      bursthead=0;
+    // Advance the head
+    bursthead=bursthead++%EVENTNUM;
+    // Reset to empty state if we have emptied the queue
+    if(bursthead==bursttail){
+      bursthead=-1;
+      bursttail=-1;
     }
   }
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(){
+void AddEvBFile(int & index){
+  index=index++%EVENTNUM; 
 }
 
 // This function closes a Burst File
@@ -453,7 +455,7 @@ void CloseBFile(){
 
 // This function adds a new event to the buffer
 void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
-              uint64_t bursttime[EVENTNUM], int bursthead, int bursttail){
+              uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
@@ -468,7 +470,7 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
     unsigned long reclen=((GenericRecordHeader*)zrec)->RecordLength;
     memcpy(burstev[bursttail], zrec, reclen);
     bursttime[bursttail] = longtime;
-    bursttail++;
+    bursttail=bursttail++%EVENTNUM;
   }
 }
 ////////////////////////////////////////////////////////////////////////
@@ -534,7 +536,6 @@ int main(int argc, char *argv[])
   int orphan = 0;
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
-
     // Check to fill Header Buffer
     for(int i=0; i<headertypes; i++){
       if (zrec->bank_name == Headernames[i]){
@@ -571,7 +572,7 @@ int main(int argc, char *argv[])
       }
       // Burst Detection Here
       if(nhit > NHITBCUT){
-        DropEv(longtime, burstev, bursttime, bursthead);
+        DropEv(longtime, burstev, bursttime, bursthead, bursttail);
         AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail);
 
         // Calculate the current burst queue length
@@ -582,6 +583,7 @@ int main(int argc, char *argv[])
           else
             burstlength = EVENTNUM + bursttail - bursthead;
          }
+         fprintf(stderr,"%i\n",burstlength);
 
         // If we are not in the midst of a burst
         if(!burst){
@@ -593,9 +595,8 @@ int main(int argc, char *argv[])
             }
             int k = bursthead;
             while(bursttime[k] < longtime - ENDWINDOW){
-              AddEvBFile();
-              k++;
-              DropEv(longtime, burstev, bursttime, bursthead);
+              AddEvBFile(k);
+              DropEv(longtime, burstev, bursttime, bursthead, bursttail);
             }
           }
         }
@@ -606,12 +607,13 @@ int main(int argc, char *argv[])
             burst=false;
           }
           else{
-            AddEvBFile();
+            AddEvBFile(bursthead);
           }
         }
 
-      }
-    }
+      } // End Burst Loop
+    } // End Loop for Event Records
+
     // Chop
     // Within the unique chunk
     if (longtime < time0 + increment){
