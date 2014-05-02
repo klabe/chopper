@@ -416,7 +416,7 @@ static const int EVENTNUM = 1000; // Maximum Burst buffer depth
 static const int NHITBCUT = 40; // Nhit Cut on Burst events
 static const int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
-static const int BurstSize = 50; // Number of events constituting a burst
+static const int BurstSize = 30; // Number of events constituting a burst
 bool burst = false; // Flags ongoing bursts
 int burstindex = 0; // Number of bursts observed
 static const int ENDWINDOW = 1*50000000; // integration window for determining whether burst has ended
@@ -455,10 +455,6 @@ void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
     index++;
   else
     index=0;
-}
-
-// This function closes a Burst File
-void CloseBFile(){
 }
 
 // This function adds a new event to the buffer
@@ -597,12 +593,12 @@ int main(int argc, char *argv[])
           else
             burstlength = EVENTNUM + bursttail - bursthead;
          }
-         fprintf(stderr,"%i: \t %i \t %i \n",burstlength, bursthead, bursttail);
 
         // If we are not in the midst of a burst
         if(!burst){
           if(burstlength>BurstSize){
             burst=true;
+            fprintf(stderr, "Burst has begun!\n");
             b = Output("Burst", burstindex);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
@@ -617,8 +613,10 @@ int main(int argc, char *argv[])
         // If we are in the midst of a burst
         else{
           if(burstlength<EndRate){
-            CloseBFile();
+            b->Close();
             burst=false;
+            fprintf(stderr, "Burst has ended.\n");
+            burstindex++;
           }
           else{
             AddEvBFile(bursthead, burstev, b);
