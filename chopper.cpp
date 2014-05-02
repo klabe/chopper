@@ -449,6 +449,7 @@ void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 
 // This fuction adds events to an open Burst File
 void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
+  SWAP_INT32((uint32_t *) burstev[index]+3, 1);
   if(b->WriteBank((uint32_t *)burstev[index], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
   if(index < EVENTNUM - 1)
@@ -473,7 +474,7 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
     }
     unsigned long reclen=((GenericRecordHeader*)zrec)->RecordLength;
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
-    memcpy(burstev[bursttail], zrec, reclen);
+    memcpy(burstev[bursttail], zrec+1, reclen);
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     bursttime[bursttail] = longtime;
     if(bursttail<EVENTNUM - 1)
