@@ -460,7 +460,8 @@ void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
 
 // This function adds a new event to the buffer
 void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
-              uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail){
+              uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail,
+              PZdabFile* zfile){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
@@ -472,7 +473,17 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       bursttail=0;
       bursthead=0;
     }
-    unsigned long reclen=((GenericRecordHeader*)zrec)->RecordLength;
+    u_int32 reclen=0;
+    if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
+      u_int32 *sub_header = &hits->CalPckType;
+      //SWAP_INT32(sub_header, 1);
+      reclen=zfile->GetSize(hits);
+      //SWAP_INT32(sub_header, 1);
+      fprintf(stderr, "%i\n", reclen);
+    }
+    else{
+      fprintf(stderr,"Error: Chopper trying to write non-hit data to buffer\n");
+    }
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     memcpy(burstev[bursttail], zrec+1, reclen);
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
@@ -585,7 +596,7 @@ int main(int argc, char *argv[])
       // Burst Detection Here
       if(nhit > NHITBCUT){
         DropEv(longtime, burstev, bursttime, bursthead, bursttail);
-        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail);
+        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
 
         // Calculate the current burst queue length
         int burstlength = 0;
@@ -597,7 +608,7 @@ int main(int argc, char *argv[])
             burstlength = EVENTNUM + bursttail - bursthead;
          }
 
-        // If we are not in the midst of a burst
+        // Open a new burst file if a burst starts
         if(!burst){
           if(burstlength>BurstSize){
             burst=true;
@@ -608,17 +619,23 @@ int main(int argc, char *argv[])
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
             }
+          }
+        }
+        // While in a burst
+        if(burst){
+          bcount++;
+          int k = bursthead;
+          while(bursttime[k] < longtime - ENDWINDOW){
+            AddEvBFile(k, burstev, b);
+            DropEv(longtime + 9*50000000, burstev, bursttime, bursthead, bursttail);
+          }
+          // Check if the burst has ended
+          if(burstlength<EndRate){
             int k = bursthead;
-            while(bursttime[k] < longtime - ENDWINDOW){
+            while(k<bursttail+1){
               AddEvBFile(k, burstev, b);
               DropEv(longtime, burstev, bursttime, bursthead, bursttail);
             }
-          }
-        }
-        // If we are in the midst of a burst
-        else{
-          bcount++;
-          if(burstlength<EndRate){
             b->Close();
             burst=false;
             int btime = longtime - starttick;
@@ -627,9 +644,6 @@ int main(int argc, char *argv[])
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
             burstindex++;
             bcount=0;
-          }
-          else{
-            AddEvBFile(bursthead, burstev, b);
           }
         }
 
