@@ -502,6 +502,9 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
     else
       bursttail=0; 
 
+    fprintf(stderr, "%i \t %i \n", bursthead, bursttail);
+    //hexdump(burstev[bursttail], reclen);
+
 /*
     uint32_t* const bank = zfile->GetBank(zrec);
     if(index==0) SWAP_INT32(bank+3, 1);
@@ -516,8 +519,6 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
     memcpy(burstev[bursttail], zrec+1, reclen);
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     bursttime[bursttail] = longtime;
-    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
-    hexdump(burstev[bursttail], reclen);
     if(bursttail<EVENTNUM - 1)
       bursttail++;
     else
@@ -603,7 +604,7 @@ int main(int argc, char *argv[])
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
-    if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+    if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
@@ -664,8 +665,8 @@ int main(int argc, char *argv[])
             burstindex++;
             // Reset to prepare for next burst
             bcount=0;
-            bursthead=0;
-            bursttail=0;
+            bursthead=-1;
+            bursttail=-1;
           }
         }
       } // End Burst Loop
