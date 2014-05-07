@@ -72,6 +72,7 @@ void hexdump(char* ptr, int len){
       fprintf(stderr, "%c", isprint(lptr[j])?lptr[j]:'.');
     }
     fprintf(stderr, "\n");
+  } 
 }
 
 // This function writes macro files needed to correctly interpret the
@@ -465,8 +466,8 @@ void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
                 PZdabWriter* const b){
   // Write out the data
-  SWAP_INT32((uint32_t *) burstev[index]+3, 1);
-  if(b->WriteBank((uint32_t *)burstev[index], kZDABindex))
+  SWAP_INT32((uint32_t *) burstev[bursthead]+3, 1);
+  if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
   // The drop the data from the buffer
   for(int j=0; j < NWREC*sizeof(uint32_t); j++){
