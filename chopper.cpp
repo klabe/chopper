@@ -60,6 +60,21 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
+// Function to Print ZDAB records to screen readably
+void hexdump(char* ptr, int len){
+  for(int i=0; i<len/16+1; i++){
+    char* lptr = ptr+i*16;
+    for(int j=0; j<16; j++){
+      fprintf(stderr, "%.2x ", (unsigned char) lptr[j]);
+    }
+    fprintf(stderr, " ");
+    for(int j=0; j<16; j++){
+      fprintf(stderr,"%c", isprint(lptr[j])?lptr[j]:'.');
+    }
+    fprintf(stderr, " \n");
+  }
+}
+
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
 // The inputs have the following meaning:
@@ -423,7 +438,7 @@ static const int ENDWINDOW = 1*50000000; // integration window for determining w
 static const int EndRate = 10; // Rate below which burst ends
 
 // This function drops old events from the buffer once they expire
-void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
+void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
             int & bursthead, int & bursttail){
   // The case that the buffer is empty
   if(bursthead==-1)
@@ -448,20 +463,27 @@ void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
-  SWAP_INT32((uint32_t *) burstev[index]+3, 1);
-  if(b->WriteBank((uint32_t *)burstev[index], kZDABindex))
+void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
+                PZdabWriter* const b){
+  // Write out the data
+  SWAP_INT32((uint32_t *) burstev[bursthead]+3, 1);
+  if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
-  if(index < EVENTNUM - 1)
-    index++;
+  // Then drop the data from the buffer
+  for(int j=0; j < NWREC*sizeof(uint32_t); j++){
+    burstev[bursthead][j] = 0;
+  }
+  Bursttime[bursthead] = 0;
+  if(bursthead < EVENTNUM - 1)
+    bursthead++;
   else
-    index=0;
+    bursthead=0;
 }
 
 // This function adds a new event to the buffer
 void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
               uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail,
-              PZdabFile* zfile){
+              int reclen){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
@@ -473,13 +495,19 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       bursttail=0;
       bursthead=0;
     }
+    // Write to memory
+    memcpy(burstev[bursttail], zrec+1, reclen);
+    if(bursttail<EVENTNUM -1)
+      bursttail++;
+    else
+      bursttail=0; 
+
+/*
+    uint32_t* const bank = zfile->GetBank(zrec);
+    if(index==0) SWAP_INT32(bank+3, 1);
     u_int32 reclen=0;
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
-      u_int32 *sub_header = &hits->CalPckType;
-      //SWAP_INT32(sub_header, 1);
       reclen=zfile->GetSize(hits);
-      //SWAP_INT32(sub_header, 1);
-      fprintf(stderr, "%i\n", reclen);
     }
     else{
       fprintf(stderr,"Error: Chopper trying to write non-hit data to buffer\n");
@@ -488,10 +516,13 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
     memcpy(burstev[bursttail], zrec+1, reclen);
     SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     bursttime[bursttail] = longtime;
+    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
+    hexdump(burstev[bursttail], reclen);
     if(bursttail<EVENTNUM - 1)
       bursttail++;
     else
       bursttail=0;
+*/
   }
 }
 ////////////////////////////////////////////////////////////////////////
@@ -570,19 +601,10 @@ int main(int argc, char *argv[])
       }
     }
 
-    // Check that the record is a ZDAB_RECORD
-    // If so, grab the nhit
-    if(zrec->bank_name == ZDAB_RECORD){
-      PmtEventRecord *pmtEventPtr;
-      pmtEventPtr = (PmtEventRecord*)(zrec + 1);
-      SWAP_PMT_RECORD( pmtEventPtr );
-      nhit = pmtEventPtr->NPmtHit;
-      SWAP_PMT_RECORD( pmtEventPtr );
-    }
-
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+      nhit = hits->NPmtHit;
       eventn++;
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
  
@@ -595,8 +617,9 @@ int main(int argc, char *argv[])
       }
       // Burst Detection Here
       if(nhit > NHITBCUT){
-        DropEv(longtime, burstev, bursttime, bursthead, bursttail);
-        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
+        UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
+        int reclen = zfile->GetSize(hits);
+        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, reclen);
 
         // Calculate the current burst queue length
         int burstlength = 0;
@@ -624,17 +647,13 @@ int main(int argc, char *argv[])
         // While in a burst
         if(burst){
           bcount++;
-          int k = bursthead;
-          while(bursttime[k] < longtime - ENDWINDOW){
-            AddEvBFile(k, burstev, b);
-            DropEv(longtime + 9*50000000, burstev, bursttime, bursthead, bursttail);
+          while(bursttime[bursthead] < longtime - ENDWINDOW){
+            AddEvBFile(bursthead, burstev, bursttime, b);
           }
           // Check if the burst has ended
           if(burstlength<EndRate){
-            int k = bursthead;
-            while(k<bursttail+1){
-              AddEvBFile(k, burstev, b);
-              DropEv(longtime, burstev, bursttime, bursthead, bursttail);
+            while(bursthead<bursttail+1){
+              AddEvBFile(bursthead, burstev, bursttime, b);
             }
             b->Close();
             burst=false;
@@ -643,10 +662,12 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Burst %i has ended.  It contains %i events"
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
             burstindex++;
+            // Reset to prepare for next burst
             bcount=0;
+            bursthead=0;
+            bursttail=0;
           }
         }
-
       } // End Burst Loop
     } // End Loop for Event Records
 
