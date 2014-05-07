@@ -60,6 +60,20 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
+// Function to Print ZDAB records to screen readably
+void hexdump(char* ptr, int len){
+  for(int i=0; i < len/16 +1; i++){
+    char* lptr = ptr+i*16;
+    for(int j=0; j<16; j++){
+      fprintf(stderr,"%.2x", (unsigned char) lptr[j]);
+    }
+    fprintf(stderr, " ");
+    for(int j=0; j<16; j++){
+      fprintf(stderr, "%c", isprint(lptr[j])?lptr[j]:'.');
+    }
+    fprintf(stderr, "\n");
+}
+
 // This function writes macro files needed to correctly interpret the
 // chopped files with RAT.  It can be suppressed with the -t flag.
 // The inputs have the following meaning:
@@ -423,7 +437,7 @@ static const int ENDWINDOW = 1*50000000; // integration window for determining w
 static const int EndRate = 10; // Rate below which burst ends
 
 // This function drops old events from the buffer once they expire
-void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
+void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
             int & bursthead, int & bursttail){
   // The case that the buffer is empty
   if(bursthead==-1)
@@ -448,14 +462,21 @@ void DropEv(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(int & index, char* burstev[], PZdabWriter* const b){
+void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
+                PZdabWriter* const b){
+  // Write out the data
   SWAP_INT32((uint32_t *) burstev[index]+3, 1);
   if(b->WriteBank((uint32_t *)burstev[index], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
-  if(index < EVENTNUM - 1)
-    index++;
+  // The drop the data from the buffer
+  for(int j=0; j < NWREC*sizeof(uint32_t); j++){
+    burstev[bursthead][j] = 0;
+  }
+  Bursttime[bursthead] = 0;
+  if(bursthead < EVENTNUM - 1)
+    bursthead++;
   else
-    index=0;
+    bursthead=0;
 }
 
 // This function adds a new event to the buffer
@@ -595,7 +616,7 @@ int main(int argc, char *argv[])
       }
       // Burst Detection Here
       if(nhit > NHITBCUT){
-        DropEv(longtime, burstev, bursttime, bursthead, bursttail);
+        UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
         AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
 
         // Calculate the current burst queue length
@@ -624,17 +645,13 @@ int main(int argc, char *argv[])
         // While in a burst
         if(burst){
           bcount++;
-          int k = bursthead;
-          while(bursttime[k] < longtime - ENDWINDOW){
-            AddEvBFile(k, burstev, b);
-            DropEv(longtime + 9*50000000, burstev, bursttime, bursthead, bursttail);
+          while(bursttime[bursthead] < longtime - ENDWINDOW){
+            AddEvBFile(bursthead, burstev, bursttime, b);
           }
           // Check if the burst has ended
           if(burstlength<EndRate){
-            int k = bursthead;
-            while(k<bursttail+1){
-              AddEvBFile(k, burstev, b);
-              DropEv(longtime, burstev, bursttime, bursthead, bursttail);
+            while(bursthead<bursttail+1){
+              AddEvBFile(bursthead, burstev, bursttime, b);
             }
             b->Close();
             burst=false;
@@ -643,7 +660,10 @@ int main(int argc, char *argv[])
             fprintf(stderr, "Burst %i has ended.  It contains %i events"
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
             burstindex++;
+            // Reset to prepare for next burst
             bcount=0;
+            bursthead=-1;
+            bursttail=-1;
           }
         }
 
