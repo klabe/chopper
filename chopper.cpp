@@ -501,7 +501,6 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       //SWAP_INT32(sub_header, 1);
       reclen=zfile->GetSize(hits);
       //SWAP_INT32(sub_header, 1);
-      fprintf(stderr, "%i\n", reclen);
     }
     else{
       fprintf(stderr,"Error: Chopper trying to write non-hit data to buffer\n");
@@ -592,19 +591,10 @@ int main(int argc, char *argv[])
       }
     }
 
-    // Check that the record is a ZDAB_RECORD
-    // If so, grab the nhit
-    if(zrec->bank_name == ZDAB_RECORD){
-      PmtEventRecord *pmtEventPtr;
-      pmtEventPtr = (PmtEventRecord*)(zrec + 1);
-      SWAP_PMT_RECORD( pmtEventPtr );
-      nhit = pmtEventPtr->NPmtHit;
-      SWAP_PMT_RECORD( pmtEventPtr );
-    }
-
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+      nhit = hits->NPmtHit;
       eventn++;
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
  
