@@ -495,12 +495,14 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       bursttail=0;
       bursthead=0;
     }
+    uint32_t* const bank = zfile->GetBank(zrec);
+    if(index==0) SWAP_INT32(bank+3, 1);
     u_int32 reclen=0;
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       u_int32 *sub_header = &hits->CalPckType;
-      //SWAP_INT32(sub_header, 1);
+      SWAP_INT32(sub_header, 1);
       reclen=zfile->GetSize(hits);
-      //SWAP_INT32(sub_header, 1);
+      SWAP_INT32(sub_header, 1);
     }
     else{
       fprintf(stderr,"Error: Chopper trying to write non-hit data to buffer\n");
