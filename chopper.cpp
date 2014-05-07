@@ -483,7 +483,7 @@ void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
 // This function adds a new event to the buffer
 void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
               uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail,
-              PZdabFile* zfile){
+              int reclen){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
@@ -495,26 +495,14 @@ void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
       bursttail=0;
       bursthead=0;
     }
-    uint32_t* const bank = zfile->GetBank(zrec);
-    if(index==0) SWAP_INT32(bank+3, 1);
-    u_int32 reclen=0;
-    if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
-      u_int32 *sub_header = &hits->CalPckType;
-      SWAP_INT32(sub_header, 1);
-      reclen=zfile->GetSize(hits);
-      SWAP_INT32(sub_header, 1);
-    }
-    else{
-      fprintf(stderr,"Error: Chopper trying to write non-hit data to buffer\n");
-    }
-    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
+
     memcpy(burstev[bursttail], zrec+1, reclen);
-    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     bursttime[bursttail] = longtime;
     if(bursttail<EVENTNUM - 1)
       bursttail++;
     else
       bursttail=0;
+    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
   }
 }
 ////////////////////////////////////////////////////////////////////////
@@ -595,7 +583,7 @@ int main(int argc, char *argv[])
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
-    if(const PmtEventRecord * const hits = zfile->GetPmtRecord(zrec)){
+    if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
@@ -610,7 +598,14 @@ int main(int argc, char *argv[])
       // Burst Detection Here
       if(nhit > NHITBCUT){
         UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
-        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
+        int reclen = zfile->GetSize(hits);
+        u_int32 *sub_header = &hits->CalPckType;
+        SWAP_INT32(sub_header, 1);
+        int reclen2=zfile->GetSize(hits);
+        SWAP_INT32(sub_header, 1);
+        fprintf(stderr,"%i \t %i \n", reclen, reclen2);
+        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
+//        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
 
         // Calculate the current burst queue length
         int burstlength = 0;
