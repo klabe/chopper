@@ -597,7 +597,6 @@ int main(int argc, char *argv[])
       if(nhit > NHITBCUT){
         UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
         int reclen = zfile->GetSize(hits);
-        u_int32 *sub_header = &hits->CalPckType;
         AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
 
         // Calculate the current burst queue length
