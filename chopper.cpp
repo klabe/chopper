@@ -132,7 +132,6 @@ static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
   if(index < 0) fprintf(stderr, "Unrecognized bank name\n");
   else{
     uint32_t * const bank = zfile->GetBank(data);
-    if(index==0) SWAP_INT32(bank+3,1);
     zwrite->WriteBank(bank, index);
   }
 }
@@ -466,7 +465,6 @@ void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
                 PZdabWriter* const b){
   // Write out the data
-  SWAP_INT32((uint32_t *) burstev[bursthead]+3, 1);
   if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
   // The drop the data from the buffer
@@ -600,12 +598,7 @@ int main(int argc, char *argv[])
         UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
         int reclen = zfile->GetSize(hits);
         u_int32 *sub_header = &hits->CalPckType;
-        SWAP_INT32(sub_header, 1);
-        int reclen2=zfile->GetSize(hits);
-        SWAP_INT32(sub_header, 1);
-        fprintf(stderr,"%i \t %i \n", reclen, reclen2);
         AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
-//        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, zfile);
 
         // Calculate the current burst queue length
         int burstlength = 0;

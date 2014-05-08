@@ -337,8 +337,6 @@ int PZdabWriter::WriteBank(u_int32 *bank_ptr, int index)
     // must set the size of PMT event records (since it is variable)
     if (index == kZDABindex) {
         sBankDef[kZDABindex].nwords = PZdabFile::GetSize((PmtEventRecord *)bank_ptr) / sizeof(u_int32);
-        // KL 12/05/13 - Swap nhit to get chopper to work
-        SWAP_INT32(bank_ptr+3,1);
     }
     
     // get the size of the record to be written
