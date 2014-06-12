@@ -294,6 +294,12 @@ static void printhelp()
   );
 }
 
+// This function sends alarms to the website
+static void alarm(int, const char*)
+{
+
+}
+
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
@@ -378,8 +384,10 @@ static void compute_times(const PmtEventRecord * const hits,
                      (oldtime10 - time10)*5 - (oldtime50 - time50) :
                      (oldtime50 - time50) - (oldtime10 - time10)*5 );
     if (dd > maxdrift){
-      fprintf(stderr, "ALARM: The Clocks jumped by %i ticks!\n", dd);
-      //system("");
+      char msg[128];
+      sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
+      alarm(1, msg);
+      fprintf(stderr, msg);
     }
 
     // Check for pathological case
@@ -397,7 +405,9 @@ static void compute_times(const PmtEventRecord * const hits,
         epoch++;
       }
       else{
-        fprintf(stderr, "ALARM: Time running backward!\n");
+        const char msg[128] = "Stonehenge: Time running backward!\n";
+        alarm(1, msg);
+        fprintf(stderr, msg);
         //system("");
         // Assume for now that the clock is wrong
         time50 = oldtime50;
@@ -406,7 +416,9 @@ static void compute_times(const PmtEventRecord * const hits,
 
     // Check that the clock has not jumped ahead too far:
     if (time50 - oldtime50 > maxjump){
-      fprintf(stderr, "ALARM: Large time gap between events!\n");
+      char msg[128] = "Stonehenge: Large time gap between events!\n";
+      alarm(1, msg);
+      fprintf(stderr, msg);
       //system("");
       // Assume for now that the time is wrong
       time50 = oldtime50;
