@@ -35,6 +35,7 @@
 #include <limits.h>
 #include <fstream>
 #include <signal.h>
+#include <time.h>
 
 static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
@@ -303,6 +304,11 @@ sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
 system(curlmsg);
 }
 
+// This function writes statistics to redis database
+static void redis()
+{
+}
+
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
@@ -546,6 +552,8 @@ int main(int argc, char *argv[])
   uint64_t time50 = 0;
   uint64_t time10 = 0;
   uint64_t longtime = 0;
+  time_t walltime = 0;
+  time_t oldwalltime = 0;
   int epoch = 0;
   int index = 0;
 
@@ -600,6 +608,14 @@ int main(int argc, char *argv[])
       nhit = hits->NPmtHit;
       eventn++;
       compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
+
+    // Has wall time changed?
+    if(walltime!=0)
+      oldwalltime=walltime;
+    walltime=time(NULL);
+    if (walltime!=oldwalltime){
+      redis();
+    }
  
       // Set time origin on first event
       if(eventn == 1){
