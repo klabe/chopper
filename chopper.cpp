@@ -295,9 +295,12 @@ static void printhelp()
 }
 
 // This function sends alarms to the website
-static void alarm(int, const char*)
+static void alarm(int level, const char* msg)
 {
-
+char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
+char curlmsg[256];
+sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
+system(curlmsg);
 }
 
 // This function interprets the command line arguments to the program
