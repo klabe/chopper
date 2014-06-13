@@ -320,6 +320,7 @@ static void Openredis(redisContext *redis)
 // This function closes the redis connection when finished
 static void Closeredis(redisContext *redis)
 {
+  redisFree(redis);
 }
 
 // This function writes statistics to redis database
@@ -327,9 +328,9 @@ static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
   char commandl1[128], commandl2[128], commandburst[128];
-  sprintf(commandl1, "INCR BY %i /alarm/int:1:l1", l1);
+  sprintf(commandl1, "INCRBY /alarm/int:1:l1 %i", l1);
   void* reply = redisCommand(redis, commandl1);
-  sprintf(commandl2, "INCR BY %i /alarm/int:1:l2", l2);
+  sprintf(commandl2, "INCRBY /alarm/int:1:l2 %i", l2);
   reply = redisCommand(redis, commandl2);
   if(burst){
     sprintf(commandburst, "INCR /alarm/int:1:burst" );
@@ -819,6 +820,7 @@ int main(int argc, char *argv[])
   if(w1) Close(outfilebase, index, w1);
   if(w2) Close(outfilebase, index+1, w2);
 
+  Closeredis(redis);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
   return 0;
