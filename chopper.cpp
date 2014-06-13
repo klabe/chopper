@@ -45,6 +45,7 @@ static bool waitnow = false; // Must we wait for queue to be rebuilt?
 static const int NHITCUT = 30;
 
 // Whether to write out metadata as macro files for each chunk
+// This also determines whether chopping occurs
 static bool macro = true;
 
 // Whether to overwrite existing output
