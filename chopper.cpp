@@ -323,7 +323,7 @@ static void Closeredis(redisContext *redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis)
+static void Writetoredis(redisContext *redis, int l1, int l2, bool burst)
 {
   char* command;
   void* reply = redisCommand(redis, command);
@@ -568,9 +568,12 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  // Prepare to record statistics in redis database
   redisContext *redis;
   if(yesredis) 
     Openredis(redis);
+  int l1, l2;
+  bool burstbool;
 
   // Initialize the various clocks
   uint64_t time0 = 0;
@@ -640,7 +643,11 @@ int main(int argc, char *argv[])
     walltime=time(NULL);
     if (walltime!=oldwalltime){
       if(yesredis) 
-        Writetoredis(redis);
+        Writetoredis(redis, l1, l2, burstbool);
+      // Reset statistics
+      l1 = 0;
+      l2 = 0;
+      burstbool = false;
     }
  
       // Set time origin on first event
