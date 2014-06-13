@@ -803,6 +803,10 @@ int main(int argc, char *argv[])
     else
       OutZdab(zrec, w1, zfile);
     recordn++;
+    // Statistics for redis
+    l1++;
+    if(nhit>NHITCUT)
+      l2++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, index, w1);
   if(w2) Close(outfilebase, index+1, w2);
