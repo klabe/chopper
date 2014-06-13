@@ -323,10 +323,18 @@ static void Closeredis(redisContext *redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, int l1, int l2, bool burst)
+static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
+                         int time)
 {
-  char* command;
-  void* reply = redisCommand(redis, command);
+  char commandl1[128], commandl2[128], commandburst[128];
+  sprintf(commandl1, "INCR BY %i /alarm/int:1:l1", l1);
+  void* reply = redisCommand(redis, commandl1);
+  sprintf(commandl2, "INCR BY %i /alarm/int:1:l2", l2);
+  reply = redisCommand(redis, commandl2);
+  if(burst){
+    sprintf(commandburst, "INCR /alarm/int:1:burst" );
+    reply = redisCommand(redis, commandburst);
+  }
 }
 
 // This function interprets the command line arguments to the program
@@ -580,8 +588,8 @@ int main(int argc, char *argv[])
   uint64_t time50 = 0;
   uint64_t time10 = 0;
   uint64_t longtime = 0;
-  time_t walltime = 0;
-  time_t oldwalltime = 0;
+  int walltime = 0;
+  int oldwalltime = 0;
   int epoch = 0;
   int index = 0;
 
@@ -640,10 +648,10 @@ int main(int argc, char *argv[])
     // Has wall time changed?
     if(walltime!=0)
       oldwalltime=walltime;
-    walltime=time(NULL);
+    walltime=(int)time(NULL);
     if (walltime!=oldwalltime){
       if(yesredis) 
-        Writetoredis(redis, l1, l2, burstbool);
+        Writetoredis(redis, l1, l2, burstbool,oldwalltime);
       // Reset statistics
       l1 = 0;
       l2 = 0;
