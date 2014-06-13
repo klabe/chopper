@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include "PZdabFile.h"
 //#include "CUtils.h"
-#pragma GCC diagnostic ignored "-Wformat"
+//#pragma GCC diagnostic ignored "-Wformat"
 //#include "SnoStr.h" // DumpRecord is disabled
 #include "Record_Info.h"
 

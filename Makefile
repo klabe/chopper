@@ -1,5 +1,6 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
-         -fdiagnostics-show-option 
+         -fdiagnostics-show-option -L/cp/home/cp/klabe/hiredis \
+         -I/cp/home/cp/klabe/hiredis -lhiredis 
 
 CC = g++
 

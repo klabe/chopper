@@ -36,6 +36,7 @@
 #include <fstream>
 #include <signal.h>
 #include <time.h>
+#include "hiredis.h"
 
 static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
@@ -51,6 +52,9 @@ static bool clobber = true;
 
 // Most output files permitted, where zero means unlimited.
 static int maxfiles = 0;
+
+// Write to redis database?
+static bool yesredis = false;
 
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
@@ -291,6 +295,7 @@ static void printhelp()
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -m [n]: Set maximum number of output files, discarding remainder\n"
   "          of input.  Zero means unlimited.\n"
+  "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
   );
 }
@@ -298,15 +303,30 @@ static void printhelp()
 // This function sends alarms to the website
 static void alarm(int level, const char* msg)
 {
-char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
-char curlmsg[256];
-sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
-system(curlmsg);
+  char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
+  char curlmsg[256];
+  sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
+  system(curlmsg);
+}
+
+// This function opens the redis connection at startup
+static void Openredis(redisContext *redis)
+{
+  redis = redisConnect("cp4.uchicago.edu", 6379);
+  if(redis->err)
+    printf("Error: %s\n", redis->errstr);
+}
+
+// This function closes the redis connection when finished
+static void Closeredis(redisContext *redis)
+{
 }
 
 // This function writes statistics to redis database
-static void redis()
+static void Writetoredis(redisContext *redis)
 {
+  char* command;
+  void* reply = redisCommand(redis, command);
 }
 
 // This function interprets the command line arguments to the program
@@ -314,7 +334,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, uint64_t & ticks,
                           uint64_t & increment)
 {
-  const char * const opts = "hi:o:tm:c:l:s:n";
+  const char * const opts = "hi:o:tm:c:l:s:n:r";
 
   bool done = false;
   
@@ -334,6 +354,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 't': macro = false; break;
       case 'n': clobber = false; break;
       case 's': subrun = optarg; break;
+      case 'r': yesredis = true; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -547,6 +568,10 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  redisContext *redis;
+  if(yesredis) 
+    Openredis(redis);
+
   // Initialize the various clocks
   uint64_t time0 = 0;
   uint64_t time50 = 0;
@@ -614,7 +639,8 @@ int main(int argc, char *argv[])
       oldwalltime=walltime;
     walltime=time(NULL);
     if (walltime!=oldwalltime){
-      redis();
+      if(yesredis) 
+        Writetoredis(redis);
     }
  
       // Set time origin on first event
