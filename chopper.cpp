@@ -697,6 +697,7 @@ int main(int argc, char *argv[])
         }
         // While in a burst
         if(burst){
+          burstbool=true;
           bcount++;
           while(bursttime[bursthead] < longtime - ENDWINDOW){
             AddEvBFile(bursthead, burstev, bursttime, b);
