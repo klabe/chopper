@@ -316,6 +316,8 @@ static void Openredis(redisContext *redis)
   redis = redisConnect("cp4.uchicago.edu", 6379);
   if(redis->err)
     printf("Error: %s\n", redis->errstr);
+  else
+    printf("Connected to Redis.\n");
 }
 
 // This function closes the redis connection when finished
@@ -328,14 +330,12 @@ static void Closeredis(redisContext *redis)
 static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
-  char commandl1[128], commandl2[128], commandburst[128];
-  sprintf(commandl1, "INCRBY /alarm/int:1:id:%i:l1:%i", time, l1);
-  void* reply = redisCommand(redis, commandl1);
-  sprintf(commandl2, "INCRBY /alarm/int:1:id:%i:l2:%i", time, l2);
-  reply = redisCommand(redis, commandl2);
+  printf("Test 1\n");
+  void* reply = redisCommand(redis, "INCRBY /alarm/int:1:id:%s:l1 %s", time, l1);
+  printf("Test 2\n");
+  reply = redisCommand(redis, "INCRBY /alarm/int:1:id:%i:l2 %i", time, l2);
   if(burst){
-    sprintf(commandburst, "INCR /alarm/int:1:id:%i:burst:1", time);
-    reply = redisCommand(redis, commandburst);
+    reply = redisCommand(redis, "INCR /alarm/int:1:id:%i:burst", time);
   }
 }
 
@@ -582,8 +582,9 @@ int main(int argc, char *argv[])
   redisContext *redis;
   if(yesredis) 
     Openredis(redis);
-  int l1, l2;
-  bool burstbool;
+  int l1=0;
+  int l2=0;
+  bool burstbool=false;
 
   // Initialize the various clocks
   uint64_t time0 = 0;
