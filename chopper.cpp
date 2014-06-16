@@ -329,12 +329,12 @@ static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
   char commandl1[128], commandl2[128], commandburst[128];
-  sprintf(commandl1, "INCRBY /alarm/int:1:l1 %i", l1);
+  sprintf(commandl1, "INCRBY /alarm/int:1:id:%i:l1:%i", time, l1);
   void* reply = redisCommand(redis, commandl1);
-  sprintf(commandl2, "INCRBY /alarm/int:1:l2 %i", l2);
+  sprintf(commandl2, "INCRBY /alarm/int:1:id:%i:l2:%i", time, l2);
   reply = redisCommand(redis, commandl2);
   if(burst){
-    sprintf(commandburst, "INCR /alarm/int:1:burst" );
+    sprintf(commandburst, "INCR /alarm/int:1:id:%i:burst:1", time);
     reply = redisCommand(redis, commandburst);
   }
 }
