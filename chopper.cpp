@@ -331,11 +331,11 @@ static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
   printf("Test 1\n");
-  void* reply = redisCommand(redis, "INCRBY /alarm/int:1:id:%s:l1 %s", time, l1);
+  void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:1400:l1 8");
   printf("Test 2\n");
-  reply = redisCommand(redis, "INCRBY /alarm/int:1:id:%i:l2 %i", time, l2);
+  reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%i:l2 %i", time, l2);
   if(burst){
-    reply = redisCommand(redis, "INCR /alarm/int:1:id:%i:burst", time);
+    reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%i:burst", time);
   }
 }
 
