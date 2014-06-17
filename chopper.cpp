@@ -37,6 +37,7 @@
 #include <signal.h>
 #include <time.h>
 #include "hiredis.h"
+#include "snbuf.h"
 
 static double chunksize = 1.0; // Default Chunk Size in Seconds
 static double overlap = 0.1; // Default Overlap Size in Seconds
@@ -311,11 +312,11 @@ static void alarm(int level, const char* msg)
 }
 
 // This function opens the redis connection at startup
-static void Openredis(redisContext *redis)
+static void Openredis(redisContext **redis)
 {
-  redis = redisConnect("cp4.uchicago.edu", 6379);
-  if(redis->err)
-    printf("Error: %s\n", redis->errstr);
+  *redis = redisConnect("cp4.uchicago.edu", 6379);
+  if((*redis)->err)
+    printf("Error: %s\n", (*redis)->errstr);
   else
     printf("Connected to Redis.\n");
 }
@@ -330,9 +331,8 @@ static void Closeredis(redisContext *redis)
 static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
-  printf("Test 1\n");
-  void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:1400:l1 8");
-  printf("Test 2\n");
+  const char *command = "INCRBY /l2_filter/int:1:id:1400:l1 8";
+  void* reply = redisCommand(redis, command);
   reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%i:l2 %i", time, l2);
   if(burst){
     reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%i:burst", time);
@@ -476,87 +476,6 @@ void setwaitnow(int sig){
   waitnow = sig == SIGUSR1;
 }
 
-// Burst Buffer Functions //
-////////////////////////////////////////////////////////////////////////
-static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static const int NHITBCUT = 40; // Nhit Cut on Burst events
-static const int BurstLength = 10; // Burst length in seconds
-static const int BurstTicks = BurstLength*50000000; // length in ticks
-static const int BurstSize = 30; // Number of events constituting a burst
-bool burst = false; // Flags ongoing bursts
-int burstindex = 0; // Number of bursts observed
-static const int ENDWINDOW = 1*50000000; // integration window for determining whether burst has ended
-static const int EndRate = 10; // Rate below which burst ends
-
-// This function drops old events from the buffer once they expire
-void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
-            int & bursthead, int & bursttail){
-  // The case that the buffer is empty
-  if(bursthead==-1)
-    return;
-  // Normal Case
-  while(Bursttime[bursthead] < longtime - BurstTicks && bursthead!=-1){
-    Bursttime[bursthead] = 0;
-    for(int j =0; j < NWREC*sizeof(uint32_t); j++){
-      Burstev[bursthead][j] = 0;
-    }
-    // Advance the head
-    if(bursthead < EVENTNUM -1)
-      bursthead++;
-    else
-      bursthead=0;
-    // Reset to empty state if we have emptied the queue
-    if(bursthead==bursttail){
-      bursthead=-1;
-      bursttail=-1;
-    }
-  }
-}
-
-// This fuction adds events to an open Burst File
-void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
-                PZdabWriter* const b){
-  // Write out the data
-  if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
-    fprintf(stderr, "Error writing zdab to burst file\n");
-  // The drop the data from the buffer
-  for(int j=0; j < NWREC*sizeof(uint32_t); j++){
-    burstev[bursthead][j] = 0;
-  }
-  Bursttime[bursthead] = 0;
-  if(bursthead < EVENTNUM - 1)
-    bursthead++;
-  else
-    bursthead=0;
-}
-
-// This function adds a new event to the buffer
-void AddEvBuf(nZDAB* zrec, uint64_t longtime, char* burstev[],
-              uint64_t bursttime[EVENTNUM], int & bursthead, int & bursttail,
-              int reclen){
-  // Check whether we will overflow the buffer
-  if(bursthead==bursttail && bursthead!=-1){
-    fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
-  }
-  // Write the event to the buffer
-  else{
-    // For first event, set pointers appropriately
-    if(bursttail==-1){
-      bursttail=0;
-      bursthead=0;
-    }
-
-    memcpy(burstev[bursttail], zrec+1, reclen);
-    bursttime[bursttail] = longtime;
-    if(bursttail<EVENTNUM - 1)
-      bursttail++;
-    else
-      bursttail=0;
-    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
-  }
-}
-////////////////////////////////////////////////////////////////////////
-
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -581,7 +500,7 @@ int main(int argc, char *argv[])
   // Prepare to record statistics in redis database
   redisContext *redis;
   if(yesredis) 
-    Openredis(redis);
+    Openredis(&redis);
   int l1=0;
   int l2=0;
   bool burstbool=false;
