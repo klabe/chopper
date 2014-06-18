@@ -19,16 +19,15 @@ void InitializeBuf(){
 }
 
 // This function drops old events from the buffer once they expire
-void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
-            int & bursthead, int & bursttail){
+void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail){
   // The case that the buffer is empty
   if(bursthead==-1)
     return;
   // Normal Case
-  while(Bursttime[bursthead] < longtime - BurstTicks && bursthead!=-1){
-    Bursttime[bursthead] = 0;
+  while(bursttime[bursthead] < longtime - BurstTicks && bursthead!=-1){
+    bursttime[bursthead] = 0;
     for(int j =0; j < NWREC*sizeof(uint32_t); j++){
-      Burstev[bursthead][j] = 0;
+      burstev[bursthead][j] = 0;
     }
     // Advance the head
     if(bursthead < EVENTNUM -1)
@@ -44,8 +43,7 @@ void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
-                PZdabWriter* const b){
+void AddEvBFile(int & bursthead, PZdabWriter* const b){
   // Write out the data
   if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
@@ -53,7 +51,7 @@ void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
   for(int j=0; j < NWREC*sizeof(uint32_t); j++){
     burstev[bursthead][j] = 0;
   }
-  Bursttime[bursthead] = 0;
+  bursttime[bursthead] = 0;
   if(bursthead < EVENTNUM - 1)
     bursthead++;
   else
@@ -62,7 +60,6 @@ void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
 
 // This function adds a new event to the buffer
 void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
-              char* const burstev[], uint64_t bursttime[EVENTNUM],
               int & bursthead, int & bursttail, const int reclen){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){

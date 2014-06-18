@@ -585,9 +585,9 @@ int main(int argc, char *argv[])
       }
       // Burst Detection Here
       if(nhit > NHITBCUT){
-        UpdateBuf(alltime.longtime, burstev, bursttime, bursthead, bursttail);
+        UpdateBuf(alltime.longtime, bursthead, bursttail);
         int reclen = zfile->GetSize(hits);
-        AddEvBuf(zrec, alltime.longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
+        AddEvBuf(zrec, alltime.longtime, bursthead, bursttail, reclen*sizeof(uint32_t));
 
         // Calculate the current burst queue length
         int burstlength = 0;
@@ -617,12 +617,12 @@ int main(int argc, char *argv[])
           burstbool=true;
           bcount++;
           while(bursttime[bursthead] < alltime.longtime - ENDWINDOW){
-            AddEvBFile(bursthead, burstev, bursttime, b);
+            AddEvBFile(bursthead, b);
           }
           // Check if the burst has ended
           if(burstlength<EndRate){
             while(bursthead<bursttail+1){
-              AddEvBFile(bursthead, burstev, bursttime, b);
+              AddEvBFile(bursthead, b);
             }
             b->Close();
             burst=false;

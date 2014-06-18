@@ -15,10 +15,7 @@ static char* burstev[EVENTNUM]; // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
 
 void InitializeBuf();
-void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
-               int & bursthead, int & bursttail);
-void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],
-                PZdabWriter* const b);
+void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail);
+void AddEvBFile(int & bursthead, PZdabWriter* const b);
 void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
-              char* const burstev[], uint64_t bursttime[EVENTNUM],
               int & bursthead, int & bursttail, const int reclen);
