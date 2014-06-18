@@ -392,7 +392,6 @@ int main(int argc, char *argv[])
 
   // Initialize the various clocks
   alltimes alltime;
-  uint64_t time0 = 0;
   int walltime = 0;
   int oldwalltime = 0;
   int index = 0;
@@ -448,12 +447,6 @@ int main(int argc, char *argv[])
         l1 = 0;
         l2 = 0;
         burstbool = false;
-      }
- 
-      // Set time origin on first event
-      if(eventn == 1){
-        puts("Initializing time origin"); // Should only print once!
-        time0 = alltime.longtime;
       }
 
       // Burst Detection Here
