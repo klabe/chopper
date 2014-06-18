@@ -613,9 +613,7 @@ int main(int argc, char *argv[])
         if(burst){
           burstbool=true;
           bcount++;
-          while(bursttime[bursthead] < alltime.longtime - ENDWINDOW){
-            AddEvBFile(bursthead, b);
-          }
+          Writeburst(bursthead, bursttail, alltime.longtime, b);
           // Check if the burst has ended
           if(burstlength<EndRate){
             while(bursthead<bursttail+1){

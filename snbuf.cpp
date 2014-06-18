@@ -98,3 +98,10 @@ int Burstlength(int bursthead, int bursttail){
   }
   return burstlength;
 }
+
+// This function writes out the allowable portion of the buffer to a burst file
+void Writeburst(int bursthead, int bursttail, uint64_t longtime,PZdabWriter* b){
+  while(bursttime[bursthead] < longtime - ENDWINDOW && bursthead < bursttail){
+    AddEvBFile(bursthead, b);
+  }
+}
