@@ -236,20 +236,21 @@ static void Openredis(redisContext **redis)
 }
 
 // This function closes the redis connection when finished
-static void Closeredis(redisContext *redis)
+static void Closeredis(redisContext **redis)
 {
-  redisFree(redis);
+  redisFree(*redis);
 }
 
 // This function writes statistics to redis database
 static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
                          int time)
 {
-  const char *command = "INCRBY /l2_filter/int:1:id:1400:l1 8";
-  void* reply = redisCommand(redis, command);
-  reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%i:l2 %i", time, l2);
+  void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l1 %d", time, l1);
+  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l1 %d", time, 100000*1);
+  reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l2 %d", time, l2);
+  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l2 %d", time, 100000*1);
   if(burst){
-    reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%i:burst", time);
+    reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%d:burst", time);
   }
 }
 
@@ -515,7 +516,7 @@ int main(int argc, char *argv[])
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, index, w1);
 
-  Closeredis(redis);
+  Closeredis(&redis);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
   return 0;
