@@ -16,10 +16,12 @@ void InitializeBuf(){
     memset(burstev[i],0,NWREC*sizeof(uint32_t));
     bursttime[i]=0;
   }
+  bursthead = -1;
+  bursttail = -1;
 }
 
 // This function drops old events from the buffer once they expire
-void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail){
+void UpdateBuf(uint64_t longtime){
   // The case that the buffer is empty
   if(bursthead==-1)
     return;
@@ -43,7 +45,7 @@ void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail){
 }
 
 // This fuction adds events to an open Burst File
-void AddEvBFile(int & bursthead, PZdabWriter* const b){
+void AddEvBFile(PZdabWriter* const b){
   // Write out the data
   if(b->WriteBank((uint32_t *)burstev[bursthead], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
@@ -59,8 +61,7 @@ void AddEvBFile(int & bursthead, PZdabWriter* const b){
 }
 
 // This function adds a new event to the buffer
-void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
-              int & bursthead, int & bursttail, const int reclen){
+void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
@@ -88,7 +89,7 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
 
 // This function computes the number of burst candidate events currently
 // in the buffer
-int Burstlength(int bursthead, int bursttail){
+int Burstlength(){
   int burstlength = 0;
   if(bursthead!=-1){
     if(bursthead<bursttail)
@@ -100,8 +101,17 @@ int Burstlength(int bursthead, int bursttail){
 }
 
 // This function writes out the allowable portion of the buffer to a burst file
-void Writeburst(int bursthead, int bursttail, uint64_t longtime,PZdabWriter* b){
+void Writeburst(uint64_t longtime, PZdabWriter* b){
   while(bursttime[bursthead] < longtime - ENDWINDOW && bursthead < bursttail){
-    AddEvBFile(bursthead, b);
+    AddEvBFile(b);
   }
+}
+
+// This function writes out the remainder of the buffer when burst ends
+void Finishburst(PZdabWriter* b){
+  while(bursthead < bursttail+1){
+    AddEvBFile(b);
+  }
+  bursthead = -1;
+  bursttail = -1;
 }

@@ -13,11 +13,13 @@ static const int ENDWINDOW = 1*500000000; // Integration window for determining 
 static const int EndRate = 10; // Rate below which burst ends
 static char* burstev[EVENTNUM]; // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
+static int bursthead;
+static int bursttail;
 
 void InitializeBuf();
-void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail);
-void AddEvBFile(int & bursthead, PZdabWriter* const b);
-void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
-              int & bursthead, int & bursttail, const int reclen);
-int Burstlength(int bursthead, int bursttail);
-void Writeburst(int bursthead, int bursttail, uint64_t longtime, PZdabWriter* b);
+void UpdateBuf(uint64_t longtime);
+void AddEvBFile(PZdabWriter* const b);
+void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen);
+int Burstlength();
+void Writeburst(uint64_t longtime, PZdabWriter* b);
+void Finishburst(PZdabWriter* b);

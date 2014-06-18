@@ -417,8 +417,6 @@ int main(int argc, char *argv[])
 
   // Set up the Burst Buffer
   InitializeBuf();
-  int bursthead = -1; // This points to the beginning of the burst buffer
-  int bursttail = -1; // This points to the end of the burst buffer
   int bcount = 0;
 
   // Loop over ZDAB Records
@@ -469,10 +467,10 @@ int main(int argc, char *argv[])
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
       if(nhit > NHITBCUT){
-        UpdateBuf(alltime.longtime, bursthead, bursttail);
+        UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
-        AddEvBuf(zrec, alltime.longtime, bursthead, bursttail, reclen*sizeof(uint32_t));
-        int burstlength = Burstlength(bursthead, bursttail);
+        AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
+        int burstlength = Burstlength();
 
         int starttick = 0;
 
@@ -493,12 +491,10 @@ int main(int argc, char *argv[])
         if(burst){
           burstbool=true;
           bcount++;
-          Writeburst(bursthead, bursttail, alltime.longtime, b);
+          Writeburst(alltime.longtime, b);
           // Check if the burst has ended
           if(burstlength<EndRate){
-            while(bursthead<bursttail+1){
-              AddEvBFile(bursthead, b);
-            }
+            Finishburst(b);
             b->Close();
             burst=false;
             int btime = alltime.longtime - starttick;
@@ -508,8 +504,6 @@ int main(int argc, char *argv[])
             burstindex++;
             // Reset to prepare for next burst
             bcount=0;
-            bursthead=-1;
-            bursttail=-1;
           }
         }
 
