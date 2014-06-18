@@ -585,7 +585,7 @@ int main(int argc, char *argv[])
       }
       // Burst Detection Here
       // If the current event is over our burst nhit threshold (NHITBCUT):
-      //   * First update the buffer by dropping events older than BURSTSIZE
+      //   * First update the buffer by dropping events older than BurstLength
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
