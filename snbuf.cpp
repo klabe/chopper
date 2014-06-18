@@ -39,6 +39,7 @@ void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail){
       bursthead=-1;
       bursttail=-1;
     }
+    fprintf(stderr, "bursttail: %d\n", bursttail);
   }
 }
 
@@ -63,8 +64,9 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
               int & bursthead, int & bursttail, const int reclen){
   // Check whether we will overflow the buffer
   if(bursthead==bursttail && bursthead!=-1){
-    fprintf(stderr, "ALARM: Burst Buffer has overflowed!");
+    fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
   }
+  
   // Write the event to the buffer
   else{
     // If buffer empty, set pointers appropriately
@@ -72,8 +74,10 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
       bursttail=0;
       bursthead=0;
     }
-
-    memcpy(burstev[bursttail], zrec+1, reclen);
+    if(reclen < NWREC*4)
+      memcpy(burstev[bursttail], zrec+1, reclen);
+    else
+      fprintf(stderr, "ALARM: Event too big for buffer!\n");
     bursttime[bursttail] = longtime;
     if(bursttail<EVENTNUM - 1)
       bursttail++;

@@ -561,19 +561,18 @@ int main(int argc, char *argv[])
       nhit = hits->NPmtHit;
       eventn++;
       alltime = compute_times(hits, alltime, eventn, orphan);
-
-    // Has wall time changed?
-    if(walltime!=0)
-      oldwalltime=walltime;
-    walltime=(int)time(NULL);
-    if (walltime!=oldwalltime){
-      if(yesredis) 
-        Writetoredis(redis, l1, l2, burstbool,oldwalltime);
-      // Reset statistics
-      l1 = 0;
-      l2 = 0;
-      burstbool = false;
-    }
+      // Has wall time changed?
+      if(walltime!=0)
+        oldwalltime=walltime;
+      walltime=(int)time(NULL);
+      if (walltime!=oldwalltime){
+        if(yesredis) 
+          Writetoredis(redis, l1, l2, burstbool,oldwalltime);
+        // Reset statistics
+        l1 = 0;
+        l2 = 0;
+        burstbool = false;
+      }
  
       // Set time origin on first event
       if(eventn == 1){
