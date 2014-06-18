@@ -67,6 +67,15 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
+// Structure to hold all the relevant times
+struct alltimes
+{
+uint64_t time10;
+uint64_t time50;
+uint64_t longtime;
+int epoch;
+};
+
 // Function to Print ZDAB records to screen readably
 void hexdump(char* ptr, int len){
   for(int i=0; i < len/16 +1; i++){
@@ -390,39 +399,35 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 // This function calculates the time of an event as measured by the
 // various clocks we are interested in.
-static void compute_times(const PmtEventRecord * const hits, 
-                          uint64_t & time10, uint64_t & time50,
-                          uint64_t & longtime, int & epoch,
+static alltimes compute_times(const PmtEventRecord * const hits, 
+                          alltimes oldat,
                           uint64_t & eventn, int & orphan)
 {
+  alltimes newat = oldat;
   if(eventn == 1){
-    time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                     + hits->TriggerCardData.Bc50_1;
-    time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
-                     + hits->TriggerCardData.Bc10_1;
-    if(time50 == 0) orphan++;
-    longtime = time50;
+    newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+                             + hits->TriggerCardData.Bc50_1;
+    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
+                             + hits->TriggerCardData.Bc10_1;
+    if(newat.time50 == 0) orphan++;
+    newat.longtime = newat.time50;
   }
   else{
-    // Store the old 10MHz and 50MHz Clock Time for comparison
-    const uint64_t oldtime50 = time50;
-    const uint64_t oldtime10 = time10;
-
     // Get the current 50MHz Clock Time
     // Implementing Part of Method Get50MHzTime() 
     // from PZdabFile.cxx
-    time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                     + hits->TriggerCardData.Bc50_1;
+    newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
+                             + hits->TriggerCardData.Bc50_1;
 
     // Get the current 10MHz Clock Time
     // Method taken from zdab_convert.cpp
-    time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                     + hits->TriggerCardData.Bc10_1;
+    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
+                             + hits->TriggerCardData.Bc10_1;
 
     // Check for consistency between clocks
-    const int dd = ( (oldtime10 - time10)*5 > oldtime50 - time50 ? 
-                     (oldtime10 - time10)*5 - (oldtime50 - time50) :
-                     (oldtime50 - time50) - (oldtime10 - time10)*5 );
+    const int dd = ( (oldat.time10 - newat.time10)*5 > oldat.time50 - newat.time50 ? 
+                     (oldat.time10 - newat.time10)*5 - (oldat.time50 - newat.time50) :
+                     (oldat.time50 - newat.time50) - (oldat.time10 - newat.time10)*5 );
     if (dd > maxdrift){
       char msg[128];
       sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
@@ -431,18 +436,18 @@ static void compute_times(const PmtEventRecord * const hits,
     }
 
     // Check for pathological case
-    if (time50 == 0){
-      time50 = oldtime50;
+    if (newat.time50 == 0){
+      newat.time50 = oldat.time50;
       orphan++;
-      return;
+      return newat;
     }
 
     // Check for time running backward:
-    if (time50 < oldtime50){
+    if (newat.time50 < oldat.time50){
       // Is it reasonable that the clock rolled over?
-      if ((oldtime50 + time50 < maxtime + maxjump) && dd < maxdrift && (oldtime50 > maxtime - maxjump) ) {
+      if ((oldat.time50 + newat.time50 < maxtime + maxjump) && dd < maxdrift && (oldat.time50 > maxtime - maxjump) ) {
         fprintf(stderr, "New Epoch\n");
-        epoch++;
+        newat.epoch++;
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
@@ -450,23 +455,24 @@ static void compute_times(const PmtEventRecord * const hits,
         fprintf(stderr, msg);
         //system("");
         // Assume for now that the clock is wrong
-        time50 = oldtime50;
+        newat.time50 = oldat.time50;
       }
     }
 
     // Check that the clock has not jumped ahead too far:
-    if (time50 - oldtime50 > maxjump){
+    if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
       alarm(1, msg);
       fprintf(stderr, msg);
       //system("");
       // Assume for now that the time is wrong
-      time50 = oldtime50;
+      newat.time50 = oldat.time50;
     }
 
     // Set the Internal Clock
-    longtime = time50 + maxtime*epoch;
+    newat.longtime = newat.time50 + maxtime*newat.epoch;
   }
+  return newat;
 }
 
 // This function is called when a SIGUSR1 or SIGUSR2 arrive.
@@ -506,13 +512,10 @@ int main(int argc, char *argv[])
   bool burstbool=false;
 
   // Initialize the various clocks
+  alltimes alltime;
   uint64_t time0 = 0;
-  uint64_t time50 = 0;
-  uint64_t time10 = 0;
-  uint64_t longtime = 0;
   int walltime = 0;
   int oldwalltime = 0;
-  int epoch = 0;
   int index = 0;
 
   // Setup initial output file
@@ -557,7 +560,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
-      compute_times(hits, time10, time50, longtime, epoch, eventn, orphan);
+      alltime = compute_times(hits, alltime, eventn, orphan);
 
     // Has wall time changed?
     if(walltime!=0)
@@ -575,15 +578,16 @@ int main(int argc, char *argv[])
       // Set time origin on first event
       if(eventn == 1){
         puts("Initializing time origin"); // Should only print once!
-        time0 = longtime;
+        time0 = alltime.longtime;
         // Make initial macro file
-        if(macro) WriteMacro(index, time10, time0, outfilebase);
+        if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
+
       }
       // Burst Detection Here
       if(nhit > NHITBCUT){
-        UpdateBuf(longtime, burstev, bursttime, bursthead, bursttail);
+        UpdateBuf(alltime.longtime, burstev, bursttime, bursthead, bursttail);
         int reclen = zfile->GetSize(hits);
-        AddEvBuf(zrec, longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
+        AddEvBuf(zrec, alltime.longtime, burstev, bursttime, bursthead, bursttail, reclen*sizeof(uint32_t));
 
         // Calculate the current burst queue length
         int burstlength = 0;
@@ -600,7 +604,7 @@ int main(int argc, char *argv[])
           if(burstlength>BurstSize){
             burst=true;
             bcount=burstlength;
-            starttick=longtime;
+            starttick=alltime.longtime;
             fprintf(stderr, "Burst %i has begun!\n", burstindex);
             b = Output("Burst", burstindex);
             for(int i=0; i<headertypes; i++){
@@ -612,7 +616,7 @@ int main(int argc, char *argv[])
         if(burst){
           burstbool=true;
           bcount++;
-          while(bursttime[bursthead] < longtime - ENDWINDOW){
+          while(bursttime[bursthead] < alltime.longtime - ENDWINDOW){
             AddEvBFile(bursthead, burstev, bursttime, b);
           }
           // Check if the burst has ended
@@ -622,7 +626,7 @@ int main(int argc, char *argv[])
             }
             b->Close();
             burst=false;
-            int btime = longtime - starttick;
+            int btime = alltime.longtime - starttick;
             float btimesec = btime/50000000.;
             fprintf(stderr, "Burst %i has ended.  It contains %i events"
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
@@ -640,20 +644,20 @@ int main(int argc, char *argv[])
     // Chop
     if(macro){
       // Within the unique chunk
-      if (longtime < time0 + increment){
+      if (alltime.longtime < time0 + increment){
         if(nhit > NHITCUT)
           OutZdab(zrec, w1, zfile);
       }
       // Within the overlap interval
       else{
-        if (longtime < time0 + ticks){
+        if (alltime.longtime < time0 + ticks){
           if(!w2){
             if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
             w2 = Output(outfilebase, index+1);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], w2, i);
             }
-            if(macro) WriteMacro(index, time10, time0, outfilebase);
+            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
           }
           if(nhit > NHITCUT){
             OutZdab(zrec, w1, zfile);
@@ -677,12 +681,12 @@ int main(int argc, char *argv[])
             w1 = Output(outfilebase, index);
             for(int i=0; i<headertypes; i++)
               OutHeader((GenericRecordHeader*) header[i], w1, i);
-            if(macro) WriteMacro(index, time10, time0, outfilebase);
+            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
           }
           time0 += increment;
       // Now check for empty chunks
           int deadsec = 0;
-          while(longtime > time0 + ticks + deadsec*increment){
+          while(alltime.longtime > time0 + ticks + deadsec*increment){
             Close(outfilebase, index, w1);
             w1 = NULL;
             index++;
@@ -695,12 +699,12 @@ int main(int argc, char *argv[])
             w1 = Output(outfilebase, index);
             for(int i=0; i<headertypes; i++)
               OutHeader((GenericRecordHeader*) header[i], w1, i);
-            if(macro) WriteMacro(index, time10, time0+deadsec*increment, outfilebase);
+            if(macro) WriteMacro(index, alltime.time10, time0+deadsec*increment, outfilebase);
             deadsec++;
           }
           time0 = time0 + deadsec*increment;
       // Lastly, check whether the event is in an overlap or not
-          if (longtime < time0 + increment)
+          if (alltime.longtime < time0 + increment)
             if(nhit>NHITCUT)
               OutZdab(zrec, w1, zfile);
           else{
@@ -714,7 +718,7 @@ int main(int argc, char *argv[])
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], w2, i);
             }
-            if(macro) WriteMacro(index, time10, time0, outfilebase);
+            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
             if(nhit>NHITCUT){
               OutZdab(zrec, w1, zfile);
               OutZdab(zrec, w2, zfile);
