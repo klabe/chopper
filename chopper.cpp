@@ -39,21 +39,10 @@
 #include "hiredis.h"
 #include "snbuf.h"
 
-static double chunksize = 1.0; // Default Chunk Size in Seconds
-static double overlap = 0.1; // Default Overlap Size in Seconds
-static char* subrun = "."; // Default output directory
-static bool waitnow = false; // Must we wait for queue to be rebuilt?
 static const int NHITCUT = 30;
-
-// Whether to write out metadata as macro files for each chunk
-// This also determines whether chopping occurs
-static bool macro = true;
 
 // Whether to overwrite existing output
 static bool clobber = true;
-
-// Most output files permitted, where zero means unlimited.
-static int maxfiles = 0;
 
 // Write to redis database?
 static bool yesredis = false;
@@ -89,54 +78,6 @@ void hexdump(char* ptr, int len){
     }
     fprintf(stderr, "\n");
   } 
-}
-
-// This function writes macro files needed to correctly interpret the
-// chopped files with RAT.  It can be suppressed with the -t flag.
-// The inputs have the following meaning:
-// The 50MHz clock shows the start of the time interval in which events
-// were allowed in.  The 10MHz clock is set to the time of the first event
-static void WriteMacro(const int index, const uint64_t time10,
-                       const uint64_t time50, const char* base)
-{
-  const int maxlength = 1024;
-  char infilename[maxlength];
-  char outfilename[maxlength];
-  char macname[maxlength];
-  snprintf(infilename, maxlength, "%s/zdab/%s_%i.zdab", subrun, base, index);
-  snprintf(outfilename, maxlength, "%s/root/%s_%i.root", subrun, base, index);
-  snprintf(macname, maxlength, "%s/mac/%i.mac", subrun, index);
-  std::ofstream file;
-  file.open (macname);
-  file << "/PhysicsList/OmitMuonicProcesses true\n";
-  file << "/PhysicsList/OmitHadronicProcesses true\n";
-  file << "/PhysicsList/OmitCerenkov true\n";
-  file << "/PhysicsList/Optical/OmitBoundaryEffects true\n";
-  file << "/PhysicsList/OmitHadronicPhysicsList true\n";
-  file << "/rat/db/set DETECTOR geo_file \"geo/empty.geo\" \n\n";
-  file << "/run/initialize\n";
-  file << "/rat/proc calibratePMT\n";
-  file << "/rat/proc count\n";
-  file << "/rat/procset update 10\n";
-  file << "/rat/proc burst\n";
-  file << "/rat/proc fBurstTrigName \"Burst\"\n";
-  file << "/rat/proc fitter\n";
-  file << "/rat/procset method \"quad\"\n";
-  file << "/rat/proc filter\n";
-  file << "/rat/procset chunk " << chunksize << "\n";
-  file << "/rat/procset start " << time50 << "\n";
-  file << "/rat/proc monitor\n";
-  file << "/rat/procset subrun " << subrun << "\n";
-  file << "/rat/procset index " << index << "\n";
-  file << "/rat/procset chunk " << chunksize << "\n";
-  file << "/rat/procset time50 " << time50 << "\n";
-  file << "/rat/procset time10 " << time10 << "\n";
-  file << "/rat/proc/if L2Cut\n";
-  file << "    /rat/proc outroot\n";
-  file << "    /rat/procset file " << outfilename << "\n";
-  file << "/rat/proc/endif\n\n";
-  file << "/rat/inzdab/read " << infilename;
-  file.close();
 }
 
 // This function writes out the ZDAB record
@@ -220,34 +161,6 @@ static void Close(const char* const base, const unsigned int index,
 {
   w->Close();
 
-  if(macro){
-    while(waitnow){
-      usleep(100000);
-    }
-    const int maxlen = 1024;
-    char closedfilename[maxlen];
-
-    snprintf(closedfilename, maxlen, "%s_%i.zdab", base, index);
-    if(access(closedfilename, F_OK)){
-      fprintf(stderr, "%s cannot be found!\n", closedfilename);
-      exit(1);
-    }
-  
-    char newname[maxlen];
-    snprintf(newname, maxlen, "%s/zdab/%s", subrun, closedfilename);
-    if(rename(closedfilename, newname)){
-      fprintf(stderr, "File %s cannot be moved!\n", closedfilename);
-      exit(1);
-    }
-
-    char job[maxlen];
-    snprintf(job, maxlen, "./job %s %i %s", subrun, index, newname);
-    std::ofstream jobqueue;
-    jobqueue.open("jobqueue.txt", std::fstream::app);
-    jobqueue << job;
-    jobqueue.close();
-  }
-
   std::ofstream myfile;
   myfile.open("chopper.run.log", std::fstream::app);
   myfile << index << "\n";
@@ -296,16 +209,8 @@ static void printhelp()
   "  -i [string]: Input file\n"
   "  -o [string]: Base of output files\n"
   "\n"
-  "Adjust physics parameters:\n"
-  "  -c [n]: Chunk size in seconds\n"
-  "  -l [n]: Overlap size in seconds\n"
-  "\n"
   "Misc/debugging options\n"
-  "  -t: Do not chop or write out processing macros\n"
-  "  -s: Specify the subrun directory\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
-  "  -m [n]: Set maximum number of output files, discarding remainder\n"
-  "          of input.  Zero means unlimited.\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
   );
@@ -366,13 +271,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
-      case 'm': maxfiles = getcmdline_l(ch); break;
-      case 'c': chunksize = getcmdline_d(ch); break;
-      case 'l': overlap = getcmdline_d(ch); break;
 
-      case 't': macro = false; break;
       case 'n': clobber = false; break;
-      case 's': subrun = optarg; break;
       case 'r': yesredis = true; break;
 
       case 'h': printhelp(); exit(0);
@@ -388,13 +288,6 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  if(overlap > chunksize){
-    fprintf(stderr, "Overlap cannot be bigger than chunksize\n");
-    exit(1);
-  }
-
-  ticks = uint64_t((chunksize+overlap)*50000000); // 50 MHz clock
-  increment = uint64_t(chunksize*50000000);
 }
 
 // This function calculates the time of an event as measured by the
@@ -475,19 +368,9 @@ static alltimes compute_times(const PmtEventRecord * const hits,
   return newat;
 }
 
-// This function is called when a SIGUSR1 or SIGUSR2 arrive.
-// These signals are sent by runjobs when it is going to rebuild
-// the jobqueue and needs chopper to wait.
-void setwaitnow(int sig){
-  waitnow = sig == SIGUSR1;
-}
-
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
-  signal(SIGUSR1, setwaitnow);
-  signal(SIGUSR2, setwaitnow);
-
   char * infilename = NULL, * outfilebase = NULL;
 
   uint64_t ticks, increment;
@@ -520,7 +403,6 @@ int main(int argc, char *argv[])
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, index);
-  PZdabWriter* w2 = NULL;
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -578,10 +460,8 @@ int main(int argc, char *argv[])
       if(eventn == 1){
         puts("Initializing time origin"); // Should only print once!
         time0 = alltime.longtime;
-        // Make initial macro file
-        if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
-
       }
+
       // Burst Detection Here
       // If the current event is over our burst nhit threshold (NHITBCUT):
       //   * First update the buffer by dropping events older than BurstLength
@@ -636,94 +516,7 @@ int main(int argc, char *argv[])
       } // End Burst Loop
     } // End Loop for Event Records
 
-    // Chop
-    if(macro){
-      // Within the unique chunk
-      if (alltime.longtime < time0 + increment){
-        if(nhit > NHITCUT)
-          OutZdab(zrec, w1, zfile);
-      }
-      // Within the overlap interval
-      else{
-        if (alltime.longtime < time0 + ticks){
-          if(!w2){
-            if(maxfiles > 0 && index+2 >= maxfiles) { eventn--; break; }
-            w2 = Output(outfilebase, index+1);
-            for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], w2, i);
-            }
-            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
-          }
-          if(nhit > NHITCUT){
-            OutZdab(zrec, w1, zfile);
-            OutZdab(zrec, w2, zfile);
-          }
-        }
-      // Past the overlap region
-      // First, close old chunk and, if there is an open overlap,
-      // promote that file to the current chunk.  If there is no
-      // overlap file, open a new chunk.
-        else{
-          Close(outfilebase, index, w1);
-          w1 = NULL;
-          index++;
-          if(w2){
-            w1 = w2;
-            w2 = NULL;
-          }
-          else{
-            if(maxfiles > 0 && index+1 >= maxfiles) { eventn--; break; }
-            w1 = Output(outfilebase, index);
-            for(int i=0; i<headertypes; i++)
-              OutHeader((GenericRecordHeader*) header[i], w1, i);
-            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
-          }
-          time0 += increment;
-      // Now check for empty chunks
-          int deadsec = 0;
-          while(alltime.longtime > time0 + ticks + deadsec*increment){
-            Close(outfilebase, index, w1);
-            w1 = NULL;
-            index++;
-            if(maxfiles > 0 && index+1 >= maxfiles){
-              eventn--;
-              printf("Done.  %lu record%s, %lu event%s processed\n",
-                     recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
-              return 0;
-            }
-            w1 = Output(outfilebase, index);
-            for(int i=0; i<headertypes; i++)
-              OutHeader((GenericRecordHeader*) header[i], w1, i);
-            if(macro) WriteMacro(index, alltime.time10, time0+deadsec*increment, outfilebase);
-            deadsec++;
-          }
-          time0 = time0 + deadsec*increment;
-      // Lastly, check whether the event is in an overlap or not
-          if (alltime.longtime < time0 + increment)
-            if(nhit>NHITCUT)
-              OutZdab(zrec, w1, zfile);
-          else{
-            if(maxfiles > 0 && index+2 >= maxfiles){
-              eventn--;
-              printf("Done. %lu record%s, %lu event%s processed\n", 
-                   recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
-              return 0;
-            }
-            w2 = Output(outfilebase, index+1);
-            for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], w2, i);
-            }
-            if(macro) WriteMacro(index, alltime.time10, time0, outfilebase);
-            if(nhit>NHITCUT){
-              OutZdab(zrec, w1, zfile);
-              OutZdab(zrec, w2, zfile);
-            }
-          }
-        }
-      } // End of the Chopping Loop for one event
-    } // If(macro)
-    else
-      OutZdab(zrec, w1, zfile);
+    OutZdab(zrec, w1, zfile);
     recordn++;
     // Statistics for redis
     l1++;
@@ -731,7 +524,6 @@ int main(int argc, char *argv[])
       l2++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, index, w1);
-  if(w2) Close(outfilebase, index+1, w2);
 
   Closeredis(redis);
   printf("Done. %lu record%s, %lu event%s processed\n",
