@@ -255,8 +255,7 @@ static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
 
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
-                          char * & outfilebase, uint64_t & ticks,
-                          uint64_t & increment)
+                          char * & outfilebase)
 {
   const char * const opts = "hi:o:tm:c:l:s:n:r";
 
@@ -373,10 +372,7 @@ int main(int argc, char *argv[])
 {
   char * infilename = NULL, * outfilebase = NULL;
 
-  uint64_t ticks, increment;
-
-  parse_cmdline(argc, argv,
-      infilename, outfilebase, ticks, increment);
+  parse_cmdline(argc, argv, infilename, outfilebase);
 
   FILE* infile = fopen(infilename, "rb");
 
