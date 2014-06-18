@@ -39,7 +39,6 @@ void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail){
       bursthead=-1;
       bursttail=-1;
     }
-    fprintf(stderr, "bursttail: %d\n", bursttail);
   }
 }
 
