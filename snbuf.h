@@ -19,3 +19,4 @@ void UpdateBuf(uint64_t longtime, int & bursthead, int & bursttail);
 void AddEvBFile(int & bursthead, PZdabWriter* const b);
 void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
               int & bursthead, int & bursttail, const int reclen);
+int Burstlength(int bursthead, int bursttail);

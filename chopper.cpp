@@ -584,20 +584,18 @@ int main(int argc, char *argv[])
 
       }
       // Burst Detection Here
+      // If the current event is over our burst nhit threshold (NHITBCUT):
+      //   * First update the buffer by dropping events older than BURSTSIZE
+      //   * Then add the new event to the buffer
+      //   * If we were not in a burst, check whether one has started
+      //   * If we were in a burst: write event to file, and check if the burst has ended
       if(nhit > NHITBCUT){
         UpdateBuf(alltime.longtime, bursthead, bursttail);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, bursthead, bursttail, reclen*sizeof(uint32_t));
+        int burstlength = Burstlength(bursthead, bursttail);
 
-        // Calculate the current burst queue length
-        int burstlength = 0;
         int starttick = 0;
-        if(bursthead!=-1){
-          if(bursthead<bursttail)
-            burstlength = bursttail-bursthead;
-          else
-            burstlength = EVENTNUM + bursttail - bursthead;
-         }
 
         // Open a new burst file if a burst starts
         if(!burst){

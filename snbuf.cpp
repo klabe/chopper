@@ -83,3 +83,15 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
   }
 }
 
+// This function computes the number of burst candidate events currently
+// in the buffer
+int Burstlength(int bursthead, int bursttail){
+  int burstlength = 0;
+  if(bursthead!=-1){
+    if(bursthead<bursttail)
+      burstlength = bursttail - bursthead;
+    else
+      burstlength = EVENTNUM + bursttail - bursthead;
+  }
+  return burstlength;
+}
