@@ -11,8 +11,10 @@ static bool burst = false; // Flags ongoing bursts
 static int burstindex = 0; // Number of bursts observed
 static const int ENDWINDOW = 1*500000000; // Integration window for determining whether burst has ended
 static const int EndRate = 10; // Rate below which burst ends
+static char* burstev[EVENTNUM]; // Burst Event Buffer
+static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
 
-
+void InitializeBuf();
 void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
                int & bursthead, int & bursttail);
 void AddEvBFile(int & bursthead, char* burstev[], uint64_t Bursttime[],

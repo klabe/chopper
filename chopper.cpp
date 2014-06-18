@@ -531,15 +531,7 @@ int main(int argc, char *argv[])
   }
 
   // Set up the Burst Buffer
-  char* burstev[EVENTNUM];
-  for(int i=0; i<EVENTNUM; i++){
-    burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
-    memset(burstev[i],0,NWREC*sizeof(uint32_t));
-  }
-  uint64_t bursttime[EVENTNUM];
-  for(int i=0; i<EVENTNUM; i++){
-    bursttime[i]=0;
-  }
+  InitializeBuf();
   int bursthead = -1; // This points to the beginning of the burst buffer
   int bursttail = -1; // This points to the end of the burst buffer
   int bcount = 0;

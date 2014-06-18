@@ -5,8 +5,18 @@
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include "snbuf.h"
+
+// This function initializes the two SN Buffers
+void InitializeBuf(){
+  for(int i=0; i<EVENTNUM; i++){
+    burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+    memset(burstev[i],0,NWREC*sizeof(uint32_t));
+    bursttime[i]=0;
+  }
+}
 
 // This function drops old events from the buffer once they expire
 void UpdateBuf(uint64_t longtime, char* Burstev[], uint64_t Bursttime[],
