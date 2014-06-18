@@ -66,7 +66,7 @@ int epoch;
 };
 
 // Function to Print ZDAB records to screen readably
-void hexdump(char* ptr, int len){
+void hexdump(char* const ptr, const int len){
   for(int i=0; i < len/16 +1; i++){
     char* lptr = ptr+i*16;
     for(int j=0; j<16; j++){
@@ -217,7 +217,7 @@ static void printhelp()
 }
 
 // This function sends alarms to the website
-static void alarm(int level, const char* msg)
+static void alarm(const int level, const char* msg)
 {
   char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
   char curlmsg[256];
@@ -242,8 +242,8 @@ static void Closeredis(redisContext **redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
-                         int time)
+static void Writetoredis(redisContext *redis, const int l1, const int l2,
+                         const bool burst, const int time)
 {
   void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l1 %d", time, l1);
   reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l1 %d", time, 100000*1);
@@ -293,8 +293,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // This function calculates the time of an event as measured by the
 // various clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, 
-                          alltimes oldat,
-                          uint64_t & eventn, int & orphan)
+                              alltimes oldat, uint64_t & eventn, int & orphan)
 {
   alltimes newat = oldat;
   if(eventn == 1){
