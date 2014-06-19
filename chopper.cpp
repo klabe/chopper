@@ -1,27 +1,23 @@
-// The Chopper
+// Stonehenge
 // K Labe and M Strait, U Chicago, 2013-2014.
 
-// The general logic here is as follows:
-// We open a zdab file and read in events, looking at their time. The 
-// events are written out into smaller files of fixed time length.  In 
-// addition, we allow for a nonzero overlap interval, in which events
-// are written into two files.  When header records are encountered,
-// they are saved to a buffer, which is written out at the beginning of
-// each new output file.
+// Stonehenge is a set of utilties for handling ZDAB files in a 
+// low-latency way, designed to meet the needs of the level two 
+// trigger and the supernova trigger.  The utilities are these:
+// 1. Supernova buffer, an analogue to RAT's burst processor.
+// 2. Chopper, available in older version (see tag: FinalChopper),
+//     for splitting a ZDAB into smaller pieces
+// 3. L2 cut, currently based on nhit, but generalizable
+// 4. Some data quality checks, particularly on time.
+// 5. Databasing interface for recording information about cut
 
-// Explanation of the various clocks used in this program: Since I'm
-// reading ZDABs, I need to track the 50 MHz clock for accuracy, and
-// the 10 MHz clock for uniqueness. For a given event, the trigger
-// time will be stored in the variables time10 and time50. The chopper
-// will start a new file every "chunksize" with a trailing period of
-// overlap of size "overlap". Time0 represents the beginning of the
-// oldest open chunk, according to the longtime clock. When the chunk is
-// closed, Time0 is increased by "increment" to ensure that it increases
-// uniformly. "maxtime" tells us when the 50 MHz clock rolls over.
-// Longtime is an internal 50 MHz clock that uses the full 64 bits
-// available so that it will not roll over during the execution of the
-// program (it will last 5000 years). Epoch counts the number of times
-// that the real 50 MHz clock has rolled over.
+// Explanation of the various clocks used in this program:
+// The 50MHz clock is tracked for accuracy, and the 10MHz clock for 
+// uniqueness.  To handle the situation in which the 50MHz clock rolls over,
+// I also keep track of an internal longtime variable, which is a 64-bit
+// 50MHz clock, which will last 5000 years without rolling over.  Epoch 
+// counts the number of times to 50MHz clock has rolled over since
+// longtime started counting. 
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -368,6 +364,7 @@ static alltimes compute_times(const PmtEventRecord * const hits,
 }
 
 // Function to retreive the trigger word
+// This method copied from zdab_convert
 uint32_t triggertype(PmtEventRecord* hits){
   uint32_t mtcwords[6];
   memcpy(mtcwords, &(hits->TriggerCardData), 6*sizeof(uint32_t));
