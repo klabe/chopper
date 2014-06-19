@@ -367,6 +367,15 @@ static alltimes compute_times(const PmtEventRecord * const hits,
   return newat;
 }
 
+// Function to retreive the trigger word
+uint32_t triggertype(PmtEventRecord* hits){
+  uint32_t mtcwords[6];
+  memcpy(mtcwords, &(hits->TriggerCardData), 6*sizeof(uint32_t));
+  uint32_t triggerword = ((mtcwords[3] & 0xff000000) >> 24) |
+                         ((mtcwords[4] & 0x3ffff) << 8);
+  return triggerword;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
