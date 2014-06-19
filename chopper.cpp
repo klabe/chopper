@@ -17,7 +17,8 @@
 // I also keep track of an internal longtime variable, which is a 64-bit
 // 50MHz clock, which will last 5000 years without rolling over.  Epoch 
 // counts the number of times to 50MHz clock has rolled over since
-// longtime started counting. 
+// longtime started counting.  We also track walltime, which is unix time, 
+// in order to write to the database with a time stamp. 
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -247,6 +248,7 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
   reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l2 %d", time, 100000*1);
   if(burst){
     reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%d:burst", time);
+    reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:burst", time, 100000*1);
   }
 }
 
