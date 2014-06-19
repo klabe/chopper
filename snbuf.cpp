@@ -115,3 +115,9 @@ void Finishburst(PZdabWriter* b){
   bursthead = -1;
   bursttail = -1;
 }
+
+// This function used by command-line parser to set 
+// the burst cut differently from default
+void setburstcut(unsigned int cut){
+  NHITBCUT = cut;
+}

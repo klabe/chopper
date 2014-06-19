@@ -36,7 +36,7 @@
 #include "hiredis.h"
 #include "snbuf.h"
 
-static const int NHITCUT = 30;
+static int NHITCUT = 30;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -207,11 +207,16 @@ static void printhelp()
   "  -o [string]: Base of output files\n"
   "\n"
   "Physics options:\n"
+  "  -l [n]: L2 nhit cut (default %d)\n"
+  "  -b [n]: Burst file nhit cut (default %d)\n"
+  "  -t [n]: Burst window width (s)\n"
+  "  -u [n]: Burst threshold rate (Hz)\n"
   "\n"
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
+  , NHITCUT, NHITBCUT
   );
 }
 
@@ -271,6 +276,9 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
+
+      case 'l': NHITCUT = getcmdline_l(ch); break;
+      case 'b': setburstcut(getcmdline_l(ch)); break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; break;
