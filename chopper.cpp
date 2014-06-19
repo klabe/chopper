@@ -206,6 +206,8 @@ static void printhelp()
   "  -i [string]: Input file\n"
   "  -o [string]: Base of output files\n"
   "\n"
+  "Physics options:\n"
+  "\n"
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
@@ -505,14 +507,20 @@ int main(int argc, char *argv[])
         }
 
       } // End Burst Loop
-    } // End Loop for Event Records
+      // L2 Filter
+      if(nhit>NHITCUT){
+        OutZdab(zrec, w1, zfile);
+        l2++;
+      }
 
-    OutZdab(zrec, w1, zfile);
-    recordn++;
-    // Statistics for redis
-    l1++;
-    if(nhit>NHITCUT)
+    } // End Loop for Event Records
+    // Write out all non-event records:
+    else{
+      OutZdab(zrec, w1, zfile);
       l2++;
+    }
+    recordn++;
+    l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, index, w1);
 
