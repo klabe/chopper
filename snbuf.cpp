@@ -116,8 +116,17 @@ void Finishburst(PZdabWriter* b){
   bursttail = -1;
 }
 
-// This function used by command-line parser to set 
+// Here are some helper functions for use by the command-line parser
+// to set some of the SN Buffer global variables:  
 // the burst cut differently from default
 void setburstcut(unsigned int cut){
   NHITBCUT = cut;
+}
+// the rate cut different from default
+void setratecut(double size){
+  BurstSize = size; 
+}
+// the time cut
+void settimecut(double time){
+  BurstLength = time;
 }

@@ -209,14 +209,14 @@ static void printhelp()
   "Physics options:\n"
   "  -l [n]: L2 nhit cut (default %d)\n"
   "  -b [n]: Burst file nhit cut (default %d)\n"
-  "  -t [n]: Burst window width (s)\n"
-  "  -u [n]: Burst threshold rate (Hz)\n"
+  "  -t [n]: Burst window width in seconds (default %d) \n"
+  "  -u [n]: Burst size threshold event count (default %d) \n"
   "\n"
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
-  , NHITCUT, NHITBCUT
+  , NHITCUT, NHITBCUT, BurstLength, BurstSize
   );
 }
 
@@ -263,7 +263,7 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
 {
-  const char * const opts = "hi:o:tm:c:l:s:n:r";
+  const char * const opts = "hi:o:l:b:t:u:nr";
 
   bool done = false;
   
@@ -279,6 +279,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'l': NHITCUT = getcmdline_l(ch); break;
       case 'b': setburstcut(getcmdline_l(ch)); break;
+      case 't': settimecut(getcmdline_d(ch)); break;
+      case 'u': setratecut(getcmdline_d(ch)); break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; break;
