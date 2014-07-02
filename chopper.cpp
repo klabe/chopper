@@ -115,13 +115,12 @@ static void OutHeader(const GenericRecordHeader * const hdr,
 // called each time the index in incremented.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-static PZdabWriter * Output(const char * const base,
-                            const unsigned int index)
+static PZdabWriter * Output(const char * const base)
 {
   const int maxlen = 1024;
   char outfilename[maxlen];
   
-  if(snprintf(outfilename, maxlen, "%s_%i.zdab", base, index) >= maxlen){
+  if(snprintf(outfilename, maxlen, "%s.zdab", base) >= maxlen){
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
@@ -153,14 +152,12 @@ static PZdabWriter * Output(const char * const base,
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, const unsigned int index, 
-                  PZdabWriter* const w)
+static void Close(const char* const base, PZdabWriter* const w)
 {
   w->Close();
 
   std::ofstream myfile;
   myfile.open("chopper.run.log", std::fstream::app);
-  myfile << index << "\n";
   myfile.close();
 }
 
@@ -414,10 +411,9 @@ int main(int argc, char *argv[])
   alltimes alltime;
   int walltime = 0;
   int oldwalltime = 0;
-  int index = 0;
 
   // Setup initial output file
-  PZdabWriter* w1  = Output(outfilebase, index);
+  PZdabWriter* w1  = Output(outfilebase);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -532,7 +528,7 @@ int main(int argc, char *argv[])
     recordn++;
     l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, index, w1);
+  if(w1) Close(outfilebase, w1);
 
   Closeredis(&redis);
   printf("Done. %lu record%s, %lu event%s processed\n",
