@@ -111,8 +111,7 @@ static void OutHeader(const GenericRecordHeader * const hdr,
     fprintf(stderr,"Error writing to zdab file\n");
 }
 
-// This function builds a new output file for each chunk and should be
-// called each time the index in incremented.  If it can't open 
+// This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
 static PZdabWriter * Output(const char * const base)
