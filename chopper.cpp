@@ -53,6 +53,9 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
+// Trigger Bitmask
+static uint32_t bitmask = 0x007F8000; // Masking out the external triggers
+
 // Structure to hold all the relevant times
 struct alltimes
 {
@@ -470,7 +473,8 @@ int main(int argc, char *argv[])
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
-      if(nhit > NHITBCUT){
+      uint32_t word = triggertype(hits); 
+      if(nhit > NHITBCUT && (word & bitmask == 0) ){
         UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
@@ -485,7 +489,9 @@ int main(int argc, char *argv[])
             bcount=burstlength;
             starttick=alltime.longtime;
             fprintf(stderr, "Burst %i has begun!\n", burstindex);
-            b = Output("Burst", burstindex);
+            char buff[32];
+            sprintf(buff,"Burst_%s_%i", outfilebase, burstindex);
+            b = Output(buff);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
             }
