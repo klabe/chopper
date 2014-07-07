@@ -9,7 +9,8 @@
 //     for splitting a ZDAB into smaller pieces
 // 3. L2 cut, currently based on nhit, but generalizable
 // 4. Some data quality checks, particularly on time.
-// 5. Databasing interface for recording information about cut
+// 5. Interface to Redis database for recording information about cut
+// 6. Interface to alarm & heartbeat system
 
 // Explanation of the various clocks used in this program:
 // The 50MHz clock is tracked for accuracy, and the 10MHz clock for 
@@ -34,6 +35,7 @@
 #include <signal.h>
 #include <time.h>
 #include "hiredis.h"
+#include "curl/curl.h"
 #include "snbuf.h"
 
 static int NHITCUT = 30;
@@ -222,9 +224,9 @@ static void printhelp()
 // This function sends alarms to the website
 static void alarm(const int level, const char* msg)
 {
-  char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
+  char host[128]="-u snoplus snopl.us/monitoring/set_alarm";
   char curlmsg[256];
-  sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
+  sprintf(curlmsg,"curl --data \"lvl=%i&message=%s\" %s",level,msg,host);
   system(curlmsg);
 }
 
@@ -256,6 +258,11 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
     reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%d:burst", time);
     reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:burst", time, 100000*1);
   }
+}
+
+// Open a curl connection
+void Opencurl(CURL** curl){
+  *curl = curl_easy_init();
 }
 
 // This function interprets the command line arguments to the program
@@ -403,8 +410,10 @@ int main(int argc, char *argv[])
 
   // Prepare to record statistics in redis database
   redisContext *redis;
+  CURL *curl;
   if(yesredis) 
     Openredis(&redis);
+    Opencurl(&curl);
   int l1=0;
   int l2=0;
   bool burstbool=false;

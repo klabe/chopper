@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
-         -fdiagnostics-show-option 
+         -fdiagnostics-show-option $(curl-config --cflags) 
 
-LINKFLAGS = -L/cp/home/cp/klabe/hiredis -lhiredis 
+LINKFLAGS = -L/cp/home/cp/klabe/hiredis -lhiredis -lcurl 
 
 all: chopper 
 
