@@ -224,12 +224,15 @@ static void printhelp()
 }
 
 // This function sends alarms to the website
-static void alarm(const int level, const char* msg)
+static void alarm(const CURL* curl, const int level, const char* msg)
 {
-  char host[128]="-u snoplus snopl.us/monitoring/set_alarm";
   char curlmsg[256];
-  sprintf(curlmsg,"curl --data \"lvl=%i&message=%s\" %s",level,msg,host);
-  system(curlmsg);
+  sprintf(curlmsg,"name=L2&level=%s&message=%s",level,msg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(message));
+  res = curl_easy_perform(curl);
+  if(res != CURLE_OK)
+    fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
 
 // This function opens the redis connection at startup
