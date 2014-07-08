@@ -58,6 +58,8 @@ static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 // Trigger Bitmask
 static uint32_t bitmask = 0x007F8000; // Masking out the external triggers
 
+static char* password = NULL;
+
 // Structure to hold all the relevant times
 struct alltimes
 {
@@ -261,8 +263,15 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
 }
 
 // Open a curl connection
-void Opencurl(CURL** curl){
+void Opencurl(CURL** curl, char* password){
   *curl = curl_easy_init();
+  char address[264];
+  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
+  if(curl){
+    curl_easy_setopt(*curl, CURLOPT_URL, address);
+  }
+  else
+    fprintf(stderr,"Could not initialize curl object");
 }
 
 // This function interprets the command line arguments to the program
@@ -289,7 +298,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'u': setratecut(getcmdline_d(ch)); break;
 
       case 'n': clobber = false; break;
-      case 'r': yesredis = true; break;
+      case 'r': yesredis = true; password = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -413,7 +422,7 @@ int main(int argc, char *argv[])
   CURL *curl;
   if(yesredis) 
     Openredis(&redis);
-    Opencurl(&curl);
+    Opencurl(&curl, password);
   int l1=0;
   int l2=0;
   bool burstbool=false;
