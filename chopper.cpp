@@ -224,13 +224,13 @@ static void printhelp()
 }
 
 // This function sends alarms to the website
-static void alarm(const CURL* curl, const int level, const char* msg)
+static void alarm(CURL* curl, const int level, const char* msg)
 {
   char curlmsg[256];
   sprintf(curlmsg,"name=L2&level=%s&message=%s",level,msg);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(message));
-  res = curl_easy_perform(curl);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
+  CURLcode res = curl_easy_perform(curl);
   if(res != CURLE_OK)
     fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
@@ -325,7 +325,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
-static alltimes compute_times(const PmtEventRecord * const hits, 
+static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
                               alltimes oldat, uint64_t & eventn, int & orphan)
 {
   alltimes newat = oldat;
@@ -477,7 +477,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
-      alltime = compute_times(hits, alltime, eventn, orphan);
+      alltime = compute_times(hits, curl, alltime, eventn, orphan);
       // Has wall time changed?
       if(walltime!=0)
         oldwalltime=walltime;
