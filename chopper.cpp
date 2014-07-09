@@ -319,7 +319,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 }
 
 // This function calculates the time of an event as measured by the
-// various clocks we are interested in.
+// varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, 
                               alltimes oldat, uint64_t & eventn, int & orphan)
 {
@@ -351,7 +351,7 @@ static alltimes compute_times(const PmtEventRecord * const hits,
     if (dd > maxdrift){
       char msg[128];
       sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
-      alarm(1, msg);
+      alarm(curl, 1, msg);
       fprintf(stderr, msg);
     }
 
@@ -371,9 +371,8 @@ static alltimes compute_times(const PmtEventRecord * const hits,
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
-        alarm(1, msg);
+        alarm(curl, 1, msg);
         fprintf(stderr, msg);
-        //system("");
         // Assume for now that the clock is wrong
         newat.time50 = oldat.time50;
       }
@@ -382,9 +381,8 @@ static alltimes compute_times(const PmtEventRecord * const hits,
     // Check that the clock has not jumped ahead too far:
     if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
-      alarm(1, msg);
+      alarm(curl, 1, msg);
       fprintf(stderr, msg);
-      //system("");
       // Assume for now that the time is wrong
       newat.time50 = oldat.time50;
     }
