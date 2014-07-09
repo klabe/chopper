@@ -277,6 +277,11 @@ void Opencurl(CURL** curl, char* password){
     fprintf(stderr,"Could not initialize curl object");
 }
 
+// Close a curl connection
+void Closecurl(CURL** curl){
+  curl_easy_cleanup(*curl);
+}
+
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
@@ -555,6 +560,7 @@ int main(int argc, char *argv[])
   if(w1) Close(outfilebase, w1);
 
   Closeredis(&redis);
+  Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
   return 0;
