@@ -255,13 +255,29 @@ static void Closeredis(redisContext **redis)
 static void Writetoredis(redisContext *redis, const int l1, const int l2,
                          const bool burst, const int time)
 {
-  void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l1 %d", time, l1);
-  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l1 %d", time, 100000*1);
-  reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l2 %d", time, l2);
-  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l2 %d", time, 100000*1);
+  int time60 = time/60;
+  int time3600 = time/3600;
+  void* reply = redisCommand(redis, "INCRBY stream/int:1:id:%d:L1 %d", time, l1);
+  reply = redisCommand(redis, "EXPIRE stream/int:1:id:%d:L1 %d", time, 100000*1);
+  reply = redisCommand(redis, "INCRBY stream/int:60:id:%d:L1 %d", time60, l1);
+  reply = redisCommand(redis, "EXPIRE stream/int:60:id:%d:L1 %d", time60, 100000*60);
+  reply = redisCommand(redis, "INCRBY stream/int:3600:id:%d:L1 %d", time3600, l1);
+  reply = redisCommand(redis, "EXPIRE stream/int:3600:id:%d:L1 %d", time3600,100000*3600);
+
+  reply = redisCommand(redis, "INCRBY stream/int:1:id:%d:L2 %d", time, l2);
+  reply = redisCommand(redis, "EXPIRE stream/int:1:id:%d:L2 %d", time, 100000*1);
+  reply = redisCommand(redis, "INCRBY stream/int:60:id:%d:L2 %d", time60, l2);
+  reply = redisCommand(redis, "EXPIRE stream/int:60:id:%d:L2 %d", time60, 100000*60);
+  reply = redisCommand(redis, "INCRBY stream/int:3600:id:%d:L2 %d", time3600, l2);
+  reply = redisCommand(redis, "EXPIRE stream/int:3600:id:%d:L2 %d", time3600, 100000*3600);
+
   if(burst){
-    reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%d:burst", time);
-    reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:burst", time, 100000*1);
+    reply = redisCommand(redis, "SET stream/int:1:id:%d:Burst 1", time);
+    reply = redisCommand(redis, "EXPIRE stream/int:1:id:%d:Burst", time, 100000*1);
+    reply = redisCommand(redis, "SET stream/int:60:id:%d:Burst 1", time60);
+    reply = redisCommand(redis, "EXPIRE stream/int:60:id:%d:Burst", time60, 100000*60);
+    reply = redisCommand(redis, "SET stream/int:3600:id:%d:Burst 1", time3600);
+    reply = redisCommand(redis, "EXPIRE stream/int:3600:id:%d:Burst", time3600, 100000*3600);
   }
 }
 
