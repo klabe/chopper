@@ -259,15 +259,15 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
   const int intervals[NumInt] = {1, 3, 9, 29, 90, 280, 867, 2677, 8267, 25531};
   for(int i=0; i < NumInt; i++){
     int ts = time/intervals[i];
-    void* reply = redisCommand(redis, "INCRBY stream/int:%d:id:%d:L1 %d", intervals[i], ts, l1);
-    reply = redisCommand(redis, "EXPIRE stream/int:%d:id:%d:L1 %d", intervals[i], ts, 12000*intervals[i]);
+    void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, l1);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 12000*intervals[i]);
 
-    reply = redisCommand(redis, "INCRBY stream/int:%d:id:%d:L2 %d", intervals[i], ts, l2);
-    reply = redisCommand(redis, "EXPIRE stream/int:%d:id:%d:L2 %d", intervals[i], ts, 12000*intervals[i]);
+    reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, l2);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 12000*intervals[i]);
 
     if(burst){
-      reply = redisCommand(redis, "SET stream/int:%d:id:%d:Burst 1", intervals[i], ts);
-      reply = redisCommand(redis, "EXPIRE stream/int:%d:id:%d:Burst", intervals[i], ts, 12000*intervals[i]);
+      reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
+      reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 12000*intervals[i]);
     }
   }
 }
