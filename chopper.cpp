@@ -1,27 +1,25 @@
-// The Chopper
+// Stonehenge
 // K Labe and M Strait, U Chicago, 2013-2014.
 
-// The general logic here is as follows:
-// We open a zdab file and read in events, looking at their time. The 
-// events are written out into smaller files of fixed time length.  In 
-// addition, we allow for a nonzero overlap interval, in which events
-// are written into two files.  When header records are encountered,
-// they are saved to a buffer, which is written out at the beginning of
-// each new output file.
+// Stonehenge is a set of utilties for handling ZDAB files in a 
+// low-latency way, designed to meet the needs of the level two 
+// trigger and the supernova trigger.  The utilities are these:
+// 1. Supernova buffer, an analogue to RAT's burst processor.
+// 2. Chopper, available in older version (see tag: FinalChopper),
+//     for splitting a ZDAB into smaller pieces
+// 3. L2 cut, currently based on nhit, but generalizable
+// 4. Some data quality checks, particularly on time.
+// 5. Interface to Redis database for recording information about cut
+// 6. Interface to alarm & heartbeat system
 
-// Explanation of the various clocks used in this program: Since I'm
-// reading ZDABs, I need to track the 50 MHz clock for accuracy, and
-// the 10 MHz clock for uniqueness. For a given event, the trigger
-// time will be stored in the variables time10 and time50. The chopper
-// will start a new file every "chunksize" with a trailing period of
-// overlap of size "overlap". Time0 represents the beginning of the
-// oldest open chunk, according to the longtime clock. When the chunk is
-// closed, Time0 is increased by "increment" to ensure that it increases
-// uniformly. "maxtime" tells us when the 50 MHz clock rolls over.
-// Longtime is an internal 50 MHz clock that uses the full 64 bits
-// available so that it will not roll over during the execution of the
-// program (it will last 5000 years). Epoch counts the number of times
-// that the real 50 MHz clock has rolled over.
+// Explanation of the various clocks used in this program:
+// The 50MHz clock is tracked for accuracy, and the 10MHz clock for 
+// uniqueness.  To handle the situation in which the 50MHz clock rolls over,
+// I also keep track of an internal longtime variable, which is a 64-bit
+// 50MHz clock, which will last 5000 years without rolling over.  Epoch 
+// counts the number of times to 50MHz clock has rolled over since
+// longtime started counting.  We also track walltime, which is unix time, 
+// in order to write to the database with a time stamp. 
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -37,9 +35,12 @@
 #include <signal.h>
 #include <time.h>
 #include "hiredis.h"
+#include "curl/curl.h"
 #include "snbuf.h"
 
-static const int NHITCUT = 30;
+#define EXTASY 0x8000 // Bit 15
+
+static int NHITCUT = 30;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -56,6 +57,11 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
+// Trigger Bitmask
+static uint32_t bitmask = 0x007F8000; // Masking out the external triggers
+
+static char* password = NULL;
+
 // Structure to hold all the relevant times
 struct alltimes
 {
@@ -66,7 +72,7 @@ int epoch;
 };
 
 // Function to Print ZDAB records to screen readably
-void hexdump(char* ptr, int len){
+void hexdump(char* const ptr, const int len){
   for(int i=0; i < len/16 +1; i++){
     char* lptr = ptr+i*16;
     for(int j=0; j<16; j++){
@@ -78,6 +84,18 @@ void hexdump(char* ptr, int len){
     }
     fprintf(stderr, "\n");
   } 
+}
+
+// This function sends alarms to the website
+static void alarm(CURL* curl, const int level, const char* msg)
+{
+  char curlmsg[256];
+  sprintf(curlmsg, "name=L2&level=%d&message=%s",level,msg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
+  CURLcode res = curl_easy_perform(curl);
+  if(res != CURLE_OK)
+    fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
 
 // This function writes out the ZDAB record
@@ -114,17 +132,15 @@ static void OutHeader(const GenericRecordHeader * const hdr,
     fprintf(stderr,"Error writing to zdab file\n");
 }
 
-// This function builds a new output file for each chunk and should be
-// called each time the index in incremented.  If it can't open 
+// This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-static PZdabWriter * Output(const char * const base,
-                            const unsigned int index)
+static PZdabWriter * Output(const char * const base)
 {
   const int maxlen = 1024;
   char outfilename[maxlen];
   
-  if(snprintf(outfilename, maxlen, "%s_%i.zdab", base, index) >= maxlen){
+  if(snprintf(outfilename, maxlen, "%s.zdab", base) >= maxlen){
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
@@ -156,14 +172,25 @@ static PZdabWriter * Output(const char * const base,
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, const unsigned int index, 
-                  PZdabWriter* const w)
+static void Close(const char* const base, PZdabWriter* const w, 
+                  CURL* curl, const bool extasy)
 {
+  char buff1[256];
+  snprintf(buff1, 256, "/trigger/home/PCAdata/%s.zdab", base);
+  const char* linkname = buff1;
+  char buff2[256];
+  snprintf(buff2, 256, "%s.zdab", base);
+  const char* outname = buff2;
+  char* message = "PCA File could not be copied";
   w->Close();
+  if(extasy){
+    if(link(outname, linkname)){
+      alarm(curl, 1, message);
+    }
+  }
 
   std::ofstream myfile;
   myfile.open("chopper.run.log", std::fstream::app);
-  myfile << index << "\n";
   myfile.close();
 }
 
@@ -209,20 +236,18 @@ static void printhelp()
   "  -i [string]: Input file\n"
   "  -o [string]: Base of output files\n"
   "\n"
+  "Physics options:\n"
+  "  -l [n]: L2 nhit cut (default %d)\n"
+  "  -b [n]: Burst file nhit cut (default %d)\n"
+  "  -t [n]: Burst window width in seconds (default %d) \n"
+  "  -u [n]: Burst size threshold event count (default %d) \n"
+  "\n"
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
+  , NHITCUT, NHITBCUT, BurstLength, BurstSize
   );
-}
-
-// This function sends alarms to the website
-static void alarm(int level, const char* msg)
-{
-  char host[128]="cps4.uchicago.edu:50000/monitoring/set_alarm";
-  char curlmsg[256];
-  sprintf(curlmsg,"curl --data \"lvl=%i&msg=%s\" %s",level,msg,host);
-  system(curlmsg);
 }
 
 // This function opens the redis connection at startup
@@ -242,23 +267,48 @@ static void Closeredis(redisContext **redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, int l1, int l2, bool burst,
-                         int time)
+static void Writetoredis(redisContext *redis, const int l1, const int l2,
+                         const bool burst, const int time)
 {
-  void* reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l1 %d", time, l1);
-  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l1 %d", time, 100000*1);
-  reply = redisCommand(redis, "INCRBY /l2_filter/int:1:id:%d:l2 %d", time, l2);
-  reply = redisCommand(redis, "EXPIRE /l2_filter/int:1:id:%d:l2 %d", time, 100000*1);
-  if(burst){
-    reply = redisCommand(redis, "INCR /l2_filter/int:1:id:%d:burst", time);
+  const int NumInt = 10;
+  const int intervals[NumInt] = {1, 3, 9, 29, 90, 280, 867, 2677, 8267, 25531};
+  for(int i=0; i < NumInt; i++){
+    int ts = time/intervals[i];
+    void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, l1);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 12000*intervals[i]);
+
+    reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, l2);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 12000*intervals[i]);
+
+    if(burst){
+      reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
+      reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 12000*intervals[i]);
+    }
   }
+}
+
+// Open a curl connection
+void Opencurl(CURL** curl, char* password){
+  *curl = curl_easy_init();
+  char address[264];
+  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
+  if(curl){
+    curl_easy_setopt(*curl, CURLOPT_URL, address);
+  }
+  else
+    fprintf(stderr,"Could not initialize curl object");
+}
+
+// Close a curl connection
+void Closecurl(CURL** curl){
+  curl_easy_cleanup(*curl);
 }
 
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
 {
-  const char * const opts = "hi:o:tm:c:l:s:n:r";
+  const char * const opts = "hi:o:l:b:t:u:nr";
 
   bool done = false;
   
@@ -272,8 +322,13 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
 
+      case 'l': NHITCUT = getcmdline_l(ch); break;
+      case 'b': setburstcut(getcmdline_l(ch)); break;
+      case 't': settimecut(getcmdline_d(ch)); break;
+      case 'u': setratecut(getcmdline_d(ch)); break;
+
       case 'n': clobber = false; break;
-      case 'r': yesredis = true; break;
+      case 'r': yesredis = true; password = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -291,10 +346,9 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 }
 
 // This function calculates the time of an event as measured by the
-// various clocks we are interested in.
-static alltimes compute_times(const PmtEventRecord * const hits, 
-                          alltimes oldat,
-                          uint64_t & eventn, int & orphan)
+// varlous clocks we are interested in.
+static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
+                              alltimes oldat, uint64_t & eventn, int & orphan)
 {
   alltimes newat = oldat;
   if(eventn == 1){
@@ -324,7 +378,7 @@ static alltimes compute_times(const PmtEventRecord * const hits,
     if (dd > maxdrift){
       char msg[128];
       sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
-      alarm(1, msg);
+      alarm(curl, 1, msg);
       fprintf(stderr, msg);
     }
 
@@ -344,9 +398,8 @@ static alltimes compute_times(const PmtEventRecord * const hits,
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
-        alarm(1, msg);
+        alarm(curl, 1, msg);
         fprintf(stderr, msg);
-        //system("");
         // Assume for now that the clock is wrong
         newat.time50 = oldat.time50;
       }
@@ -355,9 +408,8 @@ static alltimes compute_times(const PmtEventRecord * const hits,
     // Check that the clock has not jumped ahead too far:
     if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
-      alarm(1, msg);
+      alarm(curl, 1, msg);
       fprintf(stderr, msg);
-      //system("");
       // Assume for now that the time is wrong
       newat.time50 = oldat.time50;
     }
@@ -366,6 +418,16 @@ static alltimes compute_times(const PmtEventRecord * const hits,
     newat.longtime = newat.time50 + maxtime*newat.epoch;
   }
   return newat;
+}
+
+// Function to retreive the trigger word
+// This method copied from zdab_convert
+uint32_t triggertype(PmtEventRecord* hits){
+  uint32_t mtcwords[6];
+  memcpy(mtcwords, &(hits->TriggerCardData), 6*sizeof(uint32_t));
+  uint32_t triggerword = ((mtcwords[3] & 0xff000000) >> 24) |
+                         ((mtcwords[4] & 0x3ffff) << 8);
+  return triggerword;
 }
 
 // MAIN FUCTION 
@@ -385,21 +447,22 @@ int main(int argc, char *argv[])
 
   // Prepare to record statistics in redis database
   redisContext *redis;
+  CURL *curl;
   if(yesredis) 
     Openredis(&redis);
+    Opencurl(&curl, password);
   int l1=0;
   int l2=0;
   bool burstbool=false;
+  bool extasy=false;
 
   // Initialize the various clocks
   alltimes alltime;
-  uint64_t time0 = 0;
   int walltime = 0;
   int oldwalltime = 0;
-  int index = 0;
 
   // Setup initial output file
-  PZdabWriter* w1  = Output(outfilebase, index);
+  PZdabWriter* w1  = Output(outfilebase);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -437,7 +500,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
-      alltime = compute_times(hits, alltime, eventn, orphan);
+      alltime = compute_times(hits, curl, alltime, eventn, orphan);
       // Has wall time changed?
       if(walltime!=0)
         oldwalltime=walltime;
@@ -450,12 +513,6 @@ int main(int argc, char *argv[])
         l2 = 0;
         burstbool = false;
       }
- 
-      // Set time origin on first event
-      if(eventn == 1){
-        puts("Initializing time origin"); // Should only print once!
-        time0 = alltime.longtime;
-      }
 
       // Burst Detection Here
       // If the current event is over our burst nhit threshold (NHITBCUT):
@@ -463,7 +520,14 @@ int main(int argc, char *argv[])
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
-      if(nhit > NHITBCUT){
+      // We also check for EXTASY triggers here to send PCA data to Freija
+
+      uint32_t word = triggertype(hits); 
+      if(!extasy){
+        if((word & EXTASY ) == 0x00008000) // Bit 15
+          extasy = true;
+      }
+      if(nhit > NHITBCUT && (word & bitmask == 0) ){
         UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
@@ -478,7 +542,9 @@ int main(int argc, char *argv[])
             bcount=burstlength;
             starttick=alltime.longtime;
             fprintf(stderr, "Burst %i has begun!\n", burstindex);
-            b = Output("Burst", burstindex);
+            char buff[32];
+            sprintf(buff,"Burst_%s_%i", outfilebase, burstindex);
+            b = Output(buff);
             for(int i=0; i<headertypes; i++){
               OutHeader((GenericRecordHeader*) header[i], b, i);
             }
@@ -505,18 +571,25 @@ int main(int argc, char *argv[])
         }
 
       } // End Burst Loop
-    } // End Loop for Event Records
+      // L2 Filter
+      if(nhit>NHITCUT){
+        OutZdab(zrec, w1, zfile);
+        l2++;
+      }
 
-    OutZdab(zrec, w1, zfile);
-    recordn++;
-    // Statistics for redis
-    l1++;
-    if(nhit>NHITCUT)
+    } // End Loop for Event Records
+    // Write out all non-event records:
+    else{
+      OutZdab(zrec, w1, zfile);
       l2++;
+    }
+    recordn++;
+    l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, index, w1);
+  if(w1) Close(outfilebase, w1, &curl, extasy);
 
   Closeredis(&redis);
+  Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
   return 0;
