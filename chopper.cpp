@@ -38,6 +38,8 @@
 #include "curl/curl.h"
 #include "snbuf.h"
 
+#define EXTASY 0x8000 // Bit 15
+
 static int NHITCUT = 30;
 
 // Whether to overwrite existing output
@@ -82,6 +84,18 @@ void hexdump(char* const ptr, const int len){
     }
     fprintf(stderr, "\n");
   } 
+}
+
+// This function sends alarms to the website
+static void alarm(CURL* curl, const int level, const char* msg)
+{
+  char curlmsg[256];
+  sprintf(curlmsg, "name=L2&level=%d&message=%s",level,msg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
+  CURLcode res = curl_easy_perform(curl);
+  if(res != CURLE_OK)
+    fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
 
 // This function writes out the ZDAB record
@@ -158,9 +172,22 @@ static PZdabWriter * Output(const char * const base)
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, PZdabWriter* const w)
+static void Close(const char* const base, PZdabWriter* const w, 
+                  CURL* curl, const bool extasy)
 {
+  char buff1[256];
+  snprintf(buff1, 256, "/trigger/home/PCAdata/%s.zdab", base);
+  const char* linkname = buff1;
+  char buff2[256];
+  snprintf(buff2, 256, "%s.zdab", base);
+  const char* outname = buff2;
+  char* message = "PCA File could not be copied";
   w->Close();
+  if(extasy){
+    if(link(outname, linkname)){
+      alarm(curl, 1, message);
+    }
+  }
 
   std::ofstream myfile;
   myfile.open("chopper.run.log", std::fstream::app);
@@ -221,18 +248,6 @@ static void printhelp()
   "  -h: This help text\n"
   , NHITCUT, NHITBCUT, BurstLength, BurstSize
   );
-}
-
-// This function sends alarms to the website
-static void alarm(CURL* curl, const int level, const char* msg)
-{
-  char curlmsg[256];
-  sprintf(curlmsg,"name=L2&level=%s&message=%s",level,msg);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
-  CURLcode res = curl_easy_perform(curl);
-  if(res != CURLE_OK)
-    fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
 
 // This function opens the redis connection at startup
@@ -439,6 +454,7 @@ int main(int argc, char *argv[])
   int l1=0;
   int l2=0;
   bool burstbool=false;
+  bool extasy=false;
 
   // Initialize the various clocks
   alltimes alltime;
@@ -504,7 +520,13 @@ int main(int argc, char *argv[])
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
+      // We also check for EXTASY triggers here to send PCA data to Freija
+
       uint32_t word = triggertype(hits); 
+      if(!extasy){
+        if((word & EXTASY ) == 0x00008000) // Bit 15
+          extasy = true;
+      }
       if(nhit > NHITBCUT && (word & bitmask == 0) ){
         UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
@@ -564,7 +586,7 @@ int main(int argc, char *argv[])
     recordn++;
     l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, w1);
+  if(w1) Close(outfilebase, w1, &curl, extasy);
 
   Closeredis(&redis);
   Closecurl(&curl);
