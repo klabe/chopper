@@ -572,7 +572,9 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      if(nhit>NHITCUT){
+      // *Keep even if nhit over threshold
+      // *Also keep event if it was externally triggered
+      if(nhit>NHITCUT || (word & bitmask != 0) ){
         OutZdab(zrec, w1, zfile);
         l2++;
       }
