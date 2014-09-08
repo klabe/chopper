@@ -574,6 +574,7 @@ int main(int argc, char *argv[])
       // L2 Filter
       // *Keep even if nhit over threshold
       // *Also keep event if it was externally triggered
+      // *Also keep a prescaled selection
       if(nhit>NHITCUT || (word & bitmask != 0) ){
         OutZdab(zrec, w1, zfile);
         l2++;
