@@ -37,6 +37,7 @@
 #include "hiredis.h"
 #include "curl/curl.h"
 #include "snbuf.h"
+#include "TRandom3.h"
 
 #define EXTASY 0x8000 // Bit 15
 
@@ -446,6 +447,10 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
+  // Start Random number generator for prescale selection
+  static int seed = 42; // FIXME Make this run number or something
+  static TRandom3* Trand = new TRandom3(seed);
+
   // Prepare to record statistics in redis database
   redisContext *redis;
   CURL *curl;
@@ -575,10 +580,15 @@ int main(int argc, char *argv[])
       // L2 Filter
       // *Keep even if nhit over threshold
       // *Also keep event if it was externally triggered
-      // *Also keep a prescaled selection
       if(nhit>NHITCUT || (word & bitmask != 0) ){
         OutZdab(zrec, w1, zfile);
         l2++;
+      }
+
+      // Decide whether to put event in prescale file
+      double rand = Trand->Rndm();
+      if(rand < 0.01){ //Select 1% of triggers
+
       }
 
     } // End Loop for Event Records
