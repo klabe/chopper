@@ -86,11 +86,11 @@ void hexdump(char* const ptr, const int len){
   } 
 }
 
-// This function sends alarms to the website
+// This function sends alarms to the website 
 static void alarm(CURL* curl, const int level, const char* msg)
 {
   char curlmsg[256];
-  sprintf(curlmsg, "name=L2&level=%d&message=%s",level,msg);
+  sprintf(curlmsg, "name=L2-client&level=%d&message=%s",level,msg);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
   curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
   CURLcode res = curl_easy_perform(curl);
@@ -185,7 +185,7 @@ static void Close(const char* const base, PZdabWriter* const w,
   w->Close();
   if(extasy){
     if(link(outname, linkname)){
-      alarm(curl, 1, message);
+      alarm(curl, 30, message);
     }
   }
 
@@ -291,9 +291,10 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
 void Opencurl(CURL** curl, char* password){
   *curl = curl_easy_init();
   char address[264];
-  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
+//  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
   if(curl){
-    curl_easy_setopt(*curl, CURLOPT_URL, address);
+//  curl_easy_setopt(*curl, CURLOPT_URL, address);
+    curl_easy_setopt(*curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
   }
   else
     fprintf(stderr,"Could not initialize curl object");
@@ -378,7 +379,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
     if (dd > maxdrift){
       char msg[128];
       sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
-      alarm(curl, 1, msg);
+      alarm(curl, 30, msg);
       fprintf(stderr, msg);
     }
 
@@ -398,7 +399,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
-        alarm(curl, 1, msg);
+        alarm(curl, 30, msg);
         fprintf(stderr, msg);
         // Assume for now that the clock is wrong
         newat.time50 = oldat.time50;
@@ -408,7 +409,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
     // Check that the clock has not jumped ahead too far:
     if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
-      alarm(curl, 1, msg);
+      alarm(curl, 30, msg);
       fprintf(stderr, msg);
       // Assume for now that the time is wrong
       newat.time50 = oldat.time50;
@@ -450,7 +451,7 @@ int main(int argc, char *argv[])
   CURL *curl;
   if(yesredis) 
     Openredis(&redis);
-    Opencurl(&curl, password);
+  Opencurl(&curl, password);
   int l1=0;
   int l2=0;
   bool burstbool=false;
@@ -591,7 +592,8 @@ int main(int argc, char *argv[])
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, &curl, extasy);
 
-  Closeredis(&redis);
+  if(yesredis)
+    Closeredis(&redis);
   Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
