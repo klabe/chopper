@@ -37,7 +37,7 @@
 #include "hiredis.h"
 #include "curl/curl.h"
 #include "snbuf.h"
-#include "TRandom3.h"
+#include "SFMT.h"
 
 #define EXTASY 0x8000 // Bit 15
 
@@ -448,8 +448,9 @@ int main(int argc, char *argv[])
   }
 
   // Start Random number generator for prescale selection
-  static int seed = 42; // FIXME Make this run number or something
-  static TRandom3* Trand = new TRandom3(seed);
+  static uint32_t seed = 42; // FIXME Make this run number or something
+  sfmt_t randgen; // This is a random number generator
+  sfmt_init_gen_rand(&randgen, seed);
 
   // Prepare to record statistics in redis database
   redisContext *redis;
@@ -586,8 +587,8 @@ int main(int argc, char *argv[])
       }
 
       // Decide whether to put event in prescale file
-      double rand = Trand->Rndm();
-      if(rand < 0.01){ //Select 1% of triggers
+      uint32_t rand = sfmt_genrand_uint32(&randgen);
+      if(rand < 0.01*4294967296){ //Select 1% of triggers
 
       }
 
@@ -604,6 +605,7 @@ int main(int argc, char *argv[])
 
   if(yesredis)
     Closeredis(&redis);
+  alarm(curl, 21, "Subfile finished.");
   Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
