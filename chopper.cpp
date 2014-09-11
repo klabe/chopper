@@ -47,6 +47,7 @@ static int NHITCUT;
 static int HINHITCUT = 30;
 static int LONHITCUT = 10;
 static int LOWTHRESH = 50;
+static int RETRIGCUT = 5;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -260,8 +261,10 @@ static void printhelp()
 static void Openredis(redisContext **redis)
 {
   *redis = redisConnect("cp4.uchicago.edu", 6379);
-  if((*redis)->err)
+  if((*redis)->err){
     printf("Error: %s\n", (*redis)->errstr);
+    // FIXME - Log this error
+  }
   else
     printf("Connected to Redis.\n");
 }
@@ -355,7 +358,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
-                              alltimes oldat, uint64_t & eventn, int & orphan)
+                              alltimes oldat, uint64_t & eventn, int & orphan,
+                              bool passretrig, bool retrig)
 {
   alltimes newat = oldat;
   if(eventn == 1){
@@ -424,6 +428,16 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
 
     // Set the Internal Clock
     newat.longtime = newat.time50 + maxtime*newat.epoch;
+
+    // Check for retriggers
+    if (newat.time50 - oldat.time50 > 0 &&
+        newat.time50 - oldat.time50 < 24){
+      retrig = true;
+    }
+    else{
+      retrig = false;
+      passretrig = false;
+    }
   }
   return newat;
 }
@@ -493,6 +507,14 @@ int main(int argc, char *argv[])
   InitializeBuf();
   int bcount = 0;
 
+  // Flags for the retriggering logic:
+  // passretrig true means that if the next event is a retrigger, we should 
+  // apply the special retrigger threshold.
+  // retrig true means that this event is a retrigger (defined in the sense
+  // 0 < dt < 460 ns ).
+  bool passretrig = false;
+  bool retrig = false;
+
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
   int orphan = 0;
@@ -514,7 +536,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       eventn++;
-      alltime = compute_times(hits, curl, alltime, eventn, orphan);
+      alltime = compute_times(hits, curl, alltime, eventn, orphan, passretrig, retrig);
       // Has wall time changed?
       if(walltime!=0)
         oldwalltime=walltime;
@@ -597,8 +619,11 @@ int main(int argc, char *argv[])
       // L2 Filter
       // *Keep even if nhit over threshold
       // *Also keep event if it was externally triggered
-      if(nhit>NHITCUT || (word & bitmask != 0) ){
+      if(nhit>NHITCUT || 
+         (word & bitmask != 0) ||
+         (passretrig == true && retrig == true && nhit > RETRIGCUT) ){
         OutZdab(zrec, w1, zfile);
+        passretrig = true;
         l2++;
       }
 
@@ -622,7 +647,8 @@ int main(int argc, char *argv[])
   if(yesredis)
     Closeredis(&redis);
   char messg[128];
-  sprintf(messg, "Stonehenge: Subfile %s finished.", outfilebase); 
+  sprintf(messg, "Stonehenge: Subfile %s finished."
+                 "  %lu events processed.", outfilebase, eventn); 
   alarm(curl, 21, messg);
   Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
