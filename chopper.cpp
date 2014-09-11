@@ -452,6 +452,23 @@ uint32_t triggertype(PmtEventRecord* hits){
   return triggerword;
 }
 
+// This Function performs the actual L2 cut
+// It returns true if we write out the event and false otherwise
+// Keep event if it is over nhit threshold
+// or, if it was externally triggered
+// or, if it is a retrigger to an accepted event
+bool cut(const int nhit, const uint32_t word, const bool passretrig, 
+         const bool retrig){
+  if(nhit > NHITCUT)
+    return true;
+  if(word & bitmask != 0)
+    return true;
+  if(passretrig && retrig && nhit > RETRIGCUT)
+    return true;
+  else
+    return false;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -617,11 +634,7 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      // *Keep even if nhit over threshold
-      // *Also keep event if it was externally triggered
-      if(nhit>NHITCUT || 
-         (word & bitmask != 0) ||
-         (passretrig == true && retrig == true && nhit > RETRIGCUT) ){
+      if(cut(nhit, word, passretrig, retrig)){
         OutZdab(zrec, w1, zfile);
         passretrig = true;
         l2++;
