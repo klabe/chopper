@@ -19,7 +19,9 @@
 // 50MHz clock, which will last 5000 years without rolling over.  Epoch 
 // counts the number of times to 50MHz clock has rolled over since
 // longtime started counting.  We also track walltime, which is unix time, 
-// in order to write to the database with a time stamp. 
+// in order to write to the database with a time stamp.  There is also a 
+// variable called exptime, which gives the current time at which the lowered 
+// trigger threshold expires(d), if any. 
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -41,7 +43,7 @@
 
 #define EXTASY 0x8000 // Bit 15
 
-static int NHITCUT = 30;
+static int NHITCUT;
 static int HINHITCUT = 30;
 static int LONHITCUT = 10;
 static int LOWTHRESH = 50;
@@ -382,7 +384,8 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
                      (oldat.time50 - newat.time50) - (oldat.time10 - newat.time10)*5 );
     if (dd > maxdrift){
       char msg[128];
-      sprintf(msg, "Stonehenge: The Clocks jumped by %i ticks!\n", dd);
+      sprintf(msg, "Stonehenge: The 50MHz clock jumped by %i ticks relative"
+                   " to the 10MHz clock!\n", dd);
       alarm(curl, 30, msg);
       fprintf(stderr, msg);
     }
@@ -618,7 +621,9 @@ int main(int argc, char *argv[])
 
   if(yesredis)
     Closeredis(&redis);
-  alarm(curl, 21, "Subfile finished.");
+  char messg[128];
+  sprintf(messg, "Stonehenge: Subfile %s finished.", outfilebase); 
+  alarm(curl, 21, messg);
   Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n",
          recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
