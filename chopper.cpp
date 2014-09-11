@@ -42,6 +42,9 @@
 #define EXTASY 0x8000 // Bit 15
 
 static int NHITCUT = 30;
+static int HINHITCUT = 30;
+static int LONHITCUT = 10;
+static int LOWTHRESH = 50;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -467,6 +470,7 @@ int main(int argc, char *argv[])
   alltimes alltime;
   int walltime = 0;
   int oldwalltime = 0;
+  uint64_t exptime = 0;
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase);
@@ -519,6 +523,15 @@ int main(int argc, char *argv[])
         l1 = 0;
         l2 = 0;
         burstbool = false;
+      }
+      // Should we adjust the trigger threshold?
+      // The "Kalpana" solution
+      if(nhit > LOWTHRESH){
+        exptime = alltime.time50 + 20000; // 400 us in 50MHZ ticks
+        NHITCUT = LONHITCUT;
+      }
+      if(alltime.time50 < exptime){
+        NHITCUT = HINHITCUT;
       }
 
       // Burst Detection Here

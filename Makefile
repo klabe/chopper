@@ -9,7 +9,7 @@ chopper: chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o
 	g++ -o chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o $(LINKFLAGS) 
 
 chopper.o: chopper.cpp snbuf.h
-	g++ -c chopper.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis -I/home/cp/klabe/chopper/SFMT-src-1.4.1
+	g++ -c chopper.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis -I/home/cp/klabe/chopper/SFMT-src-1.4.1 -DSFMT_MEXP=19937
 
 
 PZdabFile.o: PZdabFile.cxx
