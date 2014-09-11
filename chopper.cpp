@@ -534,6 +534,7 @@ int main(int argc, char *argv[])
 
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
+  uint64_t prescalen = 0;
   int orphan = 0;
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
@@ -643,7 +644,7 @@ int main(int argc, char *argv[])
       // Decide whether to put event in prescale file
       uint32_t rand = sfmt_genrand_uint32(&randgen);
       if(rand < 0.01*4294967296){ //Select 1% of triggers
-
+        prescalen++;
       }
 
     } // End Loop for Event Records
@@ -664,7 +665,8 @@ int main(int argc, char *argv[])
                  "  %lu events processed.", outfilebase, eventn); 
   alarm(curl, 21, messg);
   Closecurl(&curl);
-  printf("Done. %lu record%s, %lu event%s processed\n",
-         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s");
+  printf("Done. %lu record%s, %lu event%s processed\n"
+         "%lu events selected by prescaler\n",
+         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen);
   return 0;
 }
