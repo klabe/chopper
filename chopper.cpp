@@ -470,7 +470,7 @@ uint32_t triggertype(PmtEventRecord* hits){
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
 bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
-              const bool retrig, int key){
+              const bool retrig, int &key){
   bool pass = false;
   key = 0;
   if(nhit > NHITCUT){
@@ -514,8 +514,7 @@ int main(int argc, char *argv[])
   Opencurl(&curl, password);
   if(yesredis) 
     Openredis(&redis, curl);
-  int l1=0;
-  int l2=0;
+  int l1=0, l2=0;
   bool burstbool=false;
   bool extasy=false;
 
@@ -663,11 +662,13 @@ int main(int argc, char *argv[])
         OutZdab(zrec, w1, zfile, curl);
         passretrig = true;
         l2++;
-        for(int i=0; i<8; i++){
+        for(int i=1; i<8; i++){
           if(key==i)
             stats[i]++;
         }
       }
+      else
+        stats[0]++;
 
       // Decide whether to put event in prescale file
       uint32_t rand = sfmt_genrand_uint32(&randgen);
@@ -698,7 +699,18 @@ int main(int argc, char *argv[])
   alarm(curl, 21, messg);
   Closecurl(&curl);
   printf("Done. %lu record%s, %lu event%s processed\n"
-         "%lu events selected by prescaler\n",
-         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen);
+         "%lu events selected by prescaler\n"
+         "%i events (%i prescaled events) pass no cut\n"
+         "%i events (%i prescaled events) pass only nhit cut\n"
+         "%i events (%i prescaled events) pass only external trigger cut\n"
+         "%i events (%i prescaled events) pass both external trigger and nhit cuts\n"
+         "%i events (%i prescaled events) pass only retrigger cut\n"
+         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
+         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
+         "%i events (%i prescaled events) pass all three cuts\n",
+         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen,
+         stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
+         stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
+         stats[6], psstats[6], stats[7], psstats[7], stats[8], psstats[8]);
   return 0;
 }
