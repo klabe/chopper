@@ -457,7 +457,7 @@ uint32_t triggertype(PmtEventRecord* hits){
 // Keep event if it is over nhit threshold
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
-bool cut(const int nhit, const uint32_t word, const bool passretrig, 
+bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
          const bool retrig){
   if(nhit > NHITCUT)
     return true;
@@ -635,7 +635,7 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      if(cut(nhit, word, passretrig, retrig)){
+      if(l2filter(nhit, word, passretrig, retrig)){
         OutZdab(zrec, w1, zfile);
         passretrig = true;
         l2++;
