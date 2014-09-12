@@ -107,7 +107,7 @@ static void alarm(CURL* curl, const int level, const char* msg)
 
 // This function writes out the ZDAB record
 static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
-                    PZdabFile * const zfile)
+                    PZdabFile * const zfile, CURL* curl)
 {
   if(!data) return;
   const int index = PZdabWriter::GetIndex(data->bank_name);
@@ -123,7 +123,7 @@ static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 
 // This function writes out the header buffer to a file
 static void OutHeader(const GenericRecordHeader * const hdr,
-                      PZdabWriter* const w, const int j)
+                      PZdabWriter* const w, const int j, CURL* curl)
 {
   if (!hdr) return;
 
@@ -147,7 +147,7 @@ static void OutHeader(const GenericRecordHeader * const hdr,
 // This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-static PZdabWriter * Output(const char * const base)
+static PZdabWriter * Output(const char * const base, CURL* curl)
 {
   const int maxlen = 1024;
   char outfilename[maxlen];
@@ -267,7 +267,7 @@ static void printhelp()
 }
 
 // This function opens the redis connection at startup
-static void Openredis(redisContext **redis)
+static void Openredis(redisContext **redis, CURL* curl)
 {
   *redis = redisConnect("cp4.uchicago.edu", 6379);
   if((*redis)->err){
@@ -470,15 +470,22 @@ uint32_t triggertype(PmtEventRecord* hits){
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
 bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
-              const bool retrig){
-  if(nhit > NHITCUT)
-    return true;
-  if(word & bitmask != 0)
-    return true;
-  if(passretrig && retrig && nhit > RETRIGCUT)
-    return true;
-  else
-    return false;
+              const bool retrig, int key){
+  bool pass = false;
+  key = 0;
+  if(nhit > NHITCUT){
+    pass = true;
+    key +=1;
+  }
+  if(word & bitmask != 0){
+    pass = true;
+    key +=2;
+  }
+  if(passretrig && retrig && nhit > RETRIGCUT){
+    pass = true;
+    key +=4;
+  }
+  return pass;
 }
 
 // MAIN FUCTION 
@@ -504,9 +511,9 @@ int main(int argc, char *argv[])
   // Prepare to record statistics in redis database
   redisContext *redis;
   CURL *curl;
-  if(yesredis) 
-    Openredis(&redis);
   Opencurl(&curl, password);
+  if(yesredis) 
+    Openredis(&redis, curl);
   int l1=0;
   int l2=0;
   bool burstbool=false;
@@ -519,7 +526,7 @@ int main(int argc, char *argv[])
   uint64_t exptime = 0;
 
   // Setup initial output file
-  PZdabWriter* w1  = Output(outfilebase);
+  PZdabWriter* w1  = Output(outfilebase, curl);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -547,6 +554,7 @@ int main(int argc, char *argv[])
   // Loop over ZDAB Records
   uint64_t eventn = 0, recordn = 0;
   uint64_t prescalen = 0;
+  int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0}, psstats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   int orphan = 0;
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
@@ -564,6 +572,8 @@ int main(int argc, char *argv[])
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
+      // The key variable is used to encode which cuts the event passes
+      int key = 0;
       nhit = hits->NPmtHit;
       eventn++;
       alltime = compute_times(hits, curl, alltime, eventn, orphan, passretrig, retrig);
@@ -620,9 +630,9 @@ int main(int argc, char *argv[])
             alarm(curl, 20, "Burst started");
             char buff[32];
             sprintf(buff,"Burst_%s_%i", outfilebase, burstindex);
-            b = Output(buff);
+            b = Output(buff, curl);
             for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], b, i);
+              OutHeader((GenericRecordHeader*) header[i], b, i, curl);
             }
           }
         }
@@ -649,8 +659,8 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      if(l2filter(nhit, word, passretrig, retrig)){
-        OutZdab(zrec, w1, zfile);
+      if(l2filter(nhit, word, passretrig, retrig, key)){
+        OutZdab(zrec, w1, zfile, curl);
         passretrig = true;
         l2++;
       }
@@ -664,7 +674,7 @@ int main(int argc, char *argv[])
     } // End Loop for Event Records
     // Write out all non-event records:
     else{
-      OutZdab(zrec, w1, zfile);
+      OutZdab(zrec, w1, zfile, curl);
       l2++;
     }
     recordn++;
