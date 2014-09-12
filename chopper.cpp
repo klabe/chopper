@@ -111,7 +111,10 @@ static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 {
   if(!data) return;
   const int index = PZdabWriter::GetIndex(data->bank_name);
-  if(index < 0) fprintf(stderr, "Unrecognized bank name\n");
+  if(index < 0){
+     fprintf(stderr, "Unrecognized bank name\n");
+     alarm(curl, 10, "Outzdab: unrecognized bank name.");
+  }
   else{
     uint32_t * const bank = zfile->GetBank(data);
     zwrite->WriteBank(bank, index);
@@ -132,11 +135,13 @@ static void OutHeader(const GenericRecordHeader * const hdr,
       case 0: index=2; break;
       case 1: index=4; break; 
       case 2: index=3; break;
-      default: fprintf(stderr, "Not reached\n"); exit(1);
+      default: fprintf(stderr, "Not reached\n"); alarm(curl, 10, "Outheader: You never see this!"); exit(1);
     }
   }
-  if(w->WriteBank((uint32_t *)hdr, index))
+  if(w->WriteBank((uint32_t *)hdr, index)){
     fprintf(stderr,"Error writing to zdab file\n");
+    alarm(curl, 10, "Outheader: error writing to zdab file.");
+  }
 }
 
 // This function builds a new output file.  If it can't open 
@@ -151,12 +156,14 @@ static PZdabWriter * Output(const char * const base)
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
+    alarm(curl, 10, "Output: output filename truncated");
   }
 
   if(!access(outfilename, W_OK)){
     if(!clobber){
       fprintf(stderr, "%s already exists and you told me not to "
               "overwrite it!\n", outfilename);
+      alarm(curl, 10, "Output: Should not overwrite that file.");
       exit(1);
     }
     unlink(outfilename);
@@ -164,6 +171,7 @@ static PZdabWriter * Output(const char * const base)
   else if(!access(outfilename, F_OK)){
     fprintf(stderr, "%s already exists and we can't overwrite it!\n",
             outfilename);
+    alarm(curl, 10, "Output: Cannot overwrite that file.");
     exit(1);
   } 
 
@@ -171,6 +179,7 @@ static PZdabWriter * Output(const char * const base)
 
   if(!ret || !ret->IsOpen()){
     fprintf(stderr, "Could not open output file %s\n", outfilename);
+    alarm(curl, 10, "Output: Cannot open file.");
     exit(1);
   }
   return ret;
@@ -263,10 +272,12 @@ static void Openredis(redisContext **redis)
   *redis = redisConnect("cp4.uchicago.edu", 6379);
   if((*redis)->err){
     printf("Error: %s\n", (*redis)->errstr);
-    // FIXME - Log this error
+    alarm(curl, 10, "Openredis: cannot connect to redis server.");
   }
-  else
+  else{
     printf("Connected to Redis.\n");
+    alarm(curl, 21, "Openredis: connected to server!");
+  }
 }
 
 // This function closes the redis connection when finished
@@ -406,6 +417,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
       // Is it reasonable that the clock rolled over?
       if ((oldat.time50 + newat.time50 < maxtime + maxjump) && dd < maxdrift && (oldat.time50 > maxtime - maxjump) ) {
         fprintf(stderr, "New Epoch\n");
+        alarm(curl, 20, "Stonehenge: new epoch.");
         newat.epoch++;
       }
       else{
@@ -458,7 +470,7 @@ uint32_t triggertype(PmtEventRecord* hits){
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
 bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
-         const bool retrig){
+              const bool retrig){
   if(nhit > NHITCUT)
     return true;
   if(word & bitmask != 0)
@@ -605,6 +617,7 @@ int main(int argc, char *argv[])
             bcount=burstlength;
             starttick=alltime.longtime;
             fprintf(stderr, "Burst %i has begun!\n", burstindex);
+            alarm(curl, 20, "Burst started");
             char buff[32];
             sprintf(buff,"Burst_%s_%i", outfilebase, burstindex);
             b = Output(buff);
@@ -627,6 +640,7 @@ int main(int argc, char *argv[])
             float btimesec = btime/50000000.;
             fprintf(stderr, "Burst %i has ended.  It contains %i events"
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
+            alarm(curl, 20, "Burst ended");
             burstindex++;
             // Reset to prepare for next burst
             bcount=0;
