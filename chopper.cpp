@@ -663,12 +663,20 @@ int main(int argc, char *argv[])
         OutZdab(zrec, w1, zfile, curl);
         passretrig = true;
         l2++;
+        for(int i=0; i<8; i++){
+          if(key==i)
+            stats[i]++;
+        }
       }
 
       // Decide whether to put event in prescale file
       uint32_t rand = sfmt_genrand_uint32(&randgen);
       if(rand < 0.01*4294967296){ //Select 1% of triggers
         prescalen++;
+        for(int i=0; i<8; i++){
+          if(key==i)
+            psstats[i]++;
+        }
       }
 
     } // End Loop for Event Records
