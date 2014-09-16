@@ -65,7 +65,8 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
 // Trigger Bitmask
-static uint32_t bitmask = 0x007F8000; // Masking out the external triggers
+static uint32_t bitmask = 0x00FFF800; // Masking in the external triggers
+                                      // select bits 10, 12-22
 
 static char* password = NULL;
 
