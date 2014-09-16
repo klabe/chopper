@@ -290,8 +290,8 @@ static void Closeredis(redisContext **redis)
 static void Writetoredis(redisContext *redis, const int l1, const int l2,
                          const bool burst, const int time)
 {
-  const int NumInt = 10;
-  const int intervals[NumInt] = {1, 3, 9, 29, 90, 280, 867, 2677, 8267, 25531};
+  const int NumInt = 17;
+  const int intervals[NumInt] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
   for(int i=0; i < NumInt; i++){
     int ts = time/intervals[i];
     void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, l1);
@@ -477,7 +477,7 @@ bool l2filter(const int nhit, const uint32_t word, const bool passretrig,
     pass = true;
     key +=1;
   }
-  if(word & bitmask != 0){
+  if((word & bitmask) != 0){
     pass = true;
     key +=2;
   }
