@@ -51,6 +51,8 @@ static int LOWINDOW = 20000; // This is the time for lowering the cut, in 50 MHz
 static int RETRIGCUT = 5;    // This is the nhit cut for retriggered events.
 static int RETRIGWINDOW = 23;// This is the max time between retriggered events, in 50 MHz ticks (23 = 460ns).
 static int PRESCALE = 100;   // This is the prescale fraction (eg 100 = "save 1 in 100 events")
+static uint32_t bitmask = 0x00FFF800; // This is the external trigger bitmask
+                                      // currently masking in bits 10, 12-22
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -66,10 +68,6 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 
 // Maximum time drift allowed between two clocks without a complaint
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
-
-// Trigger Bitmask
-static uint32_t bitmask = 0x00FFF800; // Masking in the external triggers
-                                      // select bits 10, 12-22
 
 static char* password = NULL;
 
