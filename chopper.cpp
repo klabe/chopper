@@ -48,6 +48,7 @@ static int HINHITCUT = 30;
 static int LONHITCUT = 10;
 static int LOWTHRESH = 50;
 static int RETRIGCUT = 5;
+static int PRESCALE = 100;
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -508,6 +509,7 @@ int main(int argc, char *argv[])
   static uint32_t seed = 42; // FIXME Make this run number or something
   sfmt_t randgen; // This is a random number generator
   sfmt_init_gen_rand(&randgen, seed);
+  int prescalerand =  (int) (4294967296/PRESCALE);
 
   // Prepare to record statistics in redis database
   redisContext *redis;
@@ -673,7 +675,7 @@ int main(int argc, char *argv[])
 
       // Decide whether to put event in prescale file
       uint32_t rand = sfmt_genrand_uint32(&randgen);
-      if(rand < 0.01*4294967296){ //Select 1% of triggers
+      if(rand < prescalerand){ //Select 1% of triggers
         prescalen++;
         for(int i=0; i<8; i++){
           if(key==i)
