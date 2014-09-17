@@ -43,12 +43,14 @@
 
 #define EXTASY 0x8000 // Bit 15
 
-static int NHITCUT;
-static int HINHITCUT = 30;
-static int LONHITCUT = 10;
-static int LOWTHRESH = 50;
-static int RETRIGCUT = 5;
-static int PRESCALE = 100;
+static int NHITCUT;          // This is the nhit cut applied to physics events at any given time.
+static int HINHITCUT = 30;   // This is the regular nhit cut for physics events.
+static int LONHITCUT = 10;   // This is the special lowered nhit cut for after large events.
+static int LOWTHRESH = 50;   // This defines "large events" as used above.
+static int LOWINDOW = 20000; // This is the time for lowering the cut, in 50 MHz ticks.
+static int RETRIGCUT = 5;    // This is the nhit cut for retriggered events.
+static int RETRIGWINDOW = 23;// This is the max time between retriggered events, in 50 MHz ticks (23 = 460ns).
+static int PRESCALE = 100;   // This is the prescale fraction (eg 100 = "save 1 in 100 events")
 
 // Whether to overwrite existing output
 static bool clobber = true;
@@ -445,7 +447,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
 
     // Check for retriggers
     if (newat.time50 - oldat.time50 > 0 &&
-        newat.time50 - oldat.time50 < 24){
+        newat.time50 - oldat.time50 <= RETRIGWINDOW){
       retrig = true;
     }
     else{
@@ -594,7 +596,7 @@ int main(int argc, char *argv[])
       // Should we adjust the trigger threshold?
       // The "Kalpana" solution
       if(nhit > LOWTHRESH){
-        exptime = alltime.time50 + 20000; // 400 us in 50MHZ ticks
+        exptime = alltime.time50 + LOWINDOW;
         NHITCUT = LONHITCUT;
       }
       if(alltime.time50 < exptime){
