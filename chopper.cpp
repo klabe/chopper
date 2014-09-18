@@ -521,6 +521,23 @@ void WriteConfig(char* infilename){
   curl_slist_free_all(headers);
 }
 
+// This function opens a new burst file
+void OpenBurst(int bcount, int burstlength, int starttick, alltimes alltime,
+               char* outfilebase, char* header[], int headertypes, CURL* curl, 
+               PZdabWriter* b){
+  burst = true;
+  bcount = burstlength;
+  starttick = alltime.longtime;
+  fprintf(stderr, "Burst %i has begun!\n", burstindex);
+  alarm(curl, 20, "Burst started");
+  char buff[32];
+  sprintf(buff, "Burst_%s_%i", outfilebase, burstindex);
+  b = Output(buff, curl);
+  for(int i=0; i<headertypes; i++){
+    OutHeader((GenericRecordHeader*) header[i], b, i, curl);
+  }
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -657,17 +674,8 @@ int main(int argc, char *argv[])
         // Open a new burst file if a burst starts
         if(!burst){
           if(burstlength>BurstSize){
-            burst=true;
-            bcount=burstlength;
-            starttick=alltime.longtime;
-            fprintf(stderr, "Burst %i has begun!\n", burstindex);
-            alarm(curl, 20, "Burst started");
-            char buff[32];
-            sprintf(buff,"Burst_%s_%i", outfilebase, burstindex);
-            b = Output(buff, curl);
-            for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], b, i, curl);
-            }
+            OpenBurst(bcount, burstlength, starttick, alltime, outfilebase,
+                      header, headertypes, curl, b); 
           }
         }
         // While in a burst
