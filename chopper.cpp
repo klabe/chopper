@@ -380,6 +380,16 @@ void ReadConfig(const char* filename){
 
    std::string line;
    while(getline(configfile,line)){
+     std::string param;
+     int value;
+     sscanf(line.c_str(), "%s \t %d", param, &value);
+     if(param == "nhithi")
+       ;
+     else if(param == "")
+       ;
+     else
+        printf("ReadConfig does not recognized parameter %s.  Ignoring.",
+               param); break;
    }
 }
 
