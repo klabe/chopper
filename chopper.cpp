@@ -46,15 +46,30 @@
 // These are the parameters which are set in the configuration file.
 // If there a value is not specified in the configuration file, the program
 // will use the default value listed here 
-static int HINHITCUT = 30;   // This is the regular nhit cut for physics events.
-static int LONHITCUT = 10;   // This is the special lowered nhit cut for after large events.
-static int LOWTHRESH = 50;   // This defines "large events" as used above.
-static int LOWINDOW = 20000; // This is the time for lowering the cut, in 50 MHz ticks.
-static int RETRIGCUT = 5;    // This is the nhit cut for retriggered events.
-static int RETRIGWINDOW = 23;// This is the max time between retriggered events, in 50 MHz ticks (23 = 460ns).
-static int PRESCALE = 100;   // This is the prescale fraction (eg 100 = "save 1 in 100 events")
-static uint32_t bitmask = 0x00FFF800; // This is the external trigger bitmask
-                                      // currently masking in bits 10, 12-22
+//***************************************************************************
+// This is the regular nhit cut for physics events
+static int HINHITCUT = 30; 
+
+// This is the special lowered nhit cut for after large events.
+static int LONHITCUT = 10;
+
+// This defines "large events" as used above.
+static int LOWTHRESH = 50;
+
+// This is the time for lowering the cut, in 50 MHz ticks.
+static int LOWINDOW = 20000;
+
+// This is the nhit cut for retriggered events.
+static int RETRIGCUT = 5;
+
+// This is the max time between retriggered events, in 50 MHz ticks (23 = 460ns).
+static int RETRIGWINDOW = 23;
+
+// This is the prescale fraction (eg 100 = "save 1 in 100 events")
+static int PRESCALE = 100;
+
+// This is the external trigger bitmask; currently masking in bits 10, 12-22
+static uint32_t bitmask = 0x00FFF800;
 //***************************************************************************
 
 // This variable holds the current Nhitcut, which can be either the Hi or 
@@ -359,8 +374,13 @@ void Closecurl(CURL** curl){
 }
 
 // This function reads the configuration file and sets the cut parameters.
-void ReadConfig(){ 
-    
+void ReadConfig(const char* filename){ 
+   std::ifstream configfile;
+   configfile.open(filename); 
+
+   std::string line;
+   while(getline(configfile,line)){
+   }
 }
 
 // This function interprets the command line arguments to the program
@@ -406,7 +426,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   }
 
   if(config)
-    ReadConfig();
+    ReadConfig(configfile);
 
 }
 
