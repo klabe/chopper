@@ -304,14 +304,14 @@ static void Writetoredis(redisContext *redis, const int l1, const int l2,
   for(int i=0; i < NumInt; i++){
     int ts = time/intervals[i];
     void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, l1);
-    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 12000*intervals[i]);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
 
     reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, l2);
-    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 12000*intervals[i]);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
 
     if(burst){
       reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
-      reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 12000*intervals[i]);
+      reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 2400*intervals[i]);
     }
   }
 }
@@ -334,13 +334,19 @@ void Closecurl(CURL** curl){
   curl_easy_cleanup(*curl);
 }
 
+// This function reads the configuration file and sets the cut parameters.
+void ReadConfig(){ 
+    
+}
+
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
-                          char * & outfilebase)
+                          char * & outfilebase, char * & configfile)
 {
   const char * const opts = "hi:o:l:b:t:u:nr";
 
   bool done = false;
+  bool config = false; // was there a configuration file provided?
   
   infilename = outfilebase = NULL;
 
@@ -360,6 +366,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;
 
+      case 'c': config = true; configfile = optarg; break;
+
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
     }
@@ -372,6 +380,9 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     printhelp();
     exit(1);
   }
+
+  if(config)
+    ReadConfig();
 
 }
 
@@ -497,23 +508,25 @@ bool l2filter(const int nhit, const uint32_t word, const bool passretrig,
   return pass;
 }
 
-// This function reads the configuration file and sets the cut parameters.
-void ReadConfig(){
-
-}
-
 // This function writes the configuration parameters to couchdb.
-void WriteConfig(){
-
+void WriteConfig(char* infilename){
+  CURL* couchcurl = curl_easy_init();
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, "Content-Type: application/json"); 
+  curl_easy_setopt(couchcurl, CURLOPT_URL, "http://127.0.0.1:5984/l2configuration");
+  curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, "{\"title\":\"test\"}");
+  curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
+  curl_easy_perform(couchcurl);
+  curl_easy_cleanup(couchcurl);
+  curl_slist_free_all(headers);
 }
 
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
-  char * infilename = NULL, * outfilebase = NULL;
+  char * infilename = NULL, * outfilebase = NULL, * configfile = NULL;
 
-  parse_cmdline(argc, argv, infilename, outfilebase);
-  ReadConfig();
+  parse_cmdline(argc, argv, infilename, outfilebase, configfile);
 
   FILE* infile = fopen(infilename, "rb");
 
@@ -522,7 +535,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Did not open file\n");
     exit(1);
   }
-  WriteConfig();
+  WriteConfig(infilename);
 
   // Start Random number generator for prescale selection
   static uint32_t seed = 42; // FIXME Make this run number or something
