@@ -490,12 +490,23 @@ bool l2filter(const int nhit, const uint32_t word, const bool passretrig,
   return pass;
 }
 
+// This function reads the configuration file and sets the cut parameters.
+void ReadConfig(){
+
+}
+
+// This function writes the configuration parameters to couchdb.
+void WriteConfig(){
+
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
   char * infilename = NULL, * outfilebase = NULL;
 
   parse_cmdline(argc, argv, infilename, outfilebase);
+  ReadConfig();
 
   FILE* infile = fopen(infilename, "rb");
 
@@ -504,6 +515,7 @@ int main(int argc, char *argv[])
     fprintf(stderr, "Did not open file\n");
     exit(1);
   }
+  WriteConfig();
 
   // Start Random number generator for prescale selection
   static uint32_t seed = 42; // FIXME Make this run number or something
