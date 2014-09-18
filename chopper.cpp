@@ -275,6 +275,30 @@ static void printhelp()
   );
 }
 
+// This function prints some information at the end of the file
+static void PrintClosing(char* outfilebase, uint64_t eventn, uint64_t recordn,
+                         uint64_t prescalen, int stats[], int psstats[], 
+                         CURL* curl){
+  char messg[128];
+  sprintf(messg, "Stonehenge: Subfile %s finished."
+                 "  %lu events processed.\n", outfilebase, eventn);
+  alarm(curl, 21, messg);
+  printf("Done. %lu record%s, %lu event%s processed\n"
+         "%lu events selected by prescaler\n"
+         "%i events (%i prescaled events) pass no cut\n"
+         "%i events (%i prescaled events) pass only nhit cut\n"
+         "%i events (%i prescaled events) pass only external trigger cut\n"
+         "%i events (%i prescaled events) pass both external trigger and nhit cuts\n"
+         "%i events (%i prescaled events) pass only retrigger cut\n"
+         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
+         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
+         "%i events (%i prescaled events) pass all three cuts\n",
+         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen,
+         stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
+         stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
+         stats[6], psstats[6], stats[7], psstats[7], stats[8], psstats[8]);
+}
+
 // This function opens the redis connection at startup
 static void Openredis(redisContext **redis, CURL* curl)
 {
@@ -736,24 +760,7 @@ int main(int argc, char *argv[])
 
   if(yesredis)
     Closeredis(&redis);
-  char messg[128];
-  sprintf(messg, "Stonehenge: Subfile %s finished."
-                 "  %lu events processed.", outfilebase, eventn); 
-  alarm(curl, 21, messg);
+  PrintClosing(outfilebase, eventn, recordn, prescalen, stats, psstats, curl);
   Closecurl(&curl);
-  printf("Done. %lu record%s, %lu event%s processed\n"
-         "%lu events selected by prescaler\n"
-         "%i events (%i prescaled events) pass no cut\n"
-         "%i events (%i prescaled events) pass only nhit cut\n"
-         "%i events (%i prescaled events) pass only external trigger cut\n"
-         "%i events (%i prescaled events) pass both external trigger and nhit cuts\n"
-         "%i events (%i prescaled events) pass only retrigger cut\n"
-         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
-         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
-         "%i events (%i prescaled events) pass all three cuts\n",
-         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen,
-         stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
-         stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
-         stats[6], psstats[6], stats[7], psstats[7], stats[8], psstats[8]);
   return 0;
 }
