@@ -43,7 +43,9 @@
 
 #define EXTASY 0x8000 // Bit 15
 
-static int NHITCUT;          // This is the nhit cut applied to physics events at any given time.
+// These are the parameters which are set in the configuration file.
+// If there a value is not specified in the configuration file, the program
+// will use the default value listed here 
 static int HINHITCUT = 30;   // This is the regular nhit cut for physics events.
 static int LONHITCUT = 10;   // This is the special lowered nhit cut for after large events.
 static int LOWTHRESH = 50;   // This defines "large events" as used above.
@@ -53,6 +55,11 @@ static int RETRIGWINDOW = 23;// This is the max time between retriggered events,
 static int PRESCALE = 100;   // This is the prescale fraction (eg 100 = "save 1 in 100 events")
 static uint32_t bitmask = 0x00FFF800; // This is the external trigger bitmask
                                       // currently masking in bits 10, 12-22
+//***************************************************************************
+
+// This variable holds the current Nhitcut, which can be either the Hi or 
+// Lo Nhitcut, depending on what has been going on
+static int NHITCUT;
 
 // Whether to overwrite existing output
 static bool clobber = true;
