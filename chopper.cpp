@@ -385,7 +385,20 @@ void ReadConfig(const char* filename){
      sscanf(line.c_str(), "%s \t %d", param, &value);
      if(param == "nhithi")
        ;
-     else if(param == "")
+     else if(param == "nhitlo")
+       ;
+     else if(param == "lothresh")
+       ;
+     else if(param == "lowindow")
+       ;
+     else if(param == "nhitretrig")
+       ;
+     else if(param == "retrigwindow")
+       ;
+     else if(param == "prescale")
+       ;
+     else if(param == "bitmask")
+       // bitmask is really some hex, not an int...
        ;
      else
         printf("ReadConfig does not recognized parameter %s.  Ignoring.",
