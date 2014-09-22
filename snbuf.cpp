@@ -83,7 +83,7 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
       bursttail++;
     else
       bursttail=0;
-    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
+//    fprintf(stderr,"%i \t %i \n", bursthead, bursttail);
   }
 }
 

@@ -392,38 +392,36 @@ void ReadConfig(const char* filename){
      printf("Could not open configuration file.\n");
      return;
    }
-   char* param;
+
+   char param[16];
    int value;
-   printf("Test0\n");
 
    while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     printf("Test1\n");
-     printf("s\n", param);
-     if(param == "nhithi")
+     if(strcmp(param,"nhithi") == 0)
        HINHITCUT = value;
-     else if(param == "nhitlo")
+     else if(strcmp(param,"nhitlo") == 0)
        LONHITCUT = value;
-     else if(param == "lothresh")
+     else if(strcmp(param, "lothresh") == 0)
        LOWTHRESH = value;
-     else if(param == "lowindow")
+     else if(strcmp(param, "lowindow") == 0)
        LOWINDOW = value;
-     else if(param == "nhitretrig")
+     else if(strcmp(param, "nhitretrig") == 0)
        RETRIGCUT = value;
-     else if(param == "retrigwindow")
+     else if(strcmp(param, "retrigwindow") == 0)
        RETRIGWINDOW = value;
-     else if(param == "prescale")
+     else if(strcmp(param, "prescale") == 0)
        PRESCALE = value;
-     else if(param == "bitmask")
+     else if(strcmp(param, "bitmask") == 0)
        // bitmask is really some hex, not an int...
        bitmask = value;
-     else if(param == "nhitbcut")
+     else if(strcmp(param, "nhitbcut") == 0)
        setburstcut(value);
-     else if(param == "burstwindow")
+     else if(strcmp(param, "burstwindow") == 0)
        settimecut(value);
-     else if(param == "burstsize")
+     else if(strcmp(param, "burstsize") == 0)
        setratecut(value);
      else
-        printf("ReadConfig does not recognize parameter %s.  Ignoring.",
+        printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
    }
 }
