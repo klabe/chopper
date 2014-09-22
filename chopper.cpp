@@ -109,6 +109,8 @@ uint64_t prescalen;
 uint64_t eventn;
 uint64_t recordn;
 int orphan;
+int l1;
+int l2;
 };
 
 // Function to Print ZDAB records to screen readably
@@ -344,17 +346,17 @@ static void Closeredis(redisContext **redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, const int l1, const int l2,
+static void Writetoredis(redisContext *redis, const counts count,
                          const bool burst, const int time)
 {
   const int NumInt = 17;
   const int intervals[NumInt] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
   for(int i=0; i < NumInt; i++){
     int ts = time/intervals[i];
-    void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, l1);
+    void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, count.l1);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
 
-    reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, l2);
+    reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, count.l2);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
 
     if(burst){
@@ -474,7 +476,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
                              + hits->TriggerCardData.Bc50_1;
     newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
                              + hits->TriggerCardData.Bc10_1;
-    if(newat.time50 == 0) orphan++;
+    if(newat.time50 == 0) count.orphan++;
     newat.longtime = newat.time50;
   }
   else{
@@ -504,7 +506,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
     // Check for pathological case
     if (newat.time50 == 0){
       newat.time50 = oldat.time50;
-      orphan++;
+      count.orphan++;
       return newat;
     }
 
@@ -642,6 +644,8 @@ void CountInit(counts & count){
   count.recordn = 0;
   count.prescalen = 0;
   count.orphan = 0;
+  count.l1 = 0;
+  count.l2 = 0;
 }
 
 // MAIN FUCTION 
@@ -672,7 +676,6 @@ int main(int argc, char *argv[])
   Opencurl(&curl, password);
   if(yesredis) 
     Openredis(&redis, curl);
-  int l1=0, l2=0;
   // Note the difference between burstbool and burst:
   // burst says whether a burst is ongoing right now.
   // burstbool says whether a burst occurred in the present second.
@@ -742,10 +745,10 @@ int main(int argc, char *argv[])
       walltime=(int)time(NULL);
       if (walltime!=oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, l1, l2, burstbool,oldwalltime);
+          Writetoredis(redis, count, burstbool,oldwalltime);
         // Reset statistics
-        l1 = 0;
-        l2 = 0;
+        count.l1 = 0;
+        count.l2 = 0;
         burstbool = false;
       }
       // Should we adjust the trigger threshold?
@@ -812,7 +815,7 @@ int main(int argc, char *argv[])
       if(l2filter(nhit, word, passretrig, retrig, key)){
         OutZdab(zrec, w1, zfile, curl);
         passretrig = true;
-        l2++;
+        count.l2++;
         for(int i=1; i<8; i++){
           if(key==i)
             stats[i]++;
@@ -835,10 +838,10 @@ int main(int argc, char *argv[])
     // Write out all non-event records:
     else{
       OutZdab(zrec, w1, zfile, curl);
-      l2++;
+      count.l2++;
     }
     count.recordn++;
-    l1++;
+    count.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, &curl, extasy);
 
