@@ -594,10 +594,14 @@ void WriteConfig(char* infilename){
                      \"retrigwindow\":%d, \
                      \"prescale\":%d, \
                      \"bitmask\":%d, \
+                     \"nhitbcut\":%d, \
+                     \"burstwindow\":%d, \
+                     \"burstsize\":%d, \
+                     \"endrate\":%d, \
                      \"timestamp\":%d}",
                      1500, 3, HINHITCUT, LONHITCUT, LOWTHRESH, LOWINDOW,
-                     RETRIGCUT, RETRIGWINDOW, PRESCALE, bitmask,
-                     (int)time(NULL)); 
+                     RETRIGCUT, RETRIGWINDOW, PRESCALE, bitmask, NHITBCUT,
+                     BurstLength, BurstSize, EndRate, (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
