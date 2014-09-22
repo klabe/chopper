@@ -294,6 +294,7 @@ static void printhelp()
   "  -u [n]: Burst size threshold event count (default %d) \n"
   "\n"
   "Misc/debugging options\n"
+  "  -c [string]: Configuration file\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
@@ -427,7 +428,7 @@ void ReadConfig(const char* filename){
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase, char * & configfile)
 {
-  const char * const opts = "hi:o:l:b:t:u:nr";
+  const char * const opts = "hi:o:l:b:t:u:c:nr";
 
   bool done = false;
   bool config = false; // was there a configuration file provided?
