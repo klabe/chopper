@@ -586,15 +586,24 @@ void WriteConfig(char* infilename){
                      \"version\":0, \ 
                      \"run\":%d, \
                      \"pass\":%d, \
-                     \"nhithi\":%d, \
-                     \"nhitlo\":%d, \
+                     \"hinhitcut\":%d, \
+                     \"lonhitcut\":%d, \
+                     \"lowthresh\":%d, \
+                     \"lowindow\":%d, \
+                     \"retrigcut\":%d, \
+                     \"retrigwindow\":%d, \
+                     \"prescale\":%d, \
+                     \"bitmask\":%d, \
                      \"timestamp\":%d}",
-                     1500, 3, 13, 74, (int)time(NULL)); 
+                     1500, 3, HINHITCUT, LONHITCUT, LOWTHRESH, LOWINDOW,
+                     RETRIGCUT, RETRIGWINDOW, PRESCALE, bitmask,
+                     (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
   curl_easy_cleanup(couchcurl);
   curl_slist_free_all(headers);
+  printf("Wrote configuration.\n");
 }
 
 // This function opens a new burst file
