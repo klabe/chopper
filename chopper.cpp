@@ -102,6 +102,15 @@ uint64_t longtime;
 int epoch;
 };
 
+// Structure to hold all the things we count
+struct counts
+{
+uint64_t prescalen;
+uint64_t eventn;
+uint64_t recordn;
+int orphan;
+};
+
 // Function to Print ZDAB records to screen readably
 void hexdump(char* const ptr, const int len){
   for(int i=0; i < len/16 +1; i++){
@@ -291,12 +300,11 @@ static void printhelp()
 }
 
 // This function prints some information at the end of the file
-static void PrintClosing(char* outfilebase, uint64_t eventn, uint64_t recordn,
-                         uint64_t prescalen, int stats[], int psstats[], 
-                         CURL* curl){
+static void PrintClosing(char* outfilebase, counts count, int stats[], 
+                         int psstats[], CURL* curl){
   char messg[128];
   sprintf(messg, "Stonehenge: Subfile %s finished."
-                 "  %lu events processed.\n", outfilebase, eventn);
+                 "  %lu events processed.\n", outfilebase, count.eventn);
   alarm(curl, 21, messg);
   printf("Done. %lu record%s, %lu event%s processed\n"
          "%lu events selected by prescaler\n"
@@ -308,7 +316,8 @@ static void PrintClosing(char* outfilebase, uint64_t eventn, uint64_t recordn,
          "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
          "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
          "%i events (%i prescaled events) pass all three cuts\n",
-         recordn, recordn==1?"":"s", eventn, eventn==1?"":"s", prescalen,
+         count.recordn, count.recordn==1?"":"s", count.eventn, 
+         count.eventn==1?"":"s", count.prescalen,
          stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
          stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
          stats[6], psstats[6], stats[7], psstats[7], stats[8], psstats[8]);
@@ -456,11 +465,11 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
-                              alltimes oldat, uint64_t & eventn, int & orphan,
-                              bool passretrig, bool retrig)
+                              alltimes oldat, counts & count, bool passretrig, 
+                              bool retrig)
 {
   alltimes newat = oldat;
-  if(eventn == 1){
+  if(count.eventn == 1){
     newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                              + hits->TriggerCardData.Bc50_1;
     newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
@@ -656,6 +665,9 @@ int main(int argc, char *argv[])
   if(yesredis) 
     Openredis(&redis, curl);
   int l1=0, l2=0;
+  // Note the difference between burstbool and burst:
+  // burst says whether a burst is ongoing right now.
+  // burstbool says whether a burst occurred in the present second.
   bool burstbool=false;
   bool extasy=false;
 
@@ -692,10 +704,8 @@ int main(int argc, char *argv[])
   bool retrig = false;
 
   // Loop over ZDAB Records
-  uint64_t eventn = 0, recordn = 0;
-  uint64_t prescalen = 0;
+  counts count
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0}, psstats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  int orphan = 0;
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
     // Check to fill Header Buffer
@@ -715,8 +725,8 @@ int main(int argc, char *argv[])
       // The key variable is used to encode which cuts the event passes
       int key = 0;
       nhit = hits->NPmtHit;
-      eventn++;
-      alltime = compute_times(hits, curl, alltime, eventn, orphan, passretrig, retrig);
+      count.eventn++;
+      alltime = compute_times(hits, curl, alltime, count, passretrig, retrig);
       // Has wall time changed?
       if(walltime!=0)
         oldwalltime=walltime;
@@ -805,7 +815,7 @@ int main(int argc, char *argv[])
       // Decide whether to put event in prescale file
       uint32_t rand = sfmt_genrand_uint32(&randgen);
       if(rand < prescalerand){ //Select 1% of triggers
-        prescalen++;
+        count.prescalen++;
         for(int i=0; i<8; i++){
           if(key==i)
             psstats[i]++;
@@ -818,14 +828,14 @@ int main(int argc, char *argv[])
       OutZdab(zrec, w1, zfile, curl);
       l2++;
     }
-    recordn++;
+    count.recordn++;
     l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, &curl, extasy);
 
   if(yesredis)
     Closeredis(&redis);
-  PrintClosing(outfilebase, eventn, recordn, prescalen, stats, psstats, curl);
+  PrintClosing(outfilebase, count, stats, psstats, curl);
   Closecurl(&curl);
   return 0;
 }
