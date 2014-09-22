@@ -581,7 +581,16 @@ void WriteConfig(char* infilename){
   struct curl_slist *headers = NULL;
   headers = curl_slist_append(headers, "Content-Type: application/json"); 
   curl_easy_setopt(couchcurl, CURLOPT_URL, "http://127.0.0.1:5984/l2configuration");
-  curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, "{\"title\":\"test\"}");
+  char configs[1024];
+  sprintf(configs, "{\"type\":\"L2CONFIG\", \
+                     \"version\":0, \ 
+                     \"run\":%d, \
+                     \"pass\":%d, \
+                     \"nhithi\":%d, \
+                     \"nhitlo\":%d, \
+                     \"timestamp\":%d}",
+                     1500, 3, 13, 74, (int)time(NULL)); 
+  curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
   curl_easy_cleanup(couchcurl);
