@@ -387,14 +387,18 @@ void Closecurl(CURL** curl){
 
 // This function reads the configuration file and sets the cut parameters.
 void ReadConfig(const char* filename){ 
-   std::ifstream configfile;
-   configfile.open(filename); 
+   FILE* configfile = fopen(filename, "r");
+   if(configfile == NULL){
+     printf("Could not open configuration file.\n");
+     return;
+   }
+   char* param;
+   int value;
+   printf("Test0\n");
 
-   std::string line;
-   while(getline(configfile,line)){
-     std::string param;
-     int value;
-     sscanf(line.c_str(), "%s \t %d", param, &value);
+   while(fscanf(configfile, "%s %d\n", param, &value)==2){
+     printf("Test1\n");
+     printf("s\n", param);
      if(param == "nhithi")
        HINHITCUT = value;
      else if(param == "nhitlo")
@@ -419,8 +423,8 @@ void ReadConfig(const char* filename){
      else if(param == "burstsize")
        setratecut(value);
      else
-        printf("ReadConfig does not recognized parameter %s.  Ignoring.",
-               param); break;
+        printf("ReadConfig does not recognize parameter %s.  Ignoring.",
+               param);
    }
 }
 
