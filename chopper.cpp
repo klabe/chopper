@@ -736,7 +736,7 @@ int main(int argc, char *argv[])
 
       uint32_t word = triggertype(hits); 
       if(!extasy){
-        if((word & EXTASY ) == 0x00008000) // Bit 15
+        if((word & EXTASY ) != 0) 
           extasy = true;
       }
       if(nhit > NHITBCUT && (word & bitmask == 0) ){
