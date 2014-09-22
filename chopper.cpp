@@ -395,22 +395,28 @@ void ReadConfig(const char* filename){
      int value;
      sscanf(line.c_str(), "%s \t %d", param, &value);
      if(param == "nhithi")
-       ;
+       HINHITCUT = value;
      else if(param == "nhitlo")
-       ;
+       LONHITCUT = value;
      else if(param == "lothresh")
-       ;
+       LOWTHRESH = value;
      else if(param == "lowindow")
-       ;
+       LOWINDOW = value;
      else if(param == "nhitretrig")
-       ;
+       RETRIGCUT = value;
      else if(param == "retrigwindow")
-       ;
+       RETRIGWINDOW = value;
      else if(param == "prescale")
-       ;
+       PRESCALE = value;
      else if(param == "bitmask")
        // bitmask is really some hex, not an int...
-       ;
+       bitmask = value;
+     else if(param == "nhitbcut")
+       setburstcut(value);
+     else if(param == "burstwindow")
+       settimecut(value);
+     else if(param == "burstsize")
+       setratecut(value);
      else
         printf("ReadConfig does not recognized parameter %s.  Ignoring.",
                param); break;
