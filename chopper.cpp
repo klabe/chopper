@@ -636,6 +636,14 @@ void OpenBurst(int bcount, int burstlength, int starttick, alltimes alltime,
   }
 }
 
+// This function zeros out the counters
+void CountInit(counts & count){
+  count.eventn = 0;
+  count.recordn = 0;
+  count.prescalen = 0;
+  count.orphan = 0;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -704,7 +712,8 @@ int main(int argc, char *argv[])
   bool retrig = false;
 
   // Loop over ZDAB Records
-  counts count
+  counts count;
+  CountInit(count);
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0}, psstats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
