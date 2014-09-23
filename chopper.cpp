@@ -27,9 +27,8 @@
 #include "PZdabWriter.h"
 #include <string>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
 #include <errno.h>
 #include <math.h>
 #include <limits.h>
@@ -37,7 +36,7 @@
 #include <signal.h>
 #include <time.h>
 #include "hiredis.h"
-#include "curl/curl.h"
+#include "curl.h"
 #include "snbuf.h"
 #include "SFMT.h"
 
@@ -131,27 +130,15 @@ void hexdump(char* const ptr, const int len){
   } 
 }
 
-// This function sends alarms to the website 
-static void alarm(CURL* curl, const int level, const char* msg)
-{
-  char curlmsg[256];
-  sprintf(curlmsg, "name=L2-client&level=%d&message=%s",level,msg);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-  curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long)strlen(curlmsg));
-  CURLcode res = curl_easy_perform(curl);
-  if(res != CURLE_OK)
-    fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
-}
-
 // This function writes out the ZDAB record
 static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
-                    PZdabFile * const zfile, CURL* curl)
+                    PZdabFile * const zfile)
 {
   if(!data) return;
   const int index = PZdabWriter::GetIndex(data->bank_name);
   if(index < 0){
      fprintf(stderr, "Unrecognized bank name\n");
-     alarm(curl, 10, "Outzdab: unrecognized bank name.");
+     alarm(10, "Outzdab: unrecognized bank name.");
   }
   else{
     uint32_t * const bank = zfile->GetBank(data);
@@ -161,7 +148,7 @@ static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 
 // This function writes out the header buffer to a file
 static void OutHeader(const GenericRecordHeader * const hdr,
-                      PZdabWriter* const w, const int j, CURL* curl)
+                      PZdabWriter* const w, const int j)
 {
   if (!hdr) return;
 
@@ -173,19 +160,19 @@ static void OutHeader(const GenericRecordHeader * const hdr,
       case 0: index=2; break;
       case 1: index=4; break; 
       case 2: index=3; break;
-      default: fprintf(stderr, "Not reached\n"); alarm(curl, 10, "Outheader: You never see this!"); exit(1);
+      default: fprintf(stderr, "Not reached\n"); alarm(10, "Outheader: You never see this!"); exit(1);
     }
   }
   if(w->WriteBank((uint32_t *)hdr, index)){
     fprintf(stderr,"Error writing to zdab file\n");
-    alarm(curl, 10, "Outheader: error writing to zdab file.");
+    alarm(10, "Outheader: error writing to zdab file.");
   }
 }
 
 // This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-static PZdabWriter * Output(const char * const base, CURL* curl)
+static PZdabWriter * Output(const char * const base)
 {
   const int maxlen = 1024;
   char outfilename[maxlen];
@@ -194,14 +181,14 @@ static PZdabWriter * Output(const char * const base, CURL* curl)
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
-    alarm(curl, 10, "Output: output filename truncated");
+    alarm(10, "Output: output filename truncated");
   }
 
   if(!access(outfilename, W_OK)){
     if(!clobber){
       fprintf(stderr, "%s already exists and you told me not to "
               "overwrite it!\n", outfilename);
-      alarm(curl, 10, "Output: Should not overwrite that file.");
+      alarm(10, "Output: Should not overwrite that file.");
       exit(1);
     }
     unlink(outfilename);
@@ -209,7 +196,7 @@ static PZdabWriter * Output(const char * const base, CURL* curl)
   else if(!access(outfilename, F_OK)){
     fprintf(stderr, "%s already exists and we can't overwrite it!\n",
             outfilename);
-    alarm(curl, 10, "Output: Cannot overwrite that file.");
+    alarm(10, "Output: Cannot overwrite that file.");
     exit(1);
   } 
 
@@ -217,7 +204,7 @@ static PZdabWriter * Output(const char * const base, CURL* curl)
 
   if(!ret || !ret->IsOpen()){
     fprintf(stderr, "Could not open output file %s\n", outfilename);
-    alarm(curl, 10, "Output: Cannot open file.");
+    alarm(10, "Output: Cannot open file.");
     exit(1);
   }
   return ret;
@@ -227,7 +214,7 @@ static PZdabWriter * Output(const char * const base, CURL* curl)
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
 static void Close(const char* const base, PZdabWriter* const & w, 
-                  CURL* curl, const bool extasy)
+                  const bool extasy)
 {
   char buff1[256];
   snprintf(buff1, 256, "/trigger/home/PCAdata/%s.zdab", base);
@@ -239,7 +226,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
   if(extasy){
     if(link(outname, linkname)){
       char* message = "PCA File could not be copied";
-      alarm(curl, 30, message);
+      alarm(30, message);
     }
   }
 
@@ -307,11 +294,11 @@ static void printhelp()
 
 // This function prints some information at the end of the file
 static void PrintClosing(char* outfilebase, counts count, int stats[], 
-                         int psstats[], CURL* curl){
+                         int psstats[]){
   char messg[128];
   sprintf(messg, "Stonehenge: Subfile %s finished."
                  "  %lu events processed.\n", outfilebase, count.eventn);
-  alarm(curl, 21, messg);
+  alarm(21, messg);
   printf("Done. %lu record%s, %lu event%s processed\n"
          "%lu events selected by prescaler\n"
          "%i events (%i prescaled events) pass no cut\n"
@@ -330,17 +317,17 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
 }
 
 // This function opens the redis connection at startup
-static redisContext* Openredis(CURL* curl)
+static redisContext* Openredis()
 {
   redisContext *redis = redisConnect("cp4.uchicago.edu", 6379);
   if((redis)->err){
     printf("Error: %s\n", (redis)->errstr);
-    alarm(curl, 10, "Openredis: cannot connect to redis server.");
+    alarm(10, "Openredis: cannot connect to redis server.");
     return NULL;
   }
   else{
     printf("Connected to Redis.\n");
-    alarm(curl, 21, "Openredis: connected to server!");
+    alarm(21, "Openredis: connected to server!");
   }
   return redis;
 }
@@ -353,10 +340,10 @@ static void Closeredis(redisContext **redis)
 
 // This function writes statistics to redis database
 static void Writetoredis(redisContext *redis, const counts & count,
-                         const int time, CURL* curl)
+                         const int time)
 {
   if(!redis){
-    alarm(curl, 30, "Cannot connect to redis.");
+    alarm(30, "Cannot connect to redis.");
     return;
   }
   const char* message = "Writetoredis failed.";
@@ -366,47 +353,27 @@ static void Writetoredis(redisContext *redis, const counts & count,
     int ts = time/intervals[i];
     void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, count.l1);
     if(!reply)
-      alarm(curl, 30, message);
+      alarm(30, message);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(curl, 30, message);
+      alarm(30, message);
 
     reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, count.l2);
     if(!reply) 
-      alarm(curl, 30, message);
+      alarm(30, message);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(curl, 30, message);
+      alarm(30, message);
 
     if(burstbool){
       reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
       if(!reply)
-        alarm(curl, 30, message);
+        alarm(30, message);
       reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 2400*intervals[i]);
       if(!reply)
-        alarm(curl, 30, message);
+        alarm(30, message);
     }
   }
-}
-
-// Open a curl connection
-CURL* Opencurl(char* password){
-  CURL* curl = curl_easy_init();
-    char address[264];
-    sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
-  if(curl){
-//  curl_easy_setopt(*curl, CURLOPT_URL, address);
-    curl_easy_setopt(curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
-    return curl;
-  }
-  else
-    fprintf(stderr,"Could not initialize curl object");
-    exit(1);
-}
-
-// Close a curl connection
-void Closecurl(CURL** curl){
-  curl_easy_cleanup(*curl);
 }
 
 // This function reads the configuration file and sets the cut parameters.
@@ -488,9 +455,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
-static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
-                              alltimes oldat, counts & count, bool & passretrig, 
-                              bool & retrig)
+static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
+                              counts & count, bool & passretrig, bool & retrig)
 {
   alltimes newat = oldat;
   if(count.eventn == 1){
@@ -521,7 +487,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
       char msg[128];
       sprintf(msg, "Stonehenge: The 50MHz clock jumped by %i ticks relative"
                    " to the 10MHz clock!\n", dd);
-      alarm(curl, 30, msg);
+      alarm(30, msg);
       fprintf(stderr, msg);
     }
 
@@ -537,12 +503,12 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
       // Is it reasonable that the clock rolled over?
       if ((oldat.time50 + newat.time50 < maxtime + maxjump) && dd < maxdrift && (oldat.time50 > maxtime - maxjump) ) {
         fprintf(stderr, "New Epoch\n");
-        alarm(curl, 20, "Stonehenge: new epoch.");
+        alarm(20, "Stonehenge: new epoch.");
         newat.epoch++;
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
-        alarm(curl, 30, msg);
+        alarm(30, msg);
         fprintf(stderr, msg);
         // Assume for now that the clock is wrong
         newat.time50 = oldat.time50;
@@ -552,7 +518,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
     // Check that the clock has not jumped ahead too far:
     if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
-      alarm(curl, 30, msg);
+      alarm(30, msg);
       fprintf(stderr, msg);
       // Assume for now that the time is wrong
       newat.time50 = oldat.time50;
@@ -718,10 +684,9 @@ int main(int argc, char *argv[])
   int prescalerand =  (int) (4294967296/PRESCALE);
 
   // Prepare to record statistics in redis database
-  CURL* curl = Opencurl(password);
   redisContext* redis = NULL;
   if(yesredis) 
-    redis = Openredis(curl);
+    redis = Openredis();
 
   bool extasy = false;
 
@@ -729,7 +694,7 @@ int main(int argc, char *argv[])
   alltimes alltime = InitTime();
 
   // Setup initial output file
-  PZdabWriter* w1  = Output(outfilebase, curl);
+  PZdabWriter* w1  = Output(outfilebase);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -777,13 +742,13 @@ int main(int argc, char *argv[])
       int key = 0;
       nhit = hits->NPmtHit;
       count.eventn++;
-      alltime = compute_times(hits, curl, alltime, count, passretrig, retrig);
+      alltime = compute_times(hits, alltime, count, passretrig, retrig);
 
       // Write statistics to Redis if necessary
       updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, count, alltime.oldwalltime, curl);
+          Writetoredis(redis, count, alltime.oldwalltime);
         ResetStatistics(count);
       }
 
@@ -818,12 +783,12 @@ int main(int argc, char *argv[])
             bcount = burstlength;
             starttick = alltime.longtime;
             fprintf(stderr, "Burst %i has begun!\n", burstindex);
-            alarm(curl, 20, "Burst started");
+            alarm(20, "Burst started");
             char buff[32];
             sprintf(buff, "Burst_%s_%i", outfilebase, burstindex);
-            b = Output(buff, curl);
+            b = Output(buff);
             for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], b, i, curl);
+              OutHeader((GenericRecordHeader*) header[i], b, i);
             }
           }
         }
@@ -841,7 +806,7 @@ int main(int argc, char *argv[])
             float btimesec = btime/50000000.;
             fprintf(stderr, "Burst %i has ended.  It contains %i events"
                   " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
-            alarm(curl, 20, "Burst ended");
+            alarm(20, "Burst ended");
             burstindex++;
             // Reset to prepare for next burst
             bcount=0;
@@ -851,7 +816,7 @@ int main(int argc, char *argv[])
       } // End Burst Loop
       // L2 Filter
       if(l2filter(nhit, word, passretrig, retrig, key)){
-        OutZdab(zrec, w1, zfile, curl);
+        OutZdab(zrec, w1, zfile);
         passretrig = true;
         count.l2++;
         for(int i=1; i<8; i++){
@@ -875,17 +840,17 @@ int main(int argc, char *argv[])
     } // End Loop for Event Records
     // Write out all non-event records:
     else{
-      OutZdab(zrec, w1, zfile, curl);
+      OutZdab(zrec, w1, zfile);
       count.l2++;
     }
     count.recordn++;
     count.l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, w1, curl, extasy);
+  if(w1) Close(outfilebase, w1, extasy);
 
   if(yesredis)
     Closeredis(&redis);
-  PrintClosing(outfilebase, count, stats, psstats, curl);
-  Closecurl(&curl);
+  PrintClosing(outfilebase, count, stats, psstats);
+  Closecurl();
   return 0;
 }
