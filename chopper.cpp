@@ -327,17 +327,19 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
 }
 
 // This function opens the redis connection at startup
-static void Openredis(redisContext **redis, CURL* curl)
+static redisContext* Openredis(CURL* curl)
 {
-  *redis = redisConnect("cp4.uchicago.edu", 6379);
+  redisContext *redis = redisConnect("cp4.uchicago.edu", 6379);
   if((*redis)->err){
     printf("Error: %s\n", (*redis)->errstr);
     alarm(curl, 10, "Openredis: cannot connect to redis server.");
+    return NULL;
   }
   else{
     printf("Connected to Redis.\n");
     alarm(curl, 21, "Openredis: connected to server!");
   }
+  return redis;
 }
 
 // This function closes the redis connection when finished
@@ -350,6 +352,10 @@ static void Closeredis(redisContext **redis)
 static void Writetoredis(redisContext *redis, const counts & count,
                          const bool burst, const int time, CURL* curl)
 {
+  if(!redis){
+    alarm(curl, 30, "Cannot connect to redis.");
+    return;
+  }
   const char* message = "Writetoredis failed.";
   const int NumInt = 17;
   const int intervals[NumInt] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
@@ -668,10 +674,9 @@ int main(int argc, char *argv[])
   int prescalerand =  (int) (4294967296/PRESCALE);
 
   // Prepare to record statistics in redis database
-  redisContext *redis;
   CURL* curl = Opencurl(password);
   if(yesredis) 
-    Openredis(&redis, curl);
+    redisContext* redis = Openredis(curl);
   // Note the difference between burstbool and burst:
   // burst says whether a burst is ongoing right now.
   // burstbool says whether a burst occurred in the present second.
