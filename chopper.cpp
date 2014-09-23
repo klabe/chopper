@@ -353,7 +353,7 @@ static void Closeredis(redisContext **redis)
 
 // This function writes statistics to redis database
 static void Writetoredis(redisContext *redis, const counts & count,
-                         const bool burst, const int time, CURL* curl)
+                         const int time, CURL* curl)
 {
   if(!redis){
     alarm(curl, 30, "Cannot connect to redis.");
@@ -378,7 +378,7 @@ static void Writetoredis(redisContext *redis, const counts & count,
     if(!reply)
       alarm(curl, 30, message);
 
-    if(burst){
+    if(burstbool){
       reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
       if(!reply)
         alarm(curl, 30, message);
@@ -696,11 +696,8 @@ int main(int argc, char *argv[])
   redisContext* redis = NULL;
   if(yesredis) 
     redis = Openredis(curl);
-  // Note the difference between burstbool and burst:
-  // burst says whether a burst is ongoing right now.
-  // burstbool says whether a burst occurred in the present second.
-  bool burstbool=false;
-  bool extasy=false;
+
+  bool extasy = false;
 
   // Initialize the various clocks
   alltimes alltime = InitTime();
@@ -761,7 +758,7 @@ int main(int argc, char *argv[])
       alltime.walltime=(int)time(NULL);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, count, burstbool, alltime.oldwalltime, curl);
+          Writetoredis(redis, count, alltime.oldwalltime, curl);
         // Reset statistics
         count.l1 = 0;
         count.l2 = 0;
