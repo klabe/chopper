@@ -614,7 +614,7 @@ void WriteConfig(char* infilename){
   char configs[1024];
   sprintf(configs, "{\"type\":\"L2CONFIG\", \
                      \"version\":0, \
-                     \"run\":%s, \
+                     \"run\":\"%s\", \
                      \"pass\":%d, \
                      \"hinhitcut\":%d, \
                      \"lonhitcut\":%d, \
