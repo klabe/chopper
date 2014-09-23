@@ -330,8 +330,8 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
 static redisContext* Openredis(CURL* curl)
 {
   redisContext *redis = redisConnect("cp4.uchicago.edu", 6379);
-  if((*redis)->err){
-    printf("Error: %s\n", (*redis)->errstr);
+  if((redis)->err){
+    printf("Error: %s\n", (redis)->errstr);
     alarm(curl, 10, "Openredis: cannot connect to redis server.");
     return NULL;
   }
@@ -675,8 +675,9 @@ int main(int argc, char *argv[])
 
   // Prepare to record statistics in redis database
   CURL* curl = Opencurl(password);
+  redisContext* redis = NULL;
   if(yesredis) 
-    redisContext* redis = Openredis(curl);
+    redis = Openredis(curl);
   // Note the difference between burstbool and burst:
   // burst says whether a burst is ongoing right now.
   // burstbool says whether a burst occurred in the present second.
