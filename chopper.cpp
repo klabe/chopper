@@ -847,7 +847,7 @@ int main(int argc, char *argv[])
     count.recordn++;
     count.l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, w1, &curl, extasy);
+  if(w1) Close(outfilebase, w1, curl, extasy);
 
   if(yesredis)
     Closeredis(&redis);
