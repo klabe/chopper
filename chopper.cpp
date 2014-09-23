@@ -673,7 +673,7 @@ static alltimes InitTime(){
 
 // This function sets the trigger threshold appropriately
 // The "Kalpana" solution
-static void setthreshold(int nhit, alltimes alltime){
+static void setthreshold(int nhit, alltimes & alltime){
   if(nhit > LOWTHRESH){
     alltime.exptime = alltime.time50 + LOWINDOW;
     NHITCUT = LONHITCUT;
@@ -684,10 +684,17 @@ static void setthreshold(int nhit, alltimes alltime){
 }
 
 // This function checks unix time to see whether to update the times
-static void updatetime(alltimes alltime){
+static void updatetime(alltimes & alltime){
   if(alltime.walltime!=0)
     alltime.oldwalltime=alltime.walltime;
   alltime.walltime = (int) time(NULL);
+}
+
+// This function resets the redis statistics
+static void ResetStatistics(counts & count){
+  count.l1 = 0;
+  count.l2 = 0;
+  burstbool = false;
 }
 
 // MAIN FUCTION 
@@ -771,16 +778,15 @@ int main(int argc, char *argv[])
       nhit = hits->NPmtHit;
       count.eventn++;
       alltime = compute_times(hits, curl, alltime, count, passretrig, retrig);
-      // Has wall time changed?
+
+      // Write statistics to Redis if necessary
       updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
           Writetoredis(redis, count, alltime.oldwalltime, curl);
-        // Reset statistics
-        count.l1 = 0;
-        count.l2 = 0;
-        burstbool = false;
+        ResetStatistics(count);
       }
+
       // Should we adjust the trigger threshold?
       setthreshold(nhit, alltime);
 
