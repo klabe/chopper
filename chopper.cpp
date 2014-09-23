@@ -621,13 +621,15 @@ void WriteConfig(char* infilename){
 }
 
 // This function zeros out the counters
-void CountInit(counts & count){
+counts CountInit(){
+  counts count;
   count.eventn = 0;
   count.recordn = 0;
   count.prescalen = 0;
   count.orphan = 0;
   count.l1 = 0;
   count.l2 = 0;
+  return count;
 }
 
 // MAIN FUCTION 
@@ -696,8 +698,7 @@ int main(int argc, char *argv[])
   bool retrig = false;
 
   // Loop over ZDAB Records
-  counts count;
-  CountInit(count);
+  counts count = CountInit();
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0}, psstats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
