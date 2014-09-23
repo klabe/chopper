@@ -100,6 +100,9 @@ uint64_t time10;
 uint64_t time50;
 uint64_t longtime;
 int epoch;
+int walltime;
+int oldwalltime;
+uint64_t exptime;
 };
 
 // Structure to hold all the things we count
@@ -659,6 +662,15 @@ static sfmt_t InitRand(const uint32_t seed){
   return randgen;
 }
 
+// This function initialzes the time object
+static alltimes InitTime(){
+  alltimes alltime;
+  alltime.walltime = 0;
+  alltime.oldwalltime = 0;
+  alltime.exptime = 0;
+  return alltime;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -691,10 +703,7 @@ int main(int argc, char *argv[])
   bool extasy=false;
 
   // Initialize the various clocks
-  alltimes alltime;
-  int walltime = 0;
-  int oldwalltime = 0;
-  uint64_t exptime = 0;
+  alltimes alltime = InitTime();
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, curl);
@@ -747,12 +756,12 @@ int main(int argc, char *argv[])
       count.eventn++;
       alltime = compute_times(hits, curl, alltime, count, passretrig, retrig);
       // Has wall time changed?
-      if(walltime!=0)
-        oldwalltime=walltime;
-      walltime=(int)time(NULL);
-      if (walltime!=oldwalltime){
+      if(alltime.walltime!=0)
+        alltime.oldwalltime=alltime.walltime;
+      alltime.walltime=(int)time(NULL);
+      if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, count, burstbool,oldwalltime, curl);
+          Writetoredis(redis, count, burstbool, alltime.oldwalltime, curl);
         // Reset statistics
         count.l1 = 0;
         count.l2 = 0;
@@ -761,10 +770,10 @@ int main(int argc, char *argv[])
       // Should we adjust the trigger threshold?
       // The "Kalpana" solution
       if(nhit > LOWTHRESH){
-        exptime = alltime.time50 + LOWINDOW;
+        alltime.exptime = alltime.time50 + LOWINDOW;
         NHITCUT = LONHITCUT;
       }
-      if(alltime.time50 < exptime){
+      if(alltime.time50 < alltime.exptime){
         NHITCUT = HINHITCUT;
       }
 
