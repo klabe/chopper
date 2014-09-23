@@ -671,6 +671,18 @@ static alltimes InitTime(){
   return alltime;
 }
 
+// This function sets the trigger threshold appropriately
+// The "Kalpana" solution
+static void setthreshold(int nhit, alltimes alltime){
+  if(nhit > LOWTHRESH){
+    alltime.exptime = alltime.time50 + LOWINDOW;
+    NHITCUT = LONHITCUT;
+  }
+  if(alltime.time50 < alltime.exptime){
+    NHITCUT = HINHITCUT;
+  }
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -765,14 +777,7 @@ int main(int argc, char *argv[])
         burstbool = false;
       }
       // Should we adjust the trigger threshold?
-      // The "Kalpana" solution
-      if(nhit > LOWTHRESH){
-        alltime.exptime = alltime.time50 + LOWINDOW;
-        NHITCUT = LONHITCUT;
-      }
-      if(alltime.time50 < alltime.exptime){
-        NHITCUT = HINHITCUT;
-      }
+      setthreshold(nhit, alltime);
 
       // Burst Detection Here
       // If the current event is over our burst nhit threshold (NHITBCUT):
