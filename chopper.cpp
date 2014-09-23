@@ -437,8 +437,9 @@ void ReadConfig(const char* filename){
 
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
-                          char * & outfilebase, char * & configfile)
+                          char * & outfilebase)
 {
+  char* configfile = NULL;
   const char * const opts = "hi:o:l:b:t:u:c:nr";
 
   bool done = false;
@@ -661,9 +662,9 @@ static sfmt_t InitRand(const uint32_t seed){
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
-  char * infilename = NULL, * outfilebase = NULL, * configfile = NULL;
+  char * infilename = NULL, * outfilebase = NULL;
 
-  parse_cmdline(argc, argv, infilename, outfilebase, configfile);
+  parse_cmdline(argc, argv, infilename, outfilebase);
 
   FILE* infile = fopen(infilename, "rb");
 
