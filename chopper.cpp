@@ -323,7 +323,7 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
          count.eventn==1?"":"s", count.prescalen,
          stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
          stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
-         stats[6], psstats[6], stats[7], psstats[7], stats[8], psstats[8]);
+         stats[6], psstats[6], stats[7], psstats[7]);
 }
 
 // This function opens the redis connection at startup
@@ -368,16 +368,18 @@ static void Writetoredis(redisContext *redis, const counts count,
 }
 
 // Open a curl connection
-void Opencurl(CURL** curl, char* password){
-  *curl = curl_easy_init();
-  char address[264];
-//  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
+CURL* Opencurl(char* password){
+  CURL* curl = curl_easy_init();
+    char address[264];
+    sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
   if(curl){
 //  curl_easy_setopt(*curl, CURLOPT_URL, address);
-    curl_easy_setopt(*curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
+    return curl;
   }
   else
     fprintf(stderr,"Could not initialize curl object");
+    exit(1);
 }
 
 // Close a curl connection
@@ -603,8 +605,8 @@ void WriteConfig(char* infilename){
   curl_easy_setopt(couchcurl, CURLOPT_URL, "http://127.0.0.1:5984/l2configuration");
   char configs[1024];
   sprintf(configs, "{\"type\":\"L2CONFIG\", \
-                     \"version\":0, \ 
-                     \"run\":%d, \
+                     \"version\":0, \
+                     \"run\":%s, \
                      \"pass\":%d, \
                      \"hinhitcut\":%d, \
                      \"lonhitcut\":%d, \
@@ -619,7 +621,7 @@ void WriteConfig(char* infilename){
                      \"burstsize\":%d, \
                      \"endrate\":%d, \
                      \"timestamp\":%d}",
-                     1500, 3, HINHITCUT, LONHITCUT, LOWTHRESH, LOWINDOW,
+                     infilename, 3, HINHITCUT, LONHITCUT, LOWTHRESH, LOWINDOW,
                      RETRIGCUT, RETRIGWINDOW, PRESCALE, bitmask, NHITBCUT,
                      BurstLength, BurstSize, EndRate, (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
@@ -664,8 +666,7 @@ int main(int argc, char *argv[])
 
   // Prepare to record statistics in redis database
   redisContext *redis;
-  CURL *curl;
-  Opencurl(&curl, password);
+  CURL* curl = Opencurl(password);
   if(yesredis) 
     Openredis(&redis, curl);
   // Note the difference between burstbool and burst:
@@ -766,7 +767,7 @@ int main(int argc, char *argv[])
         if((word & EXTASY ) != 0) 
           extasy = true;
       }
-      if(nhit > NHITBCUT && (word & bitmask == 0) ){
+      if(nhit > NHITBCUT && ((word & bitmask) == 0) ){
         UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
