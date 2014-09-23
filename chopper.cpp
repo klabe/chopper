@@ -683,6 +683,13 @@ static void setthreshold(int nhit, alltimes alltime){
   }
 }
 
+// This function checks unix time to see whether to update the times
+static void updatetime(alltimes alltime){
+  if(alltime.walltime!=0)
+    alltime.oldwalltime=alltime.walltime;
+  alltime.walltime = (int) time(NULL);
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -765,9 +772,7 @@ int main(int argc, char *argv[])
       count.eventn++;
       alltime = compute_times(hits, curl, alltime, count, passretrig, retrig);
       // Has wall time changed?
-      if(alltime.walltime!=0)
-        alltime.oldwalltime=alltime.walltime;
-      alltime.walltime=(int)time(NULL);
+      updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
           Writetoredis(redis, count, alltime.oldwalltime, curl);
