@@ -347,7 +347,7 @@ static void Closeredis(redisContext **redis)
 }
 
 // This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, const counts count,
+static void Writetoredis(redisContext *redis, const counts & count,
                          const bool burst, const int time)
 {
   const int NumInt = 17;
@@ -478,8 +478,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, CURL* curl,
-                              alltimes oldat, counts & count, bool passretrig, 
-                              bool retrig)
+                              alltimes oldat, counts & count, bool & passretrig, 
+                              bool & retrig)
 {
   alltimes newat = oldat;
   if(count.eventn == 1){
