@@ -223,7 +223,7 @@ static PZdabWriter * Output(const char * const base, CURL* curl)
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, PZdabWriter* const w, 
+static void Close(const char* const base, PZdabWriter* const & w, 
                   CURL* curl, const bool extasy)
 {
   char buff1[256];
@@ -232,10 +232,10 @@ static void Close(const char* const base, PZdabWriter* const w,
   char buff2[256];
   snprintf(buff2, 256, "%s.zdab", base);
   const char* outname = buff2;
-  char* message = "PCA File could not be copied";
   w->Close();
   if(extasy){
     if(link(outname, linkname)){
+      char* message = "PCA File could not be copied";
       alarm(curl, 30, message);
     }
   }
@@ -348,21 +348,34 @@ static void Closeredis(redisContext **redis)
 
 // This function writes statistics to redis database
 static void Writetoredis(redisContext *redis, const counts & count,
-                         const bool burst, const int time)
+                         const bool burst, const int time, CURL* curl)
 {
+  const char* message = "Writetoredis failed.";
   const int NumInt = 17;
   const int intervals[NumInt] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
   for(int i=0; i < NumInt; i++){
     int ts = time/intervals[i];
     void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, count.l1);
+    if(!reply)
+      alarm(curl, 30, message);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
+    if(!reply)
+      alarm(curl, 30, message);
 
     reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, count.l2);
+    if(!reply) 
+      alarm(curl, 30, message);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
+    if(!reply)
+      alarm(curl, 30, message);
 
     if(burst){
       reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
+      if(!reply)
+        alarm(curl, 30, message);
       reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 2400*intervals[i]);
+      if(!reply)
+        alarm(curl, 30, message);
     }
   }
 }
@@ -727,7 +740,7 @@ int main(int argc, char *argv[])
       walltime=(int)time(NULL);
       if (walltime!=oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, count, burstbool,oldwalltime);
+          Writetoredis(redis, count, burstbool,oldwalltime, curl);
         // Reset statistics
         count.l1 = 0;
         count.l2 = 0;
