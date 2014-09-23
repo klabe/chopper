@@ -651,6 +651,13 @@ counts CountInit(){
   return count;
 }
 
+// This function initializes the random number generator
+static sfmt_t InitRand(const uint32_t seed){
+  sfmt_t randgen;
+  sfmt_init_gen_rand(&randgen, seed);
+  return randgen;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -668,9 +675,7 @@ int main(int argc, char *argv[])
   WriteConfig(infilename);
 
   // Start Random number generator for prescale selection
-  static uint32_t seed = 42; // FIXME Make this run number or something
-  sfmt_t randgen; // This is a random number generator
-  sfmt_init_gen_rand(&randgen, seed);
+  sfmt_t randgen = InitRand(42); // FIXME - use run number for seed or something
   int prescalerand =  (int) (4294967296/PRESCALE);
 
   // Prepare to record statistics in redis database
