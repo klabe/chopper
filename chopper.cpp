@@ -399,29 +399,17 @@ void ReadConfig(const char* filename){
    int value;
 
    while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     if(strcmp(param,"nhithi") == 0)
-       HINHITCUT = value;
-     else if(strcmp(param,"nhitlo") == 0)
-       LONHITCUT = value;
-     else if(strcmp(param, "lothresh") == 0)
-       LOWTHRESH = value;
-     else if(strcmp(param, "lowindow") == 0)
-       LOWINDOW = value;
-     else if(strcmp(param, "nhitretrig") == 0)
-       RETRIGCUT = value;
-     else if(strcmp(param, "retrigwindow") == 0)
-       RETRIGWINDOW = value;
-     else if(strcmp(param, "prescale") == 0)
-       PRESCALE = value;
-     else if(strcmp(param, "bitmask") == 0)
-       // bitmask is really some hex, not an int...
-       bitmask = value;
-     else if(strcmp(param, "nhitbcut") == 0)
-       setburstcut(value);
-     else if(strcmp(param, "burstwindow") == 0)
-       settimecut(value);
-     else if(strcmp(param, "burstsize") == 0)
-       setratecut(value);
+     if     (strcmp(param,"nhithi")        == 0) HINHITCUT = value;
+     else if(strcmp(param,"nhitlo")        == 0) LONHITCUT = value;
+     else if(strcmp(param, "lothresh")     == 0) LOWTHRESH = value;
+     else if(strcmp(param, "lowindow")     == 0) LOWINDOW = value;
+     else if(strcmp(param, "nhitretrig")   == 0) RETRIGCUT = value;
+     else if(strcmp(param, "retrigwindow") == 0) RETRIGWINDOW = value;
+     else if(strcmp(param, "prescale")     == 0) PRESCALE = value;
+     else if(strcmp(param, "bitmask")      == 0) bitmask = value;
+     else if(strcmp(param, "nhitbcut")     == 0) setburstcut(value);
+     else if(strcmp(param, "burstwindow")  == 0) settimecut(value);
+     else if(strcmp(param, "burstsize")    == 0) setratecut(value);
      else
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
