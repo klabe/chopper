@@ -35,7 +35,7 @@
 #include <fstream>
 #include <signal.h>
 #include <time.h>
-#include "hiredis.h"
+#include "redis.h"
 #include "curl.h"
 #include "snbuf.h"
 #include "SFMT.h"
@@ -78,9 +78,6 @@ static int NHITCUT;
 // Whether to overwrite existing output
 static bool clobber = true;
 
-// Write to redis database?
-static bool yesredis = false;
-
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
@@ -111,8 +108,6 @@ uint64_t prescalen;
 uint64_t eventn;
 uint64_t recordn;
 int orphan;
-int l1;
-int l2;
 };
 
 // Function to Print ZDAB records to screen readably
@@ -314,66 +309,6 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
          stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
          stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
          stats[6], psstats[6], stats[7], psstats[7]);
-}
-
-// This function opens the redis connection at startup
-static redisContext* Openredis()
-{
-  redisContext *redis = redisConnect("cp4.uchicago.edu", 6379);
-  if((redis)->err){
-    printf("Error: %s\n", (redis)->errstr);
-    alarm(10, "Openredis: cannot connect to redis server.");
-    return NULL;
-  }
-  else{
-    printf("Connected to Redis.\n");
-    alarm(21, "Openredis: connected to server!");
-  }
-  return redis;
-}
-
-// This function closes the redis connection when finished
-static void Closeredis(redisContext **redis)
-{
-  redisFree(*redis);
-}
-
-// This function writes statistics to redis database
-static void Writetoredis(redisContext *redis, const counts & count,
-                         const int time)
-{
-  if(!redis){
-    alarm(30, "Cannot connect to redis.");
-    return;
-  }
-  const char* message = "Writetoredis failed.";
-  const int NumInt = 17;
-  const int intervals[NumInt] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536};
-  for(int i=0; i < NumInt; i++){
-    int ts = time/intervals[i];
-    void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, count.l1);
-    if(!reply)
-      alarm(30, message);
-    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
-    if(!reply)
-      alarm(30, message);
-
-    reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, count.l2);
-    if(!reply) 
-      alarm(30, message);
-    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
-    if(!reply)
-      alarm(30, message);
-
-    if(burstbool){
-      reply = redisCommand(redis, "SET ts:%d:id:%d:Burst 1", intervals[i], ts);
-      if(!reply)
-        alarm(30, message);
-      reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:Burst", intervals[i], ts, 2400*intervals[i]);
-      if(!reply)
-        alarm(30, message);
-    }
-  }
 }
 
 // This function reads the configuration file and sets the cut parameters.
@@ -616,8 +551,6 @@ counts CountInit(){
   count.recordn = 0;
   count.prescalen = 0;
   count.orphan = 0;
-  count.l1 = 0;
-  count.l2 = 0;
   return count;
 }
 
@@ -656,13 +589,6 @@ static void updatetime(alltimes & alltime){
   alltime.walltime = (int) time(NULL);
 }
 
-// This function resets the redis statistics
-static void ResetStatistics(counts & count){
-  count.l1 = 0;
-  count.l2 = 0;
-  burstbool = false;
-}
-
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -684,9 +610,8 @@ int main(int argc, char *argv[])
   int prescalerand =  (int) (4294967296/PRESCALE);
 
   // Prepare to record statistics in redis database
-  redisContext* redis = NULL;
   if(yesredis) 
-    redis = Openredis();
+    Openredis();
 
   bool extasy = false;
 
@@ -748,8 +673,8 @@ int main(int argc, char *argv[])
       updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
-          Writetoredis(redis, count, alltime.oldwalltime);
-        ResetStatistics(count);
+          Writetoredis(alltime.oldwalltime);
+        ResetStatistics();
       }
 
       // Should we adjust the trigger threshold?
@@ -794,7 +719,7 @@ int main(int argc, char *argv[])
         }
         // While in a burst
         if(burst){
-          burstbool=true;
+          stat.burstbool=true;
           bcount++;
           Writeburst(alltime.longtime, b);
           // Check if the burst has ended
@@ -818,7 +743,7 @@ int main(int argc, char *argv[])
       if(l2filter(nhit, word, passretrig, retrig, key)){
         OutZdab(zrec, w1, zfile);
         passretrig = true;
-        count.l2++;
+        stat.l2++;
         for(int i=1; i<8; i++){
           if(key==i)
             stats[i]++;
@@ -841,15 +766,15 @@ int main(int argc, char *argv[])
     // Write out all non-event records:
     else{
       OutZdab(zrec, w1, zfile);
-      count.l2++;
+      stat.l2++;
     }
     count.recordn++;
-    count.l1++;
+    stat.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy);
 
   if(yesredis)
-    Closeredis(&redis);
+    Closeredis();
   PrintClosing(outfilebase, count, stats, psstats);
   Closecurl();
   return 0;

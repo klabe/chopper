@@ -5,10 +5,10 @@ LINKFLAGS = -L/cp/home/cp/klabe/hiredis -L/cp/home/cp/klabe/chopper/SFMT-src-1.4
 
 all: chopper 
 
-chopper: chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o
-	g++ $(CFLAGS) -o chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o $(LINKFLAGS)
+chopper: chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o
+	g++ $(CFLAGS) -o chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o $(LINKFLAGS)
 
-chopper.o: chopper.cpp snbuf.h curl.h
+chopper.o: chopper.cpp snbuf.h curl.h redis.h
 	g++ -c chopper.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis -I/home/cp/klabe/chopper/SFMT-src-1.4.1 -DSFMT_MEXP=19937
 
 
@@ -30,6 +30,9 @@ snbuf.o: snbuf.cpp
 curl.o: curl.cpp
 	g++ -c curl.cpp $(CFLAGS)
 
+redis.o: redis.cpp
+	g++ -c redis.cpp -I/cp/home/cp/klabe/hiredis $(CFLAGS) $(LINKFLAGS)
+
 
 clean:
-	rm -f chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o
+	rm -f chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o

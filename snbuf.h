@@ -8,11 +8,7 @@ static int NHITBCUT = 40; // Nhit cut on burst events
 static int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*500000000;// length in ticks
 static int BurstSize = 30; // Number of events constituting a burst
-// Note the difference between burstbool and burst:
-// burst says whether a burst is ongoing right now
-// burstbool says whether a burst occurred in the present second
 static bool burst = false; // Flags ongoing bursts
-static bool burstbool = false; // Flags burst in present second
 static int burstindex = 0; // Number of bursts observed
 static const int ENDWINDOW = 1*500000000; // Integration window for determining whether burst has ended
 static const int EndRate = 10; // Rate below which burst ends

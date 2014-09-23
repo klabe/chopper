@@ -6,6 +6,7 @@
 #include <cstring>
 #include <stdlib.h>
 
+// This function sends alarms to the monitoring website
 void alarm(const int level, const char* msg){
   char curlmsg[256];
   sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
@@ -16,6 +17,7 @@ void alarm(const int level, const char* msg){
     fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
 }
 
+// This function opens a curl connection
 void Opencurl(char* password){
   curl = curl_easy_init();
   char address[264];
@@ -30,6 +32,7 @@ void Opencurl(char* password){
   }
 }
 
+// This function closes a curl connection
 void Closecurl(){
   curl_easy_cleanup(curl);
 }
