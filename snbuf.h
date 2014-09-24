@@ -43,3 +43,8 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, int headertypes,
 // definition elsewhere), which is used to provide some statistics about the
 // burst in the log.
 void Finishburst(PZdabWriter* & b, uint64_t longtime);
+
+// This function is used to save the state of the burstbuffer to disk so that
+// the burst detection algorithm can pick up from where it left off when the 
+// next file begins.
+void Saveburstbuff()

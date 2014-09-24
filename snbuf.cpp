@@ -155,3 +155,8 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   // Reset to prepare for next burst
   bcount = 0;
 }
+
+// This function saves the buffer state to disk.
+void Saveburstbuff(){
+
+}

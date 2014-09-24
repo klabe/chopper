@@ -7,8 +7,7 @@
 
 // This function writes out the ZDAB record
 void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
-                    PZdabFile * const zfile)
-{
+                    PZdabFile * const zfile){
   if(!data) return;
   const int index = PZdabWriter::GetIndex(data->bank_name);
   if(index < 0){
@@ -24,8 +23,7 @@ void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 
 // This function writes out the header buffer to a file
 void OutHeader(const GenericRecordHeader * const hdr,
-                      PZdabWriter* const w, const int j)
-{
+                      PZdabWriter* const w, const int j){
   if (!hdr) return;
 
   int index = PZdabWriter::GetIndex(hdr->RecordID);
@@ -49,8 +47,7 @@ void OutHeader(const GenericRecordHeader * const hdr,
 // This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-PZdabWriter * Output(const char * const base, bool clobber)
-{
+PZdabWriter * Output(const char * const base, bool clobber){
   const int maxlen = 1024;
   char outfilename[maxlen];
 
