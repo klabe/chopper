@@ -3,8 +3,11 @@
 // K Labe September 23 2014
 
 #include "curl.h"
+#include "curl/curl.h"
 #include <cstring>
 #include <stdlib.h>
+
+static CURL* curl; // curl connection object
 
 // This function sends alarms to the monitoring website
 void alarm(const int level, const char* msg){

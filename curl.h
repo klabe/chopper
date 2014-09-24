@@ -1,10 +1,7 @@
 // Curl connection Header
 //
 // K Labe, September 23 2014
-
-#include "curl/curl.h"
-
-static CURL* curl; // curl connection object
+// K Labe, September 24 2014 - remove variables to source file
 
 void Opencurl(char* password);
 void Closecurl();

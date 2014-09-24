@@ -9,6 +9,20 @@
 #include <string.h>
 #include "snbuf.h"
 
+static const int EVENTNUM = 1000; // Maximum Burst buffer depth
+static int NHITBCUT = 40; // Nhit cut on burst events
+static int BurstLength = 10; // Burst length in seconds
+static const int BurstTicks = BurstLength*50000000; // length in ticks
+static int BurstSize = 30; // Number of events constituting a burst
+static bool burst = false; // Flags ongoing bursts
+static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
+static const int EndRate = 10; // Rate below which burst ends
+
+static char* burst[EVENTNUM]; // Burst Event Buffer
+static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
+static int bursthead;
+static int bursttail;
+
 // This function initializes the two SN Buffers
 void InitializeBuf(){
   for(int i=0; i<EVENTNUM; i++){

@@ -2,20 +2,7 @@
 // 
 // K Labe, June 17 2014
 // K Labe, September 23 2014 - Move burstbool here from main file
-
-static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static int NHITBCUT = 40; // Nhit cut on burst events
-static int BurstLength = 10; // Burst length in seconds
-static const int BurstTicks = BurstLength*500000000;// length in ticks
-static int BurstSize = 30; // Number of events constituting a burst
-static bool burst = false; // Flags ongoing bursts
-static int burstindex = 0; // Number of bursts observed
-static const int ENDWINDOW = 1*500000000; // Integration window for determining whether burst has ended
-static const int EndRate = 10; // Rate below which burst ends
-static char* burstev[EVENTNUM]; // Burst Event Buffer
-static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
-static int bursthead;
-static int bursttail;
+// K Labe, September 24 2014 - Move module variables to source file
 
 void InitializeBuf();
 void UpdateBuf(uint64_t longtime);

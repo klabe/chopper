@@ -5,6 +5,10 @@
 #include "redis.h"
 #include "curl.h"
 
+static bool yesredis = false; // Write to redis database?
+static redisContext* redis = NULL; // hiredis connection object
+static l2stats stat;
+
 // This function resets the redis statistics
 void ResetStatistics(){
   stat.l1 = 0;

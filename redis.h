@@ -1,6 +1,7 @@
 // Hiredis connection header
 //
 // K Labe, September 23 2014
+// K Labe, September 24 2014 - Remove variables to source file
 
 #include "hiredis.h"
 
@@ -10,10 +11,6 @@ int l1;
 int l2;
 bool burstbool;
 };
-
-static bool yesredis = false; // Write to redis database?
-static redisContext* redis = NULL; // hiredis connection object
-static l2stats stat;
 
 void ResetStatistics();
 void Openredis();
