@@ -40,27 +40,12 @@
 #include "snbuf.h"
 #include "SFMT.h"
 #include "curl/curl.h"
+#include "struct.h"
 
 #define EXTASY 0x8000 // Bit 15
 
-// This structure holds the variables set by the configuration file and
-// recorded to couchdb
-struct configuration
-{
-int nhithi;       // The regular nhit cut for physics events
-int nhitlo;       // The special lowered nhit cut for after large events
-int lothresh;     // This defines "large events" as used above
-int lowindow;     // The time for lowering the cut, in 50 MHz ticks
-int retrigcut;    // The nhit cut for retriggered events
-int retrigwindow; // The max time between retriggered events, in 50 MHz ticks
-int prescale;     // The prescale fraction (eg 100 = "save 1 in 100 events")
-uint32_t bitmask; // The external trigger bitmask
-int nhitbcut;     // The nhit cut for inclusion in bursts
-int burstwindow;  // The integration time for spotting bursts (in secs)
-int burstsize;    // The count to exceed to be a burst
-int endrate;      // Rate below which burst ends
-};
-
+// This variable holds the configuration of the parameters that determine the
+// behavior of the filter
 static configuration config;
 
 // This variable holds the current Nhitcut, which can be either the Hi or 
@@ -83,27 +68,6 @@ static const uint64_t maxjump = 10*50000000; // 50 MHz time
 static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
 static char* password = NULL;
-
-// Structure to hold all the relevant times
-struct alltimes
-{
-uint64_t time10;
-uint64_t time50;
-uint64_t longtime;
-int epoch;
-int walltime;
-int oldwalltime;
-uint64_t exptime;
-};
-
-// Structure to hold all the things we count
-struct counts
-{
-uint64_t prescalen;
-uint64_t eventn;
-uint64_t recordn;
-int orphan;
-};
 
 // Function to Print ZDAB records to screen readably
 void hexdump(char* const ptr, const int len){
@@ -625,7 +589,6 @@ int main(int argc, char *argv[])
   // Set up the Burst Buffer
   InitializeBuf();
   int bcount = 0;
-  int burstindex = 0;
   bool burst = false;
 
   // Flags for the retriggering logic:
@@ -690,42 +653,21 @@ int main(int argc, char *argv[])
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
         int burstlength = Burstlength();
 
-        int starttick = 0;
-
         // Open a new burst file if a burst starts
         if(!burst){
           if(burstlength>config.burstsize){
+            Openburst(b, alltime);
             burst = true;
-            bcount = burstlength;
-            starttick = alltime.longtime;
-            fprintf(stderr, "Burst %i has begun!\n", burstindex);
-            alarm(20, "Burst started");
-            char buff[32];
-            sprintf(buff, "Burst_%s_%i", outfilebase, burstindex);
-            b = Output(buff);
-            for(int i=0; i<headertypes; i++){
-              OutHeader((GenericRecordHeader*) header[i], b, i);
-            }
           }
         }
         // While in a burst
         if(burst){
           stat.burstbool=true;
-          bcount++;
           Writeburst(alltime.longtime, b);
           // Check if the burst has ended
           if(burstlength < config.endrate){
-            Finishburst(b);
-            b->Close();
+            Finishburst(b, alltime);
             burst=false;
-            int btime = alltime.longtime - starttick;
-            float btimesec = btime/50000000.;
-            fprintf(stderr, "Burst %i has ended.  It contains %i events"
-                  " and lasted %.2f seconds.\n", burstindex, bcount, btimesec);
-            alarm(20, "Burst ended");
-            burstindex++;
-            // Reset to prepare for next burst
-            bcount=0;
           }
         }
 

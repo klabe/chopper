@@ -8,7 +8,7 @@ all: chopper
 chopper: chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o
 	g++ $(CFLAGS) -o chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o $(LINKFLAGS)
 
-chopper.o: chopper.cpp snbuf.h curl.h redis.h
+chopper.o: chopper.cpp snbuf.h curl.h redis.h struct.h
 	g++ -c chopper.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis -I/home/cp/klabe/chopper/SFMT-src-1.4.1 -DSFMT_MEXP=19937
 
 
