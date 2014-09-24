@@ -35,6 +35,8 @@ If no configuration file is specified, the program will exit with a message
 asking for one.  If an incomplete configuration file is provided, the program
 will likewise exit with an error message.
 
+An example configuration file is available at default.cnfg
+
 
 Catalogue of headers and dependencies
 ------------------------------------

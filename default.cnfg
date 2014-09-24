@@ -5,7 +5,7 @@ lowindow 20000
 nhitretrig 5
 retrigwindow 23
 prescale 100
-bitmask 0x00FFF800
 nhitburst 40
 burstwindow 10
 burstsize 30
+bitmask 0x00FFF800
