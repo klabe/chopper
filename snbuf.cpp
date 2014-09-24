@@ -10,7 +10,6 @@
 #include "snbuf.h"
 
 static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static int NHITBCUT = 40; // Nhit cut on burst events
 static const int BurstTicks = BurstLength*50000000; // length in ticks
 static bool burst = false; // Flags ongoing bursts
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
