@@ -1,0 +1,8 @@
+nhithi 30
+nhitlo 10
+lothresh 50
+lowindow 20000
+retrigcut 5
+retrigwindow 23
+prescale 100
+bitmask 0x00FFF800

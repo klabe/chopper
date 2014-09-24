@@ -11,6 +11,3 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
 int Burstlength();
 void Writeburst(uint64_t longtime, PZdabWriter* b);
 void Finishburst(PZdabWriter* b);
-void setburstcut(unsigned int cut);
-void settimecut(double time);
-void setratecut(double rate);

@@ -39,37 +39,28 @@
 #include "curl.h"
 #include "snbuf.h"
 #include "SFMT.h"
+#include "curl/curl.h"
 
 #define EXTASY 0x8000 // Bit 15
 
-// These are the parameters which are set in the configuration file.
-// If there a value is not specified in the configuration file, the program
-// will use the default value listed here 
-//***************************************************************************
-// This is the regular nhit cut for physics events
-static int HINHITCUT = 30; 
+// This structure holds the variables set by the configuration file and
+// recorded to couchdb
+struct configuration
+{
+int nhithi;       // The regular nhit cut for physics events
+int nhitlo;       // The special lowered nhit cut for after large events
+int lothresh;     // This defines "large events" as used above
+int lowindow;     // The time for lowering the cut, in 50 MHz ticks
+int retrigcut;    // The nhit cut for retriggered events
+int retrigwindow; // The max time between retriggered events, in 50 MHz ticks
+int prescale;     // The prescale fraction (eg 100 = "save 1 in 100 events")
+uint32_t bitmask; // The external trigger bitmask
+int nhitbcut;     // The nhit cut for inclusion in bursts
+int burstwindow;  // The integration time for spotting bursts
+int burstsize;    // The count to exceed to be a burst
+};
 
-// This is the special lowered nhit cut for after large events.
-static int LONHITCUT = 10;
-
-// This defines "large events" as used above.
-static int LOWTHRESH = 50;
-
-// This is the time for lowering the cut, in 50 MHz ticks.
-static int LOWINDOW = 20000;
-
-// This is the nhit cut for retriggered events.
-static int RETRIGCUT = 5;
-
-// This is the max time between retriggered events, in 50 MHz ticks (23 = 460ns).
-static int RETRIGWINDOW = 23;
-
-// This is the prescale fraction (eg 100 = "save 1 in 100 events")
-static int PRESCALE = 100;
-
-// This is the external trigger bitmask; currently masking in bits 10, 12-22
-static uint32_t bitmask = 0x00FFF800;
-//***************************************************************************
+static configuration config;
 
 // This variable holds the current Nhitcut, which can be either the Hi or 
 // Lo Nhitcut, depending on what has been going on
@@ -77,6 +68,9 @@ static int NHITCUT;
 
 // Whether to overwrite existing output
 static bool clobber = true;
+
+// Whether to write to redis database
+static bool yesredis = false;
 
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
@@ -274,16 +268,16 @@ static void printhelp()
   "\n"
   "Physics options:\n"
   "  -l [n]: L2 nhit cut (default %d)\n"
-  "  -b [n]: Burst file nhit cut (default %d)\n"
-  "  -t [n]: Burst window width in seconds (default %d) \n"
-  "  -u [n]: Burst size threshold event count (default %d) \n"
+  "  -b [n]: Burst file nhit cut (default )\n"
+  "  -t [n]: Burst window width in seconds (default ) \n"
+  "  -u [n]: Burst size threshold event count (default ) \n"
   "\n"
   "Misc/debugging options\n"
   "  -c [string]: Configuration file\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
-  , NHITCUT, NHITBCUT, BurstLength, BurstSize
+  , NHITCUT 
   );
 }
 
@@ -323,17 +317,17 @@ void ReadConfig(const char* filename){
    int value;
 
    while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     if     (strcmp(param,"nhithi")        == 0) HINHITCUT = value;
-     else if(strcmp(param,"nhitlo")        == 0) LONHITCUT = value;
-     else if(strcmp(param, "lothresh")     == 0) LOWTHRESH = value;
-     else if(strcmp(param, "lowindow")     == 0) LOWINDOW = value;
-     else if(strcmp(param, "nhitretrig")   == 0) RETRIGCUT = value;
-     else if(strcmp(param, "retrigwindow") == 0) RETRIGWINDOW = value;
-     else if(strcmp(param, "prescale")     == 0) PRESCALE = value;
-     else if(strcmp(param, "bitmask")      == 0) bitmask = value;
-     else if(strcmp(param, "nhitbcut")     == 0) setburstcut(value);
-     else if(strcmp(param, "burstwindow")  == 0) settimecut(value);
-     else if(strcmp(param, "burstsize")    == 0) setratecut(value);
+     if     (strcmp(param,"nhithi")        == 0) config.nhithi = value;
+     else if(strcmp(param,"nhitlo")        == 0) config.nhitlo = value;
+     else if(strcmp(param, "lothresh")     == 0) config.lothresh = value;
+     else if(strcmp(param, "lowindow")     == 0) config.lowindow = value;
+     else if(strcmp(param, "nhitretrig")   == 0) config.retrigcut = value;
+     else if(strcmp(param, "retrigwindow") == 0) config.retrigwindow = value;
+     else if(strcmp(param, "prescale")     == 0) config.prescale = value;
+     else if(strcmp(param, "bitmask")      == 0) config.bitmask = value;
+     else if(strcmp(param, "nhitbcut")     == 0) config.nhitbcut = value;
+     else if(strcmp(param, "burstwindow")  == 0) config.burstwindow = value;
+     else if(strcmp(param, "burstsize")    == 0) config.burstsize = value;
      else
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
@@ -348,7 +342,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   const char * const opts = "hi:o:l:b:t:u:c:nr";
 
   bool done = false;
-  bool config = false; // was there a configuration file provided?
+  bool configure = false; // was there a configuration file provided?
   
   infilename = outfilebase = NULL;
 
@@ -361,14 +355,14 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'o': outfilebase = optarg; break;
 
       case 'l': NHITCUT = getcmdline_l(ch); break;
-      case 'b': setburstcut(getcmdline_l(ch)); break;
-      case 't': settimecut(getcmdline_d(ch)); break;
-      case 'u': setratecut(getcmdline_d(ch)); break;
+      case 'b': config.nhitbcut = getcmdline_l(ch); break;
+      case 't': config.burstwindow = getcmdline_d(ch); break;
+      case 'u': config.burstsize = getcmdline_d(ch); break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;
 
-      case 'c': config = true; configfile = optarg; break;
+      case 'c': configure = true; configfile = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -383,7 +377,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  if(config)
+  if(configure)
     ReadConfig(configfile);
 
 }
@@ -464,7 +458,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
 
     // Check for retriggers
     if (newat.time50 - oldat.time50 > 0 &&
-        newat.time50 - oldat.time50 <= RETRIGWINDOW){
+        newat.time50 - oldat.time50 <= config.retrigwindow){
       retrig = true;
     }
     else{
@@ -498,11 +492,11 @@ bool l2filter(const int nhit, const uint32_t word, const bool passretrig,
     pass = true;
     key +=1;
   }
-  if((word & bitmask) != 0){
+  if((word & config.bitmask) != 0){
     pass = true;
     key +=2;
   }
-  if(passretrig && retrig && nhit > RETRIGCUT){
+  if(passretrig && retrig && nhit > config.retrigcut){
     pass = true;
     key +=4;
   }
@@ -533,9 +527,10 @@ void WriteConfig(char* infilename){
                      \"burstsize\":%d, \
                      \"endrate\":%d, \
                      \"timestamp\":%d}",
-                     infilename, 3, HINHITCUT, LONHITCUT, LOWTHRESH, LOWINDOW,
-                     RETRIGCUT, RETRIGWINDOW, PRESCALE, bitmask, NHITBCUT,
-                     BurstLength, BurstSize, EndRate, (int)time(NULL)); 
+                     infilename, 3, config.nhithi, config.nhitlo, config.lothresh, 
+                     config.lowindow, config.retrigcut, config.retrigwindow, 
+                     config.prescale, config.bitmask, config.nhitbcut,
+                     config.burstwindow, config.burstsize, EndRate, (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
@@ -573,12 +568,12 @@ static alltimes InitTime(){
 // This function sets the trigger threshold appropriately
 // The "Kalpana" solution
 static void setthreshold(int nhit, alltimes & alltime){
-  if(nhit > LOWTHRESH){
-    alltime.exptime = alltime.time50 + LOWINDOW;
-    NHITCUT = LONHITCUT;
+  if(nhit > config.lothresh){
+    alltime.exptime = alltime.time50 + config.lowindow;
+    NHITCUT = config.nhitlo;
   }
   if(alltime.time50 < alltime.exptime){
-    NHITCUT = HINHITCUT;
+    NHITCUT = config.nhithi;
   }
 }
 
@@ -607,7 +602,7 @@ int main(int argc, char *argv[])
 
   // Start Random number generator for prescale selection
   sfmt_t randgen = InitRand(42); // FIXME - use run number for seed or something
-  int prescalerand =  (int) (4294967296/PRESCALE);
+  int prescalerand =  (int) (4294967296/config.prescale);
 
   // Prepare to record statistics in redis database
   if(yesredis) 
@@ -681,8 +676,8 @@ int main(int argc, char *argv[])
       setthreshold(nhit, alltime);
 
       // Burst Detection Here
-      // If the current event is over our burst nhit threshold (NHITBCUT):
-      //   * First update the buffer by dropping events older than BurstLength
+      // If the current event is over our burst nhit threshold (nhitbcut):
+      //   * First update the buffer by dropping events older than burstwindow
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
@@ -693,7 +688,7 @@ int main(int argc, char *argv[])
         if((word & EXTASY ) != 0) 
           extasy = true;
       }
-      if(nhit > NHITBCUT && ((word & bitmask) == 0) ){
+      if(nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
@@ -703,7 +698,7 @@ int main(int argc, char *argv[])
 
         // Open a new burst file if a burst starts
         if(!burst){
-          if(burstlength>BurstSize){
+          if(burstlength>config.burstsize){
             burst = true;
             bcount = burstlength;
             starttick = alltime.longtime;

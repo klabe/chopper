@@ -11,9 +11,7 @@
 
 static const int EVENTNUM = 1000; // Maximum Burst buffer depth
 static int NHITBCUT = 40; // Nhit cut on burst events
-static int BurstLength = 10; // Burst length in seconds
 static const int BurstTicks = BurstLength*50000000; // length in ticks
-static int BurstSize = 30; // Number of events constituting a burst
 static bool burst = false; // Flags ongoing bursts
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
 static const int EndRate = 10; // Rate below which burst ends
@@ -127,19 +125,4 @@ void Finishburst(PZdabWriter* b){
   }
   bursthead = -1;
   bursttail = -1;
-}
-
-// Here are some helper functions for use by the command-line parser
-// to set some of the SN Buffer global variables:  
-// the burst cut differently from default
-void setburstcut(unsigned int cut){
-  NHITBCUT = cut;
-}
-// the rate cut different from default
-void setratecut(double size){
-  BurstSize = size; 
-}
-// the time cut
-void settimecut(double time){
-  BurstLength = time;
 }

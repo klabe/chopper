@@ -3,8 +3,6 @@
 // K Labe, September 23 2014
 // K Labe, September 24 2014 - Remove variables to source file
 
-#include "hiredis.h"
-
 struct l2stats
 {
 int l1;

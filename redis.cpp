@@ -2,10 +2,10 @@
 //
 // K Labe September 23 2014
 
+#include "hiredis.h"
 #include "redis.h"
 #include "curl.h"
 
-static bool yesredis = false; // Write to redis database?
 static redisContext* redis = NULL; // hiredis connection object
 static l2stats stat;
 
