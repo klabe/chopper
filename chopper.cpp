@@ -576,7 +576,8 @@ int main(int argc, char *argv[])
         // Open a new burst file if a burst starts
         if(!burst){
           if(burstlength>config.burstsize){
-            Openburst(b, alltime, headertypes, outfilebase, header, clobber);
+            Openburst(b, alltime.longtime, headertypes, outfilebase, header, 
+                      clobber);
             burst = true;
           }
         }
@@ -586,7 +587,7 @@ int main(int argc, char *argv[])
           Writeburst(alltime.longtime, b);
           // Check if the burst has ended
           if(burstlength < config.endrate){
-            Finishburst(b, alltime);
+            Finishburst(b, alltime.longtime);
             burst=false;
           }
         }

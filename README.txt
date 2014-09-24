@@ -34,3 +34,17 @@ parameters may be given in any order.
 If no configuration file is specified, the program will exit with a message
 asking for one.  If an incomplete configuration file is provided, the program
 will likewise exit with an error message.
+
+
+Catalogue of headers and dependencies
+------------------------------------
+chopper.cpp - Main Stonehenge source file
+  struct.h  - defines a bunch of structs
+  curl.h    - handles connection to minard alarm/logging system
+  output.h  - handles writing of zdab files
+  redis.h   - handles connection to redis server
+  snbuf.h   - handles burst buffer
+SFMT-src-1.4.1 - external random number generator
+libcurl
+libhiredis
+

@@ -7,7 +7,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include "struct.h"
 #include "snbuf.h"
 #include "curl.h"
 #include "output.h"
@@ -125,10 +124,10 @@ void Writeburst(uint64_t longtime, PZdabWriter* b){
 }
 
 // This function opens a new burst file
-void Openburst(PZdabWriter* & b, alltimes alltime, int headertypes,
+void Openburst(PZdabWriter* & b, uint64_t longtime, int headertypes,
                char* outfilebase, char* header[], bool clobber){
   bcount = Burstlength();
-  starttick = alltime.longtime;
+  starttick = longtime;
   fprintf(stderr, "Burst %i has begun!\n", burstindex);
   alarm(20, "Burst started");
   char buff[32];
@@ -140,14 +139,14 @@ void Openburst(PZdabWriter* & b, alltimes alltime, int headertypes,
 }
 
 // This function writes out the remainder of the buffer when burst ends
-void Finishburst(PZdabWriter* & b, alltimes alltime){
+void Finishburst(PZdabWriter* & b, uint64_t longtime){
   while(bursthead < bursttail+1){
     AddEvBFile(b);
   }
   bursthead = -1;
   bursttail = -1;
   b->Close();
-  int btime = alltime.longtime - starttick;
+  int btime = longtime - starttick;
   float btimesec = btime/50000000.;
   fprintf(stderr, "Burst %i has ended.  It contains %i events and lasted"
                   " %.2f seconds.\n", burstindex, bcount, btimesec);
