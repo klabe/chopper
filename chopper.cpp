@@ -266,19 +266,12 @@ static void printhelp()
   "Mandatory options:\n"
   "  -i [string]: Input file\n"
   "  -o [string]: Base of output files\n"
-  "\n"
-  "Physics options:\n"
-  "  -l [n]: L2 nhit cut (default %d)\n"
-  "  -b [n]: Burst file nhit cut (default )\n"
-  "  -t [n]: Burst window width in seconds (default ) \n"
-  "  -u [n]: Burst size threshold event count (default ) \n"
+  "  -c [string]: Configuration file\n"
   "\n"
   "Misc/debugging options\n"
-  "  -c [string]: Configuration file\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -h: This help text\n"
-  , NHITCUT 
   );
 }
 
@@ -354,16 +347,10 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
-
-      case 'l': NHITCUT = getcmdline_l(ch); break;
-      case 'b': config.nhitbcut = getcmdline_l(ch); break;
-      case 't': config.burstwindow = getcmdline_d(ch); break;
-      case 'u': config.burstsize = getcmdline_d(ch); break;
+      case 'c': configure = true; configfile = optarg; break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;
-
-      case 'c': configure = true; configfile = optarg; break;
 
       case 'h': printhelp(); exit(0);
       default:  printhelp(); exit(1);
@@ -372,8 +359,9 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
   if(!infilename)  fprintf(stderr, "Give an input file with -i\n");
   if(!outfilebase) fprintf(stderr, "Give an output base with -o\n");
+  if(!configfile)  fprintf(stderr, "Give a configuration file with -c\n");
 
-  if(!infilename || !outfilebase){
+  if(!infilename || !outfilebase || !configfile){
     printhelp();
     exit(1);
   }
@@ -772,6 +760,7 @@ int main(int argc, char *argv[])
     stat.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy);
+  if(b) 
 
   if(yesredis)
     Closeredis();
