@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
     stat.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy);
-  if(b) 
+  if(b) Finishburst(b, alltime); 
 
   if(yesredis)
     Closeredis();
