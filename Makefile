@@ -31,7 +31,7 @@ curl.o: curl.cpp
 	g++ -c curl.cpp $(CFLAGS)
 
 redis.o: redis.cpp
-	g++ -c redis.cpp -I/cp/home/cp/klabe/hiredis $(CFLAGS) $(LINKFLAGS)
+	g++ -c redis.cpp -I/cp/home/cp/klabe/hiredis $(CFLAGS)
 
 output.o: output.cpp
 	g++ -c output.cpp $(CFLAGS)
