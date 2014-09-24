@@ -7,17 +7,16 @@
 #include "curl.h"
 
 static redisContext* redis = NULL; // hiredis connection object
-static l2stats stat;
 
 // This function resets the redis statistics
-void ResetStatistics(){
+void ResetStatistics(l2stats stat){
   stat.l1 = 0;
   stat.l2 = 0;
   stat.burstbool = false;
 }
 
 // This function opens the redis connections
-void Openredis(){
+void Openredis(l2stats stat){
   redis = redisConnect("cp4.uchicago.edu", 6379);
   if((redis)->err){
     printf("Error: %s\n", (redis)->errstr);
@@ -28,6 +27,7 @@ void Openredis(){
     printf("Connected to Redis.\n");
     alarm(21, "Openredis: connected to server!");
   }
+  ResetStatistics(stat);
 }
 
 // This function closes the redis connection
@@ -36,7 +36,7 @@ void Closeredis(){
 }
 
 // This function writes statistics to redis database
-void Writetoredis(const int time){
+void Writetoredis(l2stats stat, const int time){
   if(!redis){
     alarm(30, "Cannot connect to redis.");
     return;
@@ -69,4 +69,5 @@ void Writetoredis(const int time){
         alarm(30, message);
     }
   }
+  ResetStatistics(stat);
 }

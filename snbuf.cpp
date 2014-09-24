@@ -10,12 +10,9 @@
 #include "snbuf.h"
 
 static const int EVENTNUM = 1000; // Maximum Burst buffer depth
-static const int BurstTicks = BurstLength*50000000; // length in ticks
-static bool burst = false; // Flags ongoing bursts
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
-static const int EndRate = 10; // Rate below which burst ends
 
-static char* burst[EVENTNUM]; // Burst Event Buffer
+static char* burstev[EVENTNUM]; // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
 static int bursthead;
 static int bursttail;
@@ -32,11 +29,12 @@ void InitializeBuf(){
 }
 
 // This function drops old events from the buffer once they expire
-void UpdateBuf(uint64_t longtime){
+void UpdateBuf(uint64_t longtime, int BurstLength){
   // The case that the buffer is empty
   if(bursthead==-1)
     return;
   // Normal Case
+  int BurstTicks = BurstLength*50000000; // length in ticks
   while(bursttime[bursthead] < longtime - BurstTicks && bursthead!=-1){
     bursttime[bursthead] = 0;
     for(int j =0; j < NWREC*sizeof(uint32_t); j++){

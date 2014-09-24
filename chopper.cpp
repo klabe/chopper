@@ -56,8 +56,9 @@ int retrigwindow; // The max time between retriggered events, in 50 MHz ticks
 int prescale;     // The prescale fraction (eg 100 = "save 1 in 100 events")
 uint32_t bitmask; // The external trigger bitmask
 int nhitbcut;     // The nhit cut for inclusion in bursts
-int burstwindow;  // The integration time for spotting bursts
+int burstwindow;  // The integration time for spotting bursts (in secs)
 int burstsize;    // The count to exceed to be a burst
+int endrate;      // Rate below which burst ends
 };
 
 static configuration config;
@@ -530,7 +531,8 @@ void WriteConfig(char* infilename){
                      infilename, 3, config.nhithi, config.nhitlo, config.lothresh, 
                      config.lowindow, config.retrigcut, config.retrigwindow, 
                      config.prescale, config.bitmask, config.nhitbcut,
-                     config.burstwindow, config.burstsize, EndRate, (int)time(NULL)); 
+                     config.burstwindow, config.burstsize, config.endrate,
+                     (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
@@ -605,8 +607,9 @@ int main(int argc, char *argv[])
   int prescalerand =  (int) (4294967296/config.prescale);
 
   // Prepare to record statistics in redis database
+  l2stats stat;
   if(yesredis) 
-    Openredis();
+    Openredis(stat);
 
   bool extasy = false;
 
@@ -630,6 +633,8 @@ int main(int argc, char *argv[])
   // Set up the Burst Buffer
   InitializeBuf();
   int bcount = 0;
+  int burstindex = 0;
+  bool burst = false;
 
   // Flags for the retriggering logic:
   // passretrig true means that if the next event is a retrigger, we should 
@@ -668,8 +673,7 @@ int main(int argc, char *argv[])
       updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
-          Writetoredis(alltime.oldwalltime);
-        ResetStatistics();
+          Writetoredis(stat, alltime.oldwalltime);
       }
 
       // Should we adjust the trigger threshold?
@@ -689,7 +693,7 @@ int main(int argc, char *argv[])
           extasy = true;
       }
       if(nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
-        UpdateBuf(alltime.longtime);
+        UpdateBuf(alltime.longtime, config.burstwindow);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
         int burstlength = Burstlength();
@@ -718,7 +722,7 @@ int main(int argc, char *argv[])
           bcount++;
           Writeburst(alltime.longtime, b);
           // Check if the burst has ended
-          if(burstlength<EndRate){
+          if(burstlength < config.endrate){
             Finishburst(b);
             b->Close();
             burst=false;

@@ -5,7 +5,7 @@
 // K Labe, September 24 2014 - Move module variables to source file
 
 void InitializeBuf();
-void UpdateBuf(uint64_t longtime);
+void UpdateBuf(uint64_t longtime, int BurstLength);
 void AddEvBFile(PZdabWriter* const b);
 void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen);
 int Burstlength();

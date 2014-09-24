@@ -10,7 +10,7 @@ int l2;
 bool burstbool;
 };
 
-void ResetStatistics();
-void Openredis();
+void ResetStatistics(l2stats stat);
+void Openredis(l2stats stat);
 void Closeredis();
-void Writetoredis(const int time);
+void Writetoredis(l2stats stat, const int time);
