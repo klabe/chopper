@@ -311,20 +311,23 @@ void ReadConfig(const char* filename){
    int value;
 
    while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     if     (strcmp(param,"nhithi")        == 0) config.nhithi = value;
-     else if(strcmp(param,"nhitlo")        == 0) config.nhitlo = value;
-     else if(strcmp(param, "lothresh")     == 0) config.lothresh = value;
-     else if(strcmp(param, "lowindow")     == 0) config.lowindow = value;
-     else if(strcmp(param, "nhitretrig")   == 0) config.retrigcut = value;
+     if     (strcmp(param, "nhithi")       == 0) config.nhithi       = value;
+     else if(strcmp(param, "nhitlo")       == 0) config.nhitlo       = value;
+     else if(strcmp(param, "lothresh")     == 0) config.lothresh     = value;
+     else if(strcmp(param, "lowindow")     == 0) config.lowindow     = value;
+     else if(strcmp(param, "nhitretrig")   == 0) config.retrigcut    = value;
      else if(strcmp(param, "retrigwindow") == 0) config.retrigwindow = value;
-     else if(strcmp(param, "prescale")     == 0) config.prescale = value;
-     else if(strcmp(param, "bitmask")      == 0) config.bitmask = value;
-     else if(strcmp(param, "nhitburst")    == 0) config.nhitbcut = value;
-     else if(strcmp(param, "burstwindow")  == 0) config.burstwindow = value;
-     else if(strcmp(param, "burstsize")    == 0) config.burstsize = value;
+     else if(strcmp(param, "prescale")     == 0) config.prescale     = value;
+     else if(strcmp(param, "nhitburst")    == 0) config.nhitbcut     = value;
+     else if(strcmp(param, "burstwindow")  == 0) config.burstwindow  = value;
+     else if(strcmp(param, "burstsize")    == 0) config.burstsize    = value;
      else
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
+   }
+   rewind(configfile);
+   while(fscanf(configfile, "%s %x\n", param, &value)==2){
+     if(strcmp(param, "bitmask") == 0) config.bitmask = value;
    }
 }
 
