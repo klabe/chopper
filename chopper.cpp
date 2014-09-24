@@ -37,10 +37,11 @@
 #include <time.h>
 #include "redis.h"
 #include "curl.h"
-#include "snbuf.h"
 #include "SFMT.h"
 #include "curl/curl.h"
 #include "struct.h"
+#include "snbuf.h"
+#include "output.h"
 
 #define EXTASY 0x8000 // Bit 15
 
@@ -82,86 +83,6 @@ void hexdump(char* const ptr, const int len){
     }
     fprintf(stderr, "\n");
   } 
-}
-
-// This function writes out the ZDAB record
-static void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
-                    PZdabFile * const zfile)
-{
-  if(!data) return;
-  const int index = PZdabWriter::GetIndex(data->bank_name);
-  if(index < 0){
-     fprintf(stderr, "Unrecognized bank name\n");
-     alarm(10, "Outzdab: unrecognized bank name.");
-  }
-  else{
-    uint32_t * const bank = zfile->GetBank(data);
-    zwrite->WriteBank(bank, index);
-  }
-}
-
-// This function writes out the header buffer to a file
-static void OutHeader(const GenericRecordHeader * const hdr,
-                      PZdabWriter* const w, const int j)
-{
-  if (!hdr) return;
-
-  int index = PZdabWriter::GetIndex(hdr->RecordID);
-  if(index < 0){
-    // PZdab for some reason got zero for the header type, 
-    // but I know what it is, so I will set it
-    switch(j){
-      case 0: index=2; break;
-      case 1: index=4; break; 
-      case 2: index=3; break;
-      default: fprintf(stderr, "Not reached\n"); alarm(10, "Outheader: You never see this!"); exit(1);
-    }
-  }
-  if(w->WriteBank((uint32_t *)hdr, index)){
-    fprintf(stderr,"Error writing to zdab file\n");
-    alarm(10, "Outheader: error writing to zdab file.");
-  }
-}
-
-// This function builds a new output file.  If it can't open 
-// the file, it aborts the program, so the return pointer does not
-// need to be checked.
-static PZdabWriter * Output(const char * const base)
-{
-  const int maxlen = 1024;
-  char outfilename[maxlen];
-  
-  if(snprintf(outfilename, maxlen, "%s.zdab", base) >= maxlen){
-    outfilename[maxlen-1] = 0; // or does snprintf do this already?
-    fprintf(stderr, "WARNING: Output filename truncated to %s\n",
-            outfilename);
-    alarm(10, "Output: output filename truncated");
-  }
-
-  if(!access(outfilename, W_OK)){
-    if(!clobber){
-      fprintf(stderr, "%s already exists and you told me not to "
-              "overwrite it!\n", outfilename);
-      alarm(10, "Output: Should not overwrite that file.");
-      exit(1);
-    }
-    unlink(outfilename);
-  }
-  else if(!access(outfilename, F_OK)){
-    fprintf(stderr, "%s already exists and we can't overwrite it!\n",
-            outfilename);
-    alarm(10, "Output: Cannot overwrite that file.");
-    exit(1);
-  } 
-
-  PZdabWriter * const ret = new PZdabWriter(outfilename, 0);
-
-  if(!ret || !ret->IsOpen()){
-    fprintf(stderr, "Could not open output file %s\n", outfilename);
-    alarm(10, "Output: Cannot open file.");
-    exit(1);
-  }
-  return ret;
 }
 
 // This function closes the completed primary chunk and  moves the file
@@ -573,7 +494,7 @@ int main(int argc, char *argv[])
   alltimes alltime = InitTime();
 
   // Setup initial output file
-  PZdabWriter* w1  = Output(outfilebase);
+  PZdabWriter* w1  = Output(outfilebase, clobber);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Header Buffer
@@ -588,7 +509,6 @@ int main(int argc, char *argv[])
 
   // Set up the Burst Buffer
   InitializeBuf();
-  int bcount = 0;
   bool burst = false;
 
   // Flags for the retriggering logic:
@@ -656,7 +576,7 @@ int main(int argc, char *argv[])
         // Open a new burst file if a burst starts
         if(!burst){
           if(burstlength>config.burstsize){
-            Openburst(b, alltime);
+            Openburst(b, alltime, headertypes, outfilebase, header, clobber);
             burst = true;
           }
         }

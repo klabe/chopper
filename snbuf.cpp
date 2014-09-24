@@ -7,7 +7,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include "struct.h"
 #include "snbuf.h"
+#include "curl.h"
+#include "output.h"
 
 static const int EVENTNUM = 1000;        // Maximum Burst buffer depth
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
@@ -24,7 +27,7 @@ static int bcount = 0;     // Number of events in present burst
 void InitializeBuf(){
   for(int i=0; i<EVENTNUM; i++){
     burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
-    if(burstev[i] = NULL)
+    if(burstev[i] == NULL)
       printf("Error: SN Buffer could not be initialized.\n");
     memset(burstev[i],0,NWREC*sizeof(uint32_t));
     bursttime[i]=0;
@@ -123,14 +126,14 @@ void Writeburst(uint64_t longtime, PZdabWriter* b){
 
 // This function opens a new burst file
 void Openburst(PZdabWriter* & b, alltimes alltime, int headertypes,
-               char* outfilebase, char* header[]){
+               char* outfilebase, char* header[], bool clobber){
   bcount = Burstlength();
   starttick = alltime.longtime;
   fprintf(stderr, "Burst %i has begun!\n", burstindex);
   alarm(20, "Burst started");
   char buff[32];
   sprintf(buff, "Burst_%s_%i", outfilebase, burstindex);
-  b = Output(buff);
+  b = Output(buff, clobber);
   for(int i=0; i<headertypes; i++){
     OutHeader((GenericRecordHeader*) header[i], b, i);
   }
