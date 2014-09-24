@@ -326,7 +326,7 @@ void ReadConfig(const char* filename){
      else if(strcmp(param, "retrigwindow") == 0) config.retrigwindow = value;
      else if(strcmp(param, "prescale")     == 0) config.prescale = value;
      else if(strcmp(param, "bitmask")      == 0) config.bitmask = value;
-     else if(strcmp(param, "nhitbcut")     == 0) config.nhitbcut = value;
+     else if(strcmp(param, "nhitburst")    == 0) config.nhitbcut = value;
      else if(strcmp(param, "burstwindow")  == 0) config.burstwindow = value;
      else if(strcmp(param, "burstsize")    == 0) config.burstsize = value;
      else
@@ -607,6 +607,7 @@ int main(int argc, char *argv[])
   int prescalerand =  (int) (4294967296/config.prescale);
 
   // Prepare to record statistics in redis database
+  Opencurl(password);
   l2stats stat;
   if(yesredis) 
     Openredis(stat);
