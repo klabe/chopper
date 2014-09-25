@@ -59,9 +59,11 @@ void ReadConfig(const char* filename, configuration & config){
      else if(!strcmp(param, "burstwindow") ){config.burstwindow  = value; bit(8);}
      else if(!strcmp(param, "burstsize")   ){config.burstsize    = value; bit(9);}
      else if(!strcmp(param, "bitmask")     ){;} // Do nothing
-     else
+     else{
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
+        exit(1);
+     }
    }
    rewind(configfile);
    while(fscanf(configfile, "%s %x\n", param, &value)==2){
