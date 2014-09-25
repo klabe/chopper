@@ -476,7 +476,6 @@ int main(int argc, char *argv[])
 
   // Set up the Burst Buffer
   InitializeBuf();
-  bool burst = false;
 
   // Flags for the retriggering logic:
   // passretrig true means that if the next event is a retrigger, we should 
@@ -538,26 +537,15 @@ int main(int argc, char *argv[])
         UpdateBuf(alltime.longtime, config.burstwindow);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t));
-        int burstlength = Burstlength();
 
-        // Open a new burst file if a burst starts
-        if(!burst){
-          if(burstlength>config.burstsize){
-            Openburst(b, alltime.longtime, headertypes, outfilebase, header, 
-                      clobber);
-            burst = true;
-          }
-        }
-        // While in a burst
-        if(burst){
-          stat.burstbool=true;
-          Writeburst(alltime.longtime, b);
-          // Check if the burst has ended
-          if(burstlength < config.endrate){
-            Finishburst(b, alltime.longtime);
-            burst=false;
-          }
-        }
+        // Write to burst file if necessary
+        // A comment here about the following bit of opaque code:
+        // Burstfile returns whether a burst is ongoing, but we want burstbool
+        // to remain true after the burst ends, until it is reset.  We therefore
+        // logical-OR the return value of Burstfile with the existing value of 
+        // stat.burstbool.
+        stat.burstbool = (stat.burstbool | Burstfile(b, config, alltime,
+                          headertypes, outfilebase, header, clobber) );
 
       } // End Burst Loop
       // L2 Filter
@@ -593,7 +581,7 @@ int main(int argc, char *argv[])
     stat.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy);
-  Saveburstbuff(burst);
+  Saveburstbuff();
   if(b) Finishburst(b, alltime.longtime); 
 
   if(yesredis)

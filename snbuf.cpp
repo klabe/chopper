@@ -6,15 +6,18 @@
 #include "PZdabWriter.h"
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
+#include "struct.h"
 #include "snbuf.h"
 #include "curl.h"
 #include "output.h"
 
-struct burstpointers
+struct burststate
 {
 int head;
 int tail;
+bool burst;
 };
 
 static const int EVENTNUM = 1000;        // Maximum Burst buffer depth
@@ -22,22 +25,36 @@ static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
 
 static char* burstev[EVENTNUM];      // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
-static burstpointers burstptr; // Object to hold pointers to head and tail of burst
-static int starttick = 0;  // Start time (in 50 MHz ticks) of burst
-static int burstindex = 0; // Number of bursts seen
-static int bcount = 0;     // Number of events in present burst
+static burststate burstptr; // Object to hold pointers to head and tail of burst
+static int starttick = 0;   // Start time (in 50 MHz ticks) of burst
+static int burstindex = 0;  // Number of bursts seen
+static int bcount = 0;      // Number of events in present burst
 
-// This function initializes the two SN Buffers
+// These are the filenames for storing the buffer between subfiles
+static const char* fburststate = "burststate.bin";
+static const char* fburstev    = "burstev.bin";
+static const char* fbursttime  = "bursttime.bin";
+
+// This function initializes the two SN Buffers.  It tries to read in the 
+// state of the buffer from file, or otherwise initializes it empty.
 void InitializeBuf(){
-  for(int i=0; i<EVENTNUM; i++){
-    burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
-    if(burstev[i] == NULL)
-      printf("Error: SN Buffer could not be initialized.\n");
-    memset(burstev[i],0,NWREC*sizeof(uint32_t));
-    bursttime[i]=0;
+  // Try to read from file
+  if(0){
+    ;
   }
-  burstptr.head = -1;
-  burstptr.tail = -1;
+  // Otherwise, initialize empty
+  else{
+    for(int i=0; i<EVENTNUM; i++){
+      burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+      if(burstev[i] == NULL)
+        printf("Error: SN Buffer could not be initialized.\n");
+      memset(burstev[i],0,NWREC*sizeof(uint32_t));
+      bursttime[i]=0;
+    }
+    burstptr.head = -1;
+    burstptr.tail = -1;
+    burstptr.burst = false;
+  }
 }
 
 // This function drops old events from the buffer once they expire
@@ -162,6 +179,29 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
 }
 
 // This function saves the buffer state to disk.
-void Saveburstbuff(bool burst){
-;
+void Saveburstbuff(){
+  ;
+}
+
+// This function manages the writing of events into a burst file.
+bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime, 
+               int headertypes, char* outfilebase, char* header[], bool clobber){
+  // Open a new burst file if a burst starts
+  if(!burstptr.burst){
+    if(Burstlength() > config.burstsize){
+      Openburst(b, alltime.longtime, headertypes, outfilebase, header, clobber);
+      burstptr.burst = true;
+    }
+  }
+  
+  // While in a burst
+  if(burstptr.burst){
+    Writeburst(alltime.longtime, b);
+    // Check whether the burst has ended
+    if(Burstlength() < config.endrate){
+      Finishburst(b, alltime.longtime);
+      burstptr.burst = false;
+    }
+  }
+  return burstptr.burst;
 }

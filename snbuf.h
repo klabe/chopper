@@ -5,7 +5,8 @@
 // K Labe, September 24 2014 - Move module variables to source file
 
 // This function should be called once at the beginning of a subfile to set
-// up the burst buffers
+// up the burst buffers.  It tries to read in the buffer state from file, or
+// otherwise initializes empty.
 void InitializeBuf();
 
 // This function drops old events from the buffer once they expire
@@ -46,6 +47,10 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime);
 
 // This function is used to save the state of the burstbuffer to disk so that
 // the burst detection algorithm can pick up from where it left off when the 
-// next file begins.  The bool tells whether a burst is ongoing at the time 
-// the file ends.
-void Saveburstbuff(bool burst);
+// next file begins.
+void Saveburstbuff();
+
+// This function manages the writing of events into a burst file.  It returns
+// a bool stating whether a burst is ongoing.
+bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime, 
+               int headertypes, char* outfilebase, char* header[], bool clobber);
