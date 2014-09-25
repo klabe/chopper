@@ -2,6 +2,8 @@
 //
 // K Labe, September 24 2014
 
+#include <stdint.h>
+
 // This structure holds the variables set by the configuration file and recorded
 // to couchdb
 struct configuration

@@ -42,13 +42,13 @@
 #include "struct.h"
 #include "snbuf.h"
 #include "output.h"
+#include "config.h"
 
 #define EXTASY 0x8000 // Bit 15
 
 // This variable holds the configuration of the parameters that determine the
 // behavior of the filter
 static configuration config;
-static const int paramn = 11; // Number of parameters held in a configuration
 
 // This variable holds the current Nhitcut, which can be either the Hi or 
 // Lo Nhitcut, depending on what has been going on
@@ -185,51 +185,6 @@ static void PrintClosing(char* outfilebase, counts count, int stats[],
          stats[6], psstats[6], stats[7], psstats[7]);
 }
 
-// This function reads the configuration file and sets the cut parameters.
-void ReadConfig(const char* filename){ 
-   FILE* configfile = fopen(filename, "r");
-   if(configfile == NULL){
-     printf("Could not open configuration file.\n");
-     exit(1);
-   }
-
-   char param[16];
-   char text[16];
-   int value;
-
-   // First, check that the number of lines is correct
-   int lines = 0;
-   while(fscanf(configfile, "%s %s\n", param, text)==2){
-     lines++;
-   }
-   if(lines != paramn){
-     printf("Configuration file does not contain correct number of parameter"
-            " settings.  Aborting.\n");
-     exit(1);
-   }
-
-   // Second, read file and check that each parameter set exactly once
-   while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     if     (strcmp(param, "nhithi")       == 0) config.nhithi       = value;
-     else if(strcmp(param, "nhitlo")       == 0) config.nhitlo       = value;
-     else if(strcmp(param, "lothresh")     == 0) config.lothresh     = value;
-     else if(strcmp(param, "lowindow")     == 0) config.lowindow     = value;
-     else if(strcmp(param, "nhitretrig")   == 0) config.retrigcut    = value;
-     else if(strcmp(param, "retrigwindow") == 0) config.retrigwindow = value;
-     else if(strcmp(param, "prescale")     == 0) config.prescale     = value;
-     else if(strcmp(param, "nhitburst")    == 0) config.nhitbcut     = value;
-     else if(strcmp(param, "burstwindow")  == 0) config.burstwindow  = value;
-     else if(strcmp(param, "burstsize")    == 0) config.burstsize    = value;
-     else
-        printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
-               param);
-   }
-   rewind(configfile);
-   while(fscanf(configfile, "%s %x\n", param, &value)==2){
-     if(strcmp(param, "bitmask") == 0) config.bitmask = value;
-   }
-}
-
 // This function interprets the command line arguments to the program
 static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
@@ -267,7 +222,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  ReadConfig(configfile);
+  ReadConfig(configfile, config);
 
 }
 
