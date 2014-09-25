@@ -48,16 +48,17 @@ void ReadConfig(const char* filename, configuration & config){
 
    // Read file and check that each parameter set exactly once
    while(fscanf(configfile, "%s %d\n", param, &value)==2){
-     if     (strcmp(param, "nhithi")       == 0){config.nhithi       = value; bit(0);}
-     else if(strcmp(param, "nhitlo")       == 0){config.nhitlo       = value; bit(1);}
-     else if(strcmp(param, "lothresh")     == 0){config.lothresh     = value; bit(2);}
-     else if(strcmp(param, "lowindow")     == 0){config.lowindow     = value; bit(3);}
-     else if(strcmp(param, "nhitretrig")   == 0){config.retrigcut    = value; bit(4);}
-     else if(strcmp(param, "retrigwindow") == 0){config.retrigwindow = value; bit(5);}
-     else if(strcmp(param, "prescale")     == 0){config.prescale     = value; bit(6);}
-     else if(strcmp(param, "nhitburst")    == 0){config.nhitbcut     = value; bit(7);}
-     else if(strcmp(param, "burstwindow")  == 0){config.burstwindow  = value; bit(8);}
-     else if(strcmp(param, "burstsize")    == 0){config.burstsize    = value; bit(9);}
+     if     (!strcmp(param, "nhithi")      ){config.nhithi       = value; bit(0);}
+     else if(!strcmp(param, "nhitlo")      ){config.nhitlo       = value; bit(1);}
+     else if(!strcmp(param, "lothresh")    ){config.lothresh     = value; bit(2);}
+     else if(!strcmp(param, "lowindow")    ){config.lowindow     = value; bit(3);}
+     else if(!strcmp(param, "nhitretrig")  ){config.retrigcut    = value; bit(4);}
+     else if(!strcmp(param, "retrigwindow")){config.retrigwindow = value; bit(5);}
+     else if(!strcmp(param, "prescale")    ){config.prescale     = value; bit(6);}
+     else if(!strcmp(param, "nhitburst")   ){config.nhitbcut     = value; bit(7);}
+     else if(!strcmp(param, "burstwindow") ){config.burstwindow  = value; bit(8);}
+     else if(!strcmp(param, "burstsize")   ){config.burstsize    = value; bit(9);}
+     else if(!strcmp(param, "bitmask")     ){;} // Do nothing
      else
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
                param);
