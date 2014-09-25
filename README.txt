@@ -42,6 +42,7 @@ Catalogue of headers and dependencies
 ------------------------------------
 chopper.cpp - Main Stonehenge source file
   struct.h  - defines a bunch of structs
+  config.h  - reads the configuration file
   curl.h    - handles connection to minard alarm/logging system
     output.h  - handles writing of zdab files
     redis.h   - handles connection to redis server
