@@ -593,8 +593,8 @@ int main(int argc, char *argv[])
     stat.l1++;
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy);
+  Saveburstbuff(burst);
   if(b) Finishburst(b, alltime.longtime); 
-  Saveburstbuff();
 
   if(yesredis)
     Closeredis();

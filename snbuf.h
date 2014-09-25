@@ -46,5 +46,6 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime);
 
 // This function is used to save the state of the burstbuffer to disk so that
 // the burst detection algorithm can pick up from where it left off when the 
-// next file begins.
-void Saveburstbuff();
+// next file begins.  The bool tells whether a burst is ongoing at the time 
+// the file ends.
+void Saveburstbuff(bool burst);
