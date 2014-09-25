@@ -64,7 +64,7 @@ void ReadConfig(const char* filename, configuration & config){
    }
    rewind(configfile);
    while(fscanf(configfile, "%s %x\n", param, &value)==2){
-     if(strcmp(param, "bitmask") == 0) config.bitmask = value; bit(10);
+     if(strcmp(param, "bitmask") == 0){ config.bitmask = value; bit(10);}
    }
 
    // Check whether all bits were set
