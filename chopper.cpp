@@ -224,7 +224,6 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   const char * const opts = "hi:o:l:b:t:u:c:nr";
 
   bool done = false;
-  bool configure = false; // was there a configuration file provided?
   
   infilename = outfilebase = NULL;
 
@@ -235,7 +234,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
-      case 'c': configure = true; configfile = optarg; break;
+      case 'c': configfile = optarg; break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;
@@ -254,8 +253,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  if(configure)
-    ReadConfig(configfile);
+  ReadConfig(configfile);
 
 }
 
