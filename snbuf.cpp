@@ -31,9 +31,9 @@ static int burstindex = 0;  // Number of bursts seen
 static int bcount = 0;      // Number of events in present burst
 
 // These are the filenames for storing the buffer between subfiles
-static const char* fburststate = "burststate.bin";
-static const char* fburstev    = "burstev.bin";
-static const char* fbursttime  = "bursttime.bin";
+static const char* fnburststate = "burststate.bin";
+static const char* fnburstev    = "burstev.bin";
+static const char* fnbursttime  = "bursttime.bin";
 
 // This function initializes the two SN Buffers.  It tries to read in the 
 // state of the buffer from file, or otherwise initializes it empty.
@@ -179,8 +179,15 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
 }
 
 // This function saves the buffer state to disk.
+// Burstev is saved in binary, bursttime and burststate are saved in ascii
 void Saveburstbuff(){
-  ;
+  FILE* fburststate = fopen(fnburststate, "w");
+  FILE* fburstev = fopen(fnburstev, "w");
+  FILE* fbursttime = fopen(fnbursttime, "w");
+  fwrite(burstev[0], sizeof(char), sizeof(burstev), fburstev);
+  fclose(fburststate);
+  fclose(fburstev);
+  fclose(fbursttime);
 }
 
 // This function manages the writing of events into a burst file.
