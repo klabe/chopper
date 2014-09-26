@@ -278,27 +278,30 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
         fprintf(stderr, "New Epoch\n");
         alarm(20, "Stonehenge: new epoch.");
         newat.epoch++;
+        newat.longtime = newat.time50 + maxtime*newat.epoch;
       }
       else{
         const char msg[128] = "Stonehenge: Time running backward!\n";
         alarm(30, msg);
         fprintf(stderr, msg);
         // Assume for now that the clock is wrong
-        newat.time50 = oldat.time50;
+        newat.longtime = oldat.longtime;
       }
     }
 
     // Check that the clock has not jumped ahead too far:
-    if (newat.time50 - oldat.time50 > maxjump){
+    else if (newat.time50 - oldat.time50 > maxjump){
       char msg[128] = "Stonehenge: Large time gap between events!\n";
       alarm(30, msg);
       fprintf(stderr, msg);
       // Assume for now that the time is wrong
-      newat.time50 = oldat.time50;
+      newat.longtime = oldat.longtime;
     }
 
-    // Set the Internal Clock
-    newat.longtime = newat.time50 + maxtime*newat.epoch;
+    // Set the Internal Clock if everything is normal
+    else{
+      newat.longtime = newat.time50 + maxtime*newat.epoch;
+    }
 
     // Check for retriggers
     if (newat.time50 - oldat.time50 > 0 &&
@@ -565,6 +568,7 @@ int main(int argc, char *argv[])
       uint32_t rand = sfmt_genrand_uint32(&randgen);
       if(rand < prescalerand){ //Select 1% of triggers
         count.prescalen++;
+        // Write out or mark here as desired
         for(int i=0; i<8; i++){
           if(key==i)
             psstats[i]++;
