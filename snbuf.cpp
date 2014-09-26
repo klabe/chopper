@@ -72,6 +72,7 @@ void InitializeBuf(){
     burstptr.head = -1;
     burstptr.tail = -1;
     burstptr.burst = false;
+  }
   if(fburststate) fclose(fburststate);
   if(fburstev)    fclose(fburstev);
   if(fbursttime)  fclose(fbursttime);
