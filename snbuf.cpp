@@ -1,6 +1,7 @@
 // Supernova Buffer Code
 //
 // K Labe June 17 2014
+// K Labe September 26 2014 Add code to handle end of file and buffer saving
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -31,16 +32,35 @@ static int burstindex = 0;  // Number of bursts seen
 static int bcount = 0;      // Number of events in present burst
 
 // These are the filenames for storing the buffer between subfiles
-static const char* fnburststate = "burststate.bin";
+static const char* fnburststate = "burststate.txt";
 static const char* fnburstev    = "burstev.bin";
-static const char* fnbursttime  = "bursttime.bin";
+static const char* fnbursttime  = "bursttime.txt";
 
 // This function initializes the two SN Buffers.  It tries to read in the 
 // state of the buffer from file, or otherwise initializes it empty.
 void InitializeBuf(){
   // Try to read from file
-  if(0){
-    ;
+  printf("test0\n");
+  FILE* fburststate = fopen(fnburststate, "r");
+  FILE* fburstev    = fopen(fnburstev,    "rb");
+  FILE* fbursttime  = fopen(fnbursttime,  "r");
+  printf("test1\n");
+  if(fburststate && fburstev && fbursttime){
+    fscanf(fburststate, "%d %d %d", &burstptr.head, &burstptr.tail,
+                                    &burstptr.burst);
+    for(int i=0; i<EVENTNUM; i++){
+      if(fscanf(fbursttime, "%llu \n", &bursttime[i]) != 1)
+        bursttime[i] = 0;
+      burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+      if(burstev[i] == NULL)
+        printf("Error: SN Buffer could not be initialized.\n");
+    }
+    double fburstevsize = ftell(fburstev);
+    if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
+      for(int i=0; i<EVENTNUM; i++){
+        memset(burstev[i],0,NWREC*sizeof(uint32_t));
+      }
+    }
   }
   // Otherwise, initialize empty
   else{
@@ -55,6 +75,11 @@ void InitializeBuf(){
     burstptr.tail = -1;
     burstptr.burst = false;
   }
+  printf("test2\n");
+  if(fburststate) fclose(fburststate);
+  if(fburstev)    fclose(fburstev);
+  if(fbursttime)  fclose(fbursttime);
+  printf("test3\n");
 }
 
 // This function drops old events from the buffer once they expire
@@ -182,7 +207,7 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
 // Burstev is saved in binary, bursttime and burststate are saved in ascii
 void Saveburstbuff(){
   FILE* fburststate = fopen(fnburststate, "w");
-  FILE* fburstev = fopen(fnburstev, "w");
+  FILE* fburstev = fopen(fnburstev, "wb");
   FILE* fbursttime = fopen(fnbursttime, "w");
   fwrite(burstev[0], sizeof(char), sizeof(burstev), fburstev);
   for(int i=0; i<EVENTNUM; i++){
@@ -215,4 +240,11 @@ bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime,
     }
   }
   return burstptr.burst;
+}
+
+// This function wraps up the burst buffer when the end of file is reached
+void BurstEndofFile(PZdabWriter* & b, uint64_t longtime){
+  Saveburstbuff();
+  if(burstptr.burst)
+    Finishburst(b, longtime);
 }

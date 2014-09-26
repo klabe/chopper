@@ -8,4 +8,5 @@ prescale 100
 nhitburst 40
 burstwindow 10
 burstsize 30
+endrate 10
 bitmask 0x00FFF800

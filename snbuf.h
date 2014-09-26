@@ -3,6 +3,7 @@
 // K Labe, June 17 2014
 // K Labe, September 23 2014 - Move burstbool here from main file
 // K Labe, September 24 2014 - Move module variables to source file
+// K Labe, September 26 2014 - Add new functions to handle saving at end of file
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
@@ -54,3 +55,6 @@ void Saveburstbuff();
 // a bool stating whether a burst is ongoing.
 bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime, 
                int headertypes, char* outfilebase, char* header[], bool clobber);
+
+// This function wraps up the burst buffer when the end of a subfile is reached.
+void BurstEndofFile(PZdabWriter* & b, uint64_t longtime);
