@@ -40,11 +40,9 @@ static const char* fnbursttime  = "bursttime.txt";
 // state of the buffer from file, or otherwise initializes it empty.
 void InitializeBuf(){
   // Try to read from file
-  printf("test0\n");
   FILE* fburststate = fopen(fnburststate, "r");
   FILE* fburstev    = fopen(fnburstev,    "rb");
   FILE* fbursttime  = fopen(fnbursttime,  "r");
-  printf("test1\n");
   if(fburststate && fburstev && fbursttime){
     fscanf(fburststate, "%d %d %d", &burstptr.head, &burstptr.tail,
                                     &burstptr.burst);
@@ -74,12 +72,9 @@ void InitializeBuf(){
     burstptr.head = -1;
     burstptr.tail = -1;
     burstptr.burst = false;
-  }
-  printf("test2\n");
   if(fburststate) fclose(fburststate);
   if(fburstev)    fclose(fburstev);
   if(fbursttime)  fclose(fbursttime);
-  printf("test3\n");
 }
 
 // This function drops old events from the buffer once they expire
