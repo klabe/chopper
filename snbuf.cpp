@@ -185,6 +185,10 @@ void Saveburstbuff(){
   FILE* fburstev = fopen(fnburstev, "w");
   FILE* fbursttime = fopen(fnbursttime, "w");
   fwrite(burstev[0], sizeof(char), sizeof(burstev), fburstev);
+  for(int i=0; i<EVENTNUM; i++){
+    fprintf(fbursttime, "%llu \n", bursttime[i]);
+  }
+  fprintf(fburststate, "%d %d %d", burstptr.head, burstptr.tail, burstptr.burst);
   fclose(fburststate);
   fclose(fburstev);
   fclose(fbursttime);
