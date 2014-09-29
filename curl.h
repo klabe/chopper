@@ -2,6 +2,13 @@
 //
 // K Labe, September 23 2014
 // K Labe, September 24 2014 - remove variables to source file
+// K Labe, Setpember 29 2014 - add enum of types and function for it
+
+enum alarm_type {DEBUG, INFO, SUCCESS, WARNING, ERROR};
+
+// This function returns the alarm_type corresponding to the logging level
+// number
+alarm_type type(const int level);
 
 // This opens the connection to minard
 void Opencurl(char* password);

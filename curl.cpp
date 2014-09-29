@@ -8,18 +8,38 @@
 #include <stdlib.h>
 
 static CURL* curl; // curl connection object
-static const int max = 10; // maximum number of curl messages allowed per second
-static int n = 0; // number of curl messages in last second
-static int overflow = 0; // number of overfow messages
+static const int max[5] = {5, 5, 5, 5, 5}; // maximum number of curl messages allowed per second
+static int alarmn[5]   = {0, 0, 0, 0, 0}; // number of curl messages in last second
+static int overflow[5] = {0, 0, 0, 0, 0}; // number of overfow messages
 static int oldwalltime = 0;
+
+// This function return alarm_type from tony's log number
+alarm_type type(const int level){
+  if(level == 20)
+    return INFO;
+  if(level == 21)
+    return SUCCESS;
+  if(level == 30)
+    return WARNING;
+  if(level == 40)
+    return ERROR;
+  else
+    return DEBUG;
+}
 
 // This function sends alarms to the monitoring website
 void alarm(const int level, const char* msg){
   int walltime = time(NULL);
   if(walltime != oldwalltime){
-    if(overflow){
+    int overflowsum = 0;
+    for(int i=0; i<5; i++){
+      overflowsum += overflow[i];
+      overflow[i] = 0;
+      alarmn[i] = 0;
+    }
+    if(overflowsum){
       char mssg[128];
-      sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflow);
+      sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflowsum);
       char curlmsg[256];
       sprintf(curlmsg, "name=L2-client&level=30&message=%s", mssg);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
@@ -29,12 +49,10 @@ void alarm(const int level, const char* msg){
         fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
     }
     oldwalltime = walltime;
-    n = 0;
-    overflow = 0;
   }
-  n++;
-  if(n > max && level < 40) 
-    overflow++;
+  alarmn[type(level)]++;
+  if(alarmn[type(level)] > max[type(level)]) 
+    overflow[type(level)]++;
   else{
     char curlmsg[256];
     sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
