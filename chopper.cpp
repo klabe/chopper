@@ -420,7 +420,7 @@ static void setthreshold(int nhit, alltimes & alltime){
     alltime.exptime = alltime.time50 + config.lowindow;
     NHITCUT = config.nhitlo;
   }
-  if(alltime.time50 < alltime.exptime){
+  if(alltime.time50 > alltime.exptime){
     NHITCUT = config.nhithi;
   }
 }
