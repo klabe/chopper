@@ -110,18 +110,20 @@ void AddEvBFile(PZdabWriter* const b){
   }
   bursttime[burstptr.head] = 0;
   AdvanceHead();
+  bcount++;
 }
 
 // This function adds a new event to the buffer
-void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen){
+void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen,
+              PZdabWriter* const b){
   // Check whether we will overflow the buffer
   // If so, first drop oldest event, then write
   if(burstptr.head==burstptr.tail && burstptr.head!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
-    bursttime[burstptr.head] = 0;
-    for(int j=0; j<NWREC*sizeof(uint32_t); j++)
-      burstev[burstptr.head][j] = 0;
-    AdvanceHead();
+    if(!burstptr.burst)
+      fprintf(stderr, "ALARM: Burst Threshold larger than buffer!\n");
+    else
+      AddEvBFile(b);
   }
   
   // Write the event to the buffer
@@ -158,7 +160,6 @@ int Burstlength(){
 void Writeburst(uint64_t longtime, PZdabWriter* b){
   while(bursttime[burstptr.head] < longtime - ENDWINDOW && burstptr.head < burstptr.tail){
     AddEvBFile(b);
-    bcount++;
   }
 }
 
