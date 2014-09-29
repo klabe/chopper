@@ -226,12 +226,44 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
 }
 
+// This function checks the clocks for various anomalies and raises alarms.
+// It returns true if the event passes the tests, false otherwise
+bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
+  // Check for time running backward:
+  if(newat.time50 < standard.time50){
+    // Is it reasonable that the clock rolled over?
+    if((standard.time50 + newat.time50 < maxtime + maxjump) &&
+        dd < maxdrift && (standard.time50 > maxtime - maxjump) ){
+      fprintf(stderr, "New Epoch\n");
+      alarm(20, "Stonehenge: new epoch.");
+      newat.epoch++;
+    }
+    else{
+      const char msg[128] = "Stonehenge: Time running backward!\n";
+      alarm(30, msg);
+      fprintf(stderr, msg);
+      return true;
+    }  
+  }
+  // Check that time has not jumped too far ahead
+  else if(newat.time50 - standard.time50 > maxjump){
+    char msg[128] = "Stonehenge: Large time gap between events!\n";
+    alarm(30, msg);
+    fprintf(stderr, msg);
+    return true;
+  }
+  else
+    return false;
+}
+
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                               counts & count, bool & passretrig, bool & retrig,
                               l2stats & stat)
 {
+  static alltimes standard; // Previous unproblematic timestamp
+  static bool problem;      // Was there a problem with previous timestamp?
   alltimes newat = oldat;
   if(count.eventn == 1){
     newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
@@ -240,6 +272,8 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                              + hits->TriggerCardData.Bc10_1;
     if(newat.time50 == 0) stat.orphan++;
     newat.longtime = newat.time50;
+    standard = newat;
+    problem = false;
   }
   else{
     // Get the current 50MHz Clock Time
@@ -282,37 +316,16 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       return newat;
     }
 
-    // Check for time running backward:
-    if (newat.time50 < oldat.time50){
-      // Is it reasonable that the clock rolled over?
-      if ((oldat.time50 + newat.time50 < maxtime + maxjump) && dd < maxdrift && (oldat.time50 > maxtime - maxjump) ) {
-        fprintf(stderr, "New Epoch\n");
-        alarm(20, "Stonehenge: new epoch.");
-        newat.epoch++;
-        newat.longtime = newat.time50 + maxtime*newat.epoch;
-      }
-      else{
-        const char msg[128] = "Stonehenge: Time running backward!\n";
-        alarm(30, msg);
-        fprintf(stderr, msg);
-        // Assume for now that the clock is wrong
-        newat.longtime = oldat.longtime;
-      }
-    }
-
-    // Check that the clock has not jumped ahead too far:
-    else if (newat.time50 - oldat.time50 > maxjump){
-      char msg[128] = "Stonehenge: Large time gap between events!\n";
-      alarm(30, msg);
-      fprintf(stderr, msg);
-      // Assume for now that the time is wrong
-      newat.longtime = oldat.longtime;
-    }
-
-    // Set the Internal Clock if everything is normal
-    else{
+    // Check for well-orderedness
+    if(IsConsistent(newat, standard, dd)){
       newat.longtime = newat.time50 + maxtime*newat.epoch;
+      standard = newat;
     }
+    else if(problem)
+      // RESET EVERYTHING
+      ;
+    else
+      problem = true;
   }
   return newat;
 }
