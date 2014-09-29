@@ -4,6 +4,7 @@
 // K Labe, September 23 2014 - Move burstbool here from main file
 // K Labe, September 24 2014 - Move module variables to source file
 // K Labe, September 26 2014 - Add new functions to handle saving at end of file
+// K Labe, September 29 2014 - Add ClearBuffer and AdvanceHead functions
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
@@ -31,7 +32,7 @@ int Burstlength();
 
 // This function writers out the allowable portion of the buffer to a burst 
 // file b.  Longtime again specifies the current time (see comment elsewhere 
-// for definition).  By allowable, we mean that the portion of the burst not
+// for definition).  By allowable, we mean that portion of the burst not
 // occuring within the integration period used to determine whether the burst 
 // has ended.
 void Writeburst(uint64_t longtime, PZdabWriter* b);
@@ -65,3 +66,9 @@ void BurstEndofFile(PZdabWriter* & b, uint64_t longtime);
 // This function just advances the pointer to the head of the burst properly
 // when the buffer is updated.
 void AdvanceHead();
+
+// This function is used to clear the buffer when Stonehenge detects that 
+// the event timestamps have jumped in a non-recoverable way.  b and longtime 
+// are used in the event that a burst is ongoing when the buffer needs to be 
+// cleared.
+void ClearBuffer(PZdabWriter* & b, uint64_t longtime);

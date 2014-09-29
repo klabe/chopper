@@ -194,6 +194,7 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   burstindex++;
   // Reset to prepare for next burst
   bcount = 0;
+  burstptr.burst = false;
 }
 
 // This function saves the buffer state to disk.
@@ -229,7 +230,6 @@ bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime,
     // Check whether the burst has ended
     if(Burstlength() < config.endrate){
       Finishburst(b, alltime.longtime);
-      burstptr.burst = false;
     }
   }
   return burstptr.burst;
@@ -248,4 +248,20 @@ void AdvanceHead(){
     burstptr.head++;
   else
     burstptr.head = 0;
+}
+
+// This function is used to reset the buffer in the event that the events 
+// arrive out of order in a non-recoverable way.
+void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
+  if(burstptr.burst)
+    Finishburst(b, longtime);
+  else{
+    for(int i=0; i<EVENTNUM; i++){
+      bursttime[i] = 0;
+      memset(burstev[i],0,NWREC*sizeof(uint32_t));
+    }
+    burstptr.head = -1;
+    burstptr.tail = -1;
+    burstptr.burst = false;
+  }
 }

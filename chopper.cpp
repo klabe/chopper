@@ -260,7 +260,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                               counts & count, bool & passretrig, bool & retrig,
-                              l2stats & stat)
+                              l2stats & stat, PZdabWriter* & b)
 {
   static alltimes standard; // Previous unproblematic timestamp
   static bool problem;      // Was there a problem with previous timestamp?
@@ -320,10 +320,17 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     if(IsConsistent(newat, standard, dd)){
       newat.longtime = newat.time50 + maxtime*newat.epoch;
       standard = newat;
+      problem = false;
     }
-    else if(problem)
+    else if(problem){
       // RESET EVERYTHING
-      ;
+      alarm(40, "Stonehenge: Events out of order - Resetting buffers.");
+      ClearBuffer(b, standard.longtime);
+      NHITCUT = config.nhithi;
+      newat.epoch = 0;
+      newat.longtime = newat.time50;
+      newat.exptime = 0; 
+    }
     else
       problem = true;
   }
@@ -524,7 +531,7 @@ int main(int argc, char *argv[])
       int key = 0;
       nhit = hits->NPmtHit;
       count.eventn++;
-      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat);
+      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
 
       // Write statistics to Redis if necessary
       updatetime(alltime);
