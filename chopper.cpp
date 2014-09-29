@@ -265,6 +265,16 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       fprintf(stderr, msg);
     }
 
+    // Check for retriggers
+    if (newat.time50 - oldat.time50 > 0 &&
+        newat.time50 - oldat.time50 <= config.retrigwindow){
+      retrig = true;
+    }
+    else{
+      retrig = false;
+      passretrig = false;
+    }
+
     // Check for pathological case
     if (newat.time50 == 0){
       newat.time50 = oldat.time50;
@@ -302,16 +312,6 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     // Set the Internal Clock if everything is normal
     else{
       newat.longtime = newat.time50 + maxtime*newat.epoch;
-    }
-
-    // Check for retriggers
-    if (newat.time50 - oldat.time50 > 0 &&
-        newat.time50 - oldat.time50 <= config.retrigwindow){
-      retrig = true;
-    }
-    else{
-      retrig = false;
-      passretrig = false;
     }
   }
   return newat;
@@ -417,10 +417,10 @@ static alltimes InitTime(){
 // The "Kalpana" solution
 static void setthreshold(int nhit, alltimes & alltime){
   if(nhit > config.lothresh){
-    alltime.exptime = alltime.time50 + config.lowindow;
+    alltime.exptime = alltime.longtime + config.lowindow;
     NHITCUT = config.nhitlo;
   }
-  if(alltime.time50 > alltime.exptime){
+  if(alltime.longtime > alltime.exptime){
     NHITCUT = config.nhithi;
   }
 }
