@@ -9,6 +9,7 @@ struct l2stats
 int l1;
 int l2;
 bool burstbool;
+int orphan;
 };
 
 // This function resets the redis statistics and is automatically called by 

@@ -13,6 +13,7 @@ void ResetStatistics(l2stats stat){
   stat.l1 = 0;
   stat.l2 = 0;
   stat.burstbool = false;
+  stat.orphan = 0;
 }
 
 // This function opens the redis connections
@@ -57,6 +58,13 @@ void Writetoredis(l2stats stat, const int time){
     if(!reply)
       alarm(30, message);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
+    if(!reply)
+      alarm(30, message);
+
+    reply = redisCommand(redis, "INCRBY ts:%d:%d:ORPHANS %d", intervals[i], ts, stat.orphan);
+    if(!reply)
+      alarm(30, message);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:ORPHANS %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
       alarm(30, message);
 

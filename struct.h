@@ -40,5 +40,4 @@ struct counts
 uint64_t prescalen;
 uint64_t eventn;
 uint64_t recordn;
-int orphan;
 };

@@ -229,7 +229,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
-                              counts & count, bool & passretrig, bool & retrig)
+                              counts & count, bool & passretrig, bool & retrig,
+                              l2stats & stat)
 {
   alltimes newat = oldat;
   if(count.eventn == 1){
@@ -237,7 +238,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                              + hits->TriggerCardData.Bc50_1;
     newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
                              + hits->TriggerCardData.Bc10_1;
-    if(newat.time50 == 0) count.orphan++;
+    if(newat.time50 == 0) stat.orphan++;
     newat.longtime = newat.time50;
   }
   else{
@@ -267,7 +268,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     // Check for pathological case
     if (newat.time50 == 0){
       newat.time50 = oldat.time50;
-      count.orphan++;
+      stat.orphan++;
       return newat;
     }
 
@@ -393,7 +394,6 @@ counts CountInit(){
   count.eventn = 0;
   count.recordn = 0;
   count.prescalen = 0;
-  count.orphan = 0;
   return count;
 }
 
@@ -511,7 +511,7 @@ int main(int argc, char *argv[])
       int key = 0;
       nhit = hits->NPmtHit;
       count.eventn++;
-      alltime = compute_times(hits, alltime, count, passretrig, retrig);
+      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat);
 
       // Write statistics to Redis if necessary
       updatetime(alltime);
