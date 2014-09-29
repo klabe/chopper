@@ -242,7 +242,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
       const char msg[128] = "Stonehenge: Time running backward!\n";
       alarm(30, msg);
       fprintf(stderr, msg);
-      return true;
+      return false;
     }  
   }
   // Check that time has not jumped too far ahead
@@ -250,10 +250,10 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
     char msg[128] = "Stonehenge: Large time gap between events!\n";
     alarm(30, msg);
     fprintf(stderr, msg);
-    return true;
+    return false;
   }
   else
-    return false;
+    return true;
 }
 
 // This function calculates the time of an event as measured by the
@@ -330,6 +330,8 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       newat.epoch = 0;
       newat.longtime = newat.time50;
       newat.exptime = 0; 
+      standard = newat;
+      problem = false;
     }
     else
       problem = true;
