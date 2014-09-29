@@ -90,11 +90,7 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
     for(int j =0; j < NWREC*sizeof(uint32_t); j++){
       burstev[burstptr.head][j] = 0;
     }
-    // Advance the head
-    if(burstptr.head < EVENTNUM -1)
-      burstptr.head++;
-    else
-      burstptr.head=0;
+    AdvanceHead();
     // Reset to empty state if we have emptied the queue
     if(burstptr.head==burstptr.tail){
       burstptr.head=-1;
@@ -113,36 +109,36 @@ void AddEvBFile(PZdabWriter* const b){
     burstev[burstptr.head][j] = 0;
   }
   bursttime[burstptr.head] = 0;
-  if(burstptr.head < EVENTNUM - 1)
-    burstptr.head++;
-  else
-    burstptr.head=0;
+  AdvanceHead();
 }
 
 // This function adds a new event to the buffer
 void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen){
   // Check whether we will overflow the buffer
+  // If so, first drop oldest event, then write
   if(burstptr.head==burstptr.tail && burstptr.head!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
+    bursttime[burstptr.head] = 0;
+    for(int j=0; j<NWREC*sizeof(uint32_t); j++)
+      burstev[burstptr.head][j] = 0;
+    AdvanceHead();
   }
   
   // Write the event to the buffer
-  else{
-    // If buffer empty, set pointers appropriately
-    if(burstptr.tail==-1){
-      burstptr.tail=0;
-      burstptr.head=0;
-    }
-    if(reclen < NWREC*4)
-      memcpy(burstev[burstptr.tail], zrec+1, reclen);
-    else
-      fprintf(stderr, "ALARM: Event too big for buffer!\n");
-    bursttime[burstptr.tail] = longtime;
-    if(burstptr.tail<EVENTNUM - 1)
-      burstptr.tail++;
-    else
-      burstptr.tail=0;
+  // If buffer empty, set pointers appropriately
+  if(burstptr.tail==-1){
+    burstptr.tail=0;
+    burstptr.head=0;
   }
+  if(reclen < NWREC*4)
+    memcpy(burstev[burstptr.tail], zrec+1, reclen);
+  else
+    fprintf(stderr, "ALARM: Event too big for buffer!\n");
+  bursttime[burstptr.tail] = longtime;
+  if(burstptr.tail<EVENTNUM - 1)
+    burstptr.tail++;
+  else
+    burstptr.tail=0;
 }
 
 // This function computes the number of burst candidate events currently
@@ -243,4 +239,12 @@ void BurstEndofFile(PZdabWriter* & b, uint64_t longtime){
   Saveburstbuff();
   if(burstptr.burst)
     Finishburst(b, longtime);
+}
+
+// This function advances the head pointer appropriately
+void AdvanceHead(){
+  if(burstptr.head < EVENTNUM - 1)
+    burstptr.head++;
+  else
+    burstptr.head = 0;
 }

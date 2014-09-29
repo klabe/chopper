@@ -58,3 +58,7 @@ bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime,
 
 // This function wraps up the burst buffer when the end of a subfile is reached.
 void BurstEndofFile(PZdabWriter* & b, uint64_t longtime);
+
+// This function just advances the pointer to the head of the burst properly
+// when the buffer is updated.
+void AdvanceHead();
