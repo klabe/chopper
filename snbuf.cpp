@@ -22,9 +22,9 @@ int tail;
 bool burst;
 };
 
+// Stuff for the burst buffer
 static const int EVENTNUM = 1000;        // Maximum Burst buffer depth
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
-
 static char* burstev[EVENTNUM];      // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
 static burststate burstptr; // Object to hold pointers to head and tail of burst
@@ -32,13 +32,20 @@ static int starttick = 0;   // Start time (in 50 MHz ticks) of burst
 static int burstindex = 0;  // Number of bursts seen
 static int bcount = 0;      // Number of events in present burst
 
+// Stuff for the header buffer
+static const int headertypes = 3;
+static const uint32_t Headernames[headertypes] = 
+  { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
+static char* header[headertypes];
+
 // These are the filenames for storing the buffer between subfiles
 static const char* fnburststate = "burststate.txt";
 static const char* fnburstev    = "burstev.bin";
 static const char* fnbursttime  = "bursttime.txt";
 
 // This function initializes the two SN Buffers.  It tries to read in the 
-// state of the buffer from file, or otherwise initializes it empty.
+// state of the buffer from file, or otherwise initializes it empty.  It also 
+// initializes the header buffer.
 void InitializeBuf(){
   // Try to read from file
   FILE* fburststate = fopen(fnburststate, "r");
@@ -74,6 +81,14 @@ void InitializeBuf(){
     burstptr.tail = -1;
     burstptr.burst = false;
   }
+
+  // Set up the header buffer
+  for(int i=0; i<headertypes; i++){
+    header[i] = (char*) malloc(NWREC);
+    memset(header[i], 0, NWREC);
+  }
+
+  // Close files in necessary
   if(fburststate) fclose(fburststate);
   if(fburstev)    fclose(fburstev);
   if(fbursttime)  fclose(fbursttime);
@@ -167,8 +182,8 @@ void Writeburst(uint64_t longtime, PZdabWriter* b){
 }
 
 // This function opens a new burst file
-void Openburst(PZdabWriter* & b, uint64_t longtime, int headertypes,
-               char* outfilebase, char* header[], bool clobber){
+void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase, 
+               bool clobber){
   bcount = Burstlength();
   starttick = longtime;
   fprintf(stderr, "Burst %i has begun!\n", burstindex);
@@ -218,11 +233,11 @@ void Saveburstbuff(){
 
 // This function manages the writing of events into a burst file.
 bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime, 
-               int headertypes, char* outfilebase, char* header[], bool clobber){
+               char* outfilebase, bool clobber){
   // Open a new burst file if a burst starts
   if(!burstptr.burst){
     if(Burstlength() > config.burstsize){
-      Openburst(b, alltime.longtime, headertypes, outfilebase, header, clobber);
+      Openburst(b, alltime.longtime, outfilebase, clobber);
       burstptr.burst = true;
     }
   }
@@ -266,5 +281,18 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
     burstptr.head = -1;
     burstptr.tail = -1;
     burstptr.burst = false;
+  }
+}
+
+// This function checks whether the passed record is a header record, and,
+// if it is, writes it to the header buffer.
+void FillHeaderBuffer(nZDAB* const zrec){
+  for(int i=0; i<headertypes; i++){
+    if(zrec->bank_name == Headernames[i]){
+      memset(header[i], 0, NWREC);
+      unsigned long recLen = ((GenericRecordHeader*)zrec)->RecordLength;
+      SWAP_INT32(zrec,recLen/sizeof(uint32_t));
+      memcpy(header[i], zrec+1, recLen);
+    }
   }
 }

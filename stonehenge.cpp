@@ -470,16 +470,6 @@ int main(int argc, char *argv[])
   PZdabWriter* w1  = Output(outfilebase, clobber);
   PZdabWriter* b = NULL; // Burst event file
 
-  // Set up the Header Buffer
-  const int headertypes = 3;
-  const uint32_t Headernames[headertypes] = 
-    { RHDR_RECORD, TRIG_RECORD, EPED_RECORD };
-  char* header[headertypes];
-  for(int i = 0; i<headertypes; i++){
-    header[i] = (char*) malloc(NWREC);
-    memset(header[i],0,NWREC);
-  }
-
   // Set up the Burst Buffer
   InitializeBuf();
 
@@ -496,16 +486,8 @@ int main(int argc, char *argv[])
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
-    // Check to fill Header Buffer
-    for(int i=0; i<headertypes; i++){
-      if (zrec->bank_name == Headernames[i]){
-        memset(header[i],0,NWREC);
-        unsigned long recLen=((GenericRecordHeader*)zrec)->RecordLength;
-        SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-        memcpy(header[i], zrec+1, recLen);
-        SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-      }
-    }
+    // Fill Header buffer if necessary
+    FillHeaderBuffer(zrec);
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
@@ -551,7 +533,7 @@ int main(int argc, char *argv[])
         // logical-OR the return value of Burstfile with the existing value of 
         // stat.burstbool.
         stat.burstbool = (stat.burstbool | Burstfile(b, config, alltime,
-                          headertypes, outfilebase, header, clobber) );
+                          outfilebase, clobber) );
 
       } // End Burst Loop
       // L2 Filter

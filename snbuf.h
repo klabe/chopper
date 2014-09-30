@@ -5,10 +5,11 @@
 // K Labe, September 24 2014 - Move module variables to source file
 // K Labe, September 26 2014 - Add new functions to handle saving at end of file
 // K Labe, September 29 2014 - Add ClearBuffer and AdvanceHead functions
+// K Labe, September 30 2014 - Add FillHeaderBuffer() function
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
-// otherwise initializes empty.
+// otherwise initializes empty.  It also initializes the header buffer.
 void InitializeBuf();
 
 // This function drops old events from the buffer once they expire
@@ -41,8 +42,8 @@ void Writeburst(uint64_t longtime, PZdabWriter* b);
 // definition elsewhere).  Headertypes in the number of distinct kinds of header
 // records saved in the header buffer (header[]).  Clobber tells whether to
 // write over existing files.
-void Openburst(PZdabWriter* & b, uint64_t longtime, int headertypes,
-               char* outfilebase, char* header[], bool clobber);
+void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
+               bool clobber);
 
 // This function writes out the remainder of the burst buffer when the burst
 // ends into the file b, and closes it.  Longtime is the present time (see 
@@ -58,7 +59,7 @@ void Saveburstbuff();
 // This function manages the writing of events into a burst file.  It returns
 // a bool stating whether a burst is ongoing.
 bool Burstfile(PZdabWriter* & b, configuration config, alltimes alltime, 
-               int headertypes, char* outfilebase, char* header[], bool clobber);
+               char* outfilebase, bool clobber);
 
 // This function wraps up the burst buffer when the end of a subfile is reached.
 void BurstEndofFile(PZdabWriter* & b, uint64_t longtime);
@@ -72,3 +73,7 @@ void AdvanceHead();
 // are used in the event that a burst is ongoing when the buffer needs to be 
 // cleared.
 void ClearBuffer(PZdabWriter* & b, uint64_t longtime);
+
+// This function checks the zdab record zrec, and if it is one of the header-
+// type records, it records it in the header buffer.
+void FillHeaderBuffer(nZDAB* const zrec);
