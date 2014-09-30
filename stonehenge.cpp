@@ -241,7 +241,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
     }  
   }
   // Check that time has not jumped too far ahead
-  else if(newat.time50 - standard.time50 > maxjump){
+  if(newat.time50 - standard.time50 > maxjump){
     char msg[128] = "Stonehenge: Large time gap between events!\n";
     alarm(30, msg);
     fprintf(stderr, msg);
