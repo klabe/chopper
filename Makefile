@@ -1,15 +1,15 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
          -fdiagnostics-show-option $(curl-config --cflags) 
 
-LINKFLAGS = -L/cp/home/cp/klabe/hiredis -L/cp/home/cp/klabe/chopper/SFMT-src-1.4.1 -lhiredis -lcurl -lsfmt
+LINKFLAGS = -L/cp/home/cp/klabe/hiredis -lhiredis -lcurl
 
-all: chopper 
+all: stonehenge 
 
-chopper: chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o output.o config.o
-	g++ $(CFLAGS) -o chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o output.o config.o $(LINKFLAGS)
+stonehenge: stonehenge.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o output.o config.o
+	g++ $(CFLAGS) -o stonehenge stonehenge.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o output.o config.o $(LINKFLAGS)
 
-chopper.o: chopper.cpp snbuf.h curl.h redis.h struct.h output.h config.h
-	g++ -c chopper.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis -I/home/cp/klabe/chopper/SFMT-src-1.4.1 -DSFMT_MEXP=19937
+stonehenge.o: stonehenge.cpp snbuf.h curl.h redis.h struct.h output.h config.h
+	g++ -c stonehenge.cpp $(CFLAGS) -I/cp/home/cp/klabe/hiredis 
 
 
 PZdabFile.o: PZdabFile.cxx
@@ -41,4 +41,4 @@ config.o: config.cpp
 
 
 clean:
-	rm -f chopper chopper.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o
+	rm -f stonehenge stonehenge.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o

@@ -1,4 +1,4 @@
-Chopper (Stonehenge) Readme file.
+Stonehenge (Chopper) Readme file.
 
 Installation instructions
 -------------------------
@@ -10,7 +10,7 @@ paths.  Thereafter, a simple "make" should suffice to build the software.
 Because of the external library dependencies (specifically, hiredis
 in order to communicate to the monitoring database), it is useful to run 
 Stonehenge  in a wrapper script to avoid needing to set the 
-LD_LIBRARY_PATH yourself.  This is available at chopper.sh.
+LD_LIBRARY_PATH yourself.  This is available at stonehenge.sh.
 
 
 A Note on the Format of Configuration Files
@@ -34,12 +34,12 @@ An example configuration file is available at default.cnfg
 
 Catalogue of headers and dependencies
 ------------------------------------
-chopper.cpp - Main Stonehenge source file
-  struct.h  - defines a bunch of structs
-  config.h  - reads the configuration file
-  curl.h    - handles connection to minard alarm/logging system
-    output.h  - handles writing of zdab files
-    redis.h   - handles connection to redis server
-    snbuf.h   - handles burst buffer
-  libcurl   - needed for logging
-  libhiredis- needed for contacting redis server
+stonehenge.cpp - Main Stonehenge source file
+  struct.h     - defines a bunch of structs
+  config.h     - reads the configuration file
+  curl.h       - handles connection to minard alarm/logging system
+    output.h   - handles writing of zdab files
+    redis.h    - handles connection to redis server
+    snbuf.h    - handles burst buffer
+  libcurl      - needed for logging
+  libhiredis   - needed for contacting redis server
