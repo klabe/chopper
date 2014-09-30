@@ -7,7 +7,7 @@
 #include <fstream>
 
 // Number of parameters held by the configuration object
-static const int paramn = 12;
+static const int paramn = 11;
 
 // This object keeps track of which configuration parameters have been set
 static bool state[paramn];
@@ -54,10 +54,10 @@ void ReadConfig(const char* filename, configuration & config){
      else if(!strcmp(param, "lowindow")    ){config.lowindow     = value; bit(3);}
      else if(!strcmp(param, "nhitretrig")  ){config.retrigcut    = value; bit(4);}
      else if(!strcmp(param, "retrigwindow")){config.retrigwindow = value; bit(5);}
-     else if(!strcmp(param, "nhitburst")   ){config.nhitbcut     = value; bit(7);}
-     else if(!strcmp(param, "burstwindow") ){config.burstwindow  = value; bit(8);}
-     else if(!strcmp(param, "burstsize")   ){config.burstsize    = value; bit(9);}
-     else if(!strcmp(param, "endrate")     ){config.endrate      = value; bit(10);}
+     else if(!strcmp(param, "nhitburst")   ){config.nhitbcut     = value; bit(6);}
+     else if(!strcmp(param, "burstwindow") ){config.burstwindow  = value; bit(7);}
+     else if(!strcmp(param, "burstsize")   ){config.burstsize    = value; bit(8);}
+     else if(!strcmp(param, "endrate")     ){config.endrate      = value; bit(9);}
      else if(!strcmp(param, "bitmask")     ){;} // Do nothing
      else{
         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
@@ -67,7 +67,7 @@ void ReadConfig(const char* filename, configuration & config){
    }
    rewind(configfile);
    while(fscanf(configfile, "%s %x\n", param, &value)==2){
-     if(strcmp(param, "bitmask") == 0){ config.bitmask = value; bit(11);}
+     if(strcmp(param, "bitmask") == 0){ config.bitmask = value; bit(10);}
    }
 
    // Check whether all bits were set

@@ -2,21 +2,15 @@ Chopper (Stonehenge) Readme file.
 
 Installation instructions
 -------------------------
-After cloning the chopper git repository, you must compile the sfmt library.
-In the SFMT directory, run the following commands:
-
-gcc -c -Wall -Werror -fpic -DSFMT_MEXP=19937 SFMT.c
-gcc -shared -o libsfmt.so SFMT.o
-
-In addition, the hiredis and libcurl libraries are required.  These must be
-installed independently.  Furthermore, the Makefile must be updated to provide
-the appropriate library and inclusion paths.  Thereafter, a simple "make"
-should suffice to build the software.
+In addition to downloading the chopper repository,  the hiredis and libcurl 
+libraries are required.  These must be installed independently.  Furthermore, 
+the Makefile must be updated to provide the appropriate library and inclusion 
+paths.  Thereafter, a simple "make" should suffice to build the software.
 
 Because of the external library dependencies (specifically, hiredis
-in order to communicate to the monitoring database, and sfmt for geenrating
-random numbers), it is useful to run Stonehenge  in a wrapper script to avoid 
-needing to set the LD_LIBRARY_PATH yourself.  This is available at chopper.sh.
+in order to communicate to the monitoring database), it is useful to run 
+Stonehenge  in a wrapper script to avoid needing to set the 
+LD_LIBRARY_PATH yourself.  This is available at chopper.sh.
 
 
 A Note on the Format of Configuration Files
@@ -47,6 +41,5 @@ chopper.cpp - Main Stonehenge source file
     output.h  - handles writing of zdab files
     redis.h   - handles connection to redis server
     snbuf.h   - handles burst buffer
-  SFMT      - External random number generator
   libcurl   - needed for logging
   libhiredis- needed for contacting redis server
