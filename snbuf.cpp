@@ -293,6 +293,7 @@ void FillHeaderBuffer(nZDAB* const zrec){
       unsigned long recLen = ((GenericRecordHeader*)zrec)->RecordLength;
       SWAP_INT32(zrec,recLen/sizeof(uint32_t));
       memcpy(header[i], zrec+1, recLen);
+      SWAP_INT32(zrec,recLen/sizeof(uint32_t));
     }
   }
 }

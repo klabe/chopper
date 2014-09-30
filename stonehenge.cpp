@@ -350,9 +350,9 @@ uint32_t triggertype(PmtEventRecord* hits){
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
 bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
-              const bool retrig, int &key){
+              const bool retrig, int stats[]){
   bool pass = false;
-  key = 0;
+  int key = 0;
   if(nhit > NHITCUT){
     pass = true;
     key +=1;
@@ -364,6 +364,10 @@ bool l2filter(const int nhit, const uint32_t word, const bool passretrig,
   if(passretrig && retrig && nhit > config.retrigcut){
     pass = true;
     key +=4;
+  }
+  for(int i=0; i<8; i++){
+    if(key == i)
+      stats[i]++;
   }
   return pass;
 }
@@ -492,8 +496,6 @@ int main(int argc, char *argv[])
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
-      // The key variable is used to encode which cuts the event passes
-      int key = 0;
       nhit = hits->NPmtHit;
       count.eventn++;
       alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
@@ -537,17 +539,11 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      if(l2filter(nhit, word, passretrig, retrig, key)){
+      if(l2filter(nhit, word, passretrig, retrig, stats)){
         OutZdab(zrec, w1, zfile);
         passretrig = true;
         stat.l2++;
-        for(int i=1; i<8; i++){
-          if(key==i)
-            stats[i]++;
-        }
       }
-      else
-        stats[0]++;
 
     } // End Loop for Event Records
     // Write out all non-event records:
