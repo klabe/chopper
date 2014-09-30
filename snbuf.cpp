@@ -14,6 +14,7 @@
 #include "curl.h"
 #include "output.h"
 
+#define MAXSIZE 30472 // Largest possible event
 struct burststate
 {
 int head;
@@ -49,24 +50,24 @@ void InitializeBuf(){
     for(int i=0; i<EVENTNUM; i++){
       if(fscanf(fbursttime, "%llu \n", &bursttime[i]) != 1)
         bursttime[i] = 0;
-      burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+      burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
       if(burstev[i] == NULL)
         printf("Error: SN Buffer could not be initialized.\n");
     }
     double fburstevsize = ftell(fburstev);
     if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
       for(int i=0; i<EVENTNUM; i++){
-        memset(burstev[i],0,NWREC*sizeof(uint32_t));
+        memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
       }
     }
   }
   // Otherwise, initialize empty
   else{
     for(int i=0; i<EVENTNUM; i++){
-      burstev[i] = (char*) malloc(NWREC*sizeof(uint32_t));
+      burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
       if(burstev[i] == NULL)
         printf("Error: SN Buffer could not be initialized.\n");
-      memset(burstev[i],0,NWREC*sizeof(uint32_t));
+      memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
       bursttime[i]=0;
     }
     burstptr.head = -1;
@@ -87,7 +88,7 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
   int BurstTicks = BurstLength*50000000; // length in ticks
   while(bursttime[burstptr.head] < longtime - BurstTicks && burstptr.head!=-1){
     bursttime[burstptr.head] = 0;
-    for(int j =0; j < NWREC*sizeof(uint32_t); j++){
+    for(int j =0; j < MAXSIZE*sizeof(uint32_t); j++){
       burstev[burstptr.head][j] = 0;
     }
     AdvanceHead();
@@ -105,7 +106,7 @@ void AddEvBFile(PZdabWriter* const b){
   if(b->WriteBank((uint32_t *)burstev[burstptr.head], kZDABindex))
     fprintf(stderr, "Error writing zdab to burst file\n");
   // The drop the data from the buffer
-  for(int j=0; j < NWREC*sizeof(uint32_t); j++){
+  for(int j=0; j < MAXSIZE*sizeof(uint32_t); j++){
     burstev[burstptr.head][j] = 0;
   }
   bursttime[burstptr.head] = 0;
@@ -132,10 +133,12 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
     burstptr.tail=0;
     burstptr.head=0;
   }
-  if(reclen < NWREC*4)
+  if(reclen < MAXSIZE*4)
     memcpy(burstev[burstptr.tail], zrec+1, reclen);
-  else
-    fprintf(stderr, "ALARM: Event too big for buffer!\n");
+  else{
+    fprintf(stderr, "ALARM: Event too big for buffer!  %d bytes!\n", reclen);
+    exit(1);
+  }
   bursttime[burstptr.tail] = longtime;
   if(burstptr.tail<EVENTNUM - 1)
     burstptr.tail++;
@@ -258,7 +261,7 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
   else{
     for(int i=0; i<EVENTNUM; i++){
       bursttime[i] = 0;
-      memset(burstev[i],0,NWREC*sizeof(uint32_t));
+      memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
     }
     burstptr.head = -1;
     burstptr.tail = -1;
