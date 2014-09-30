@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 static CURL* curl; // curl connection object
-static const int max[5] = {5, 5, 5, 5, 5}; // maximum number of curl messages allowed per second
+static const int max[5] = {5, 5, 5, 5, 1}; // maximum number of curl messages allowed per second
 static int alarmn[5]   = {0, 0, 0, 0, 0}; // number of curl messages in last second
 static int overflow[5] = {0, 0, 0, 0, 0}; // number of overfow messages
 static int oldwalltime = 0;

@@ -37,7 +37,6 @@
 #include <time.h>
 #include "redis.h"
 #include "curl.h"
-#include "SFMT.h"
 #include "curl/curl.h"
 #include "struct.h"
 #include "snbuf.h"
@@ -162,27 +161,23 @@ static void printhelp()
 }
 
 // This function prints some information at the end of the file
-static void PrintClosing(char* outfilebase, counts count, int stats[], 
-                         int psstats[]){
+static void PrintClosing(char* outfilebase, counts count, int stats[]){
   char messg[128];
   sprintf(messg, "Stonehenge: Subfile %s finished."
                  "  %lu events processed.\n", outfilebase, count.eventn);
   alarm(21, messg);
   printf("Done. %lu record%s, %lu event%s processed\n"
-         "%lu events selected by prescaler\n"
-         "%i events (%i prescaled events) pass no cut\n"
-         "%i events (%i prescaled events) pass only nhit cut\n"
-         "%i events (%i prescaled events) pass only external trigger cut\n"
-         "%i events (%i prescaled events) pass both external trigger and nhit cuts\n"
-         "%i events (%i prescaled events) pass only retrigger cut\n"
-         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
-         "%i events (%i prescaled events) pass both retrigger cut and nhit cut\n"
-         "%i events (%i prescaled events) pass all three cuts\n",
+         "%i events pass no cut\n"
+         "%i events pass only nhit cut\n"
+         "%i events pass only external trigger cut\n"
+         "%i events pass both external trigger and nhit cuts\n"
+         "%i events pass only retrigger cut\n"
+         "%i events pass both retrigger cut and nhit cut\n"
+         "%i events pass both retrigger cut and nhit cut\n"
+         "%i events pass all three cuts\n",
          count.recordn, count.recordn==1?"":"s", count.eventn, 
-         count.eventn==1?"":"s", count.prescalen,
-         stats[0], psstats[0], stats[1], psstats[1], stats[2], psstats[2],
-         stats[3], psstats[3], stats[4], psstats[4], stats[5], psstats[5],
-         stats[6], psstats[6], stats[7], psstats[7]);
+         count.eventn==1?"":"s", stats[0], stats[1], stats[2],
+         stats[3], stats[4], stats[5], stats[6], stats[7]);
 }
 
 // This function interprets the command line arguments to the program
@@ -390,7 +385,6 @@ void WriteConfig(char* infilename){
                      \"lowindow\":%d, \
                      \"retrigcut\":%d, \
                      \"retrigwindow\":%d, \
-                     \"prescale\":%d, \
                      \"bitmask\":%d, \
                      \"nhitbcut\":%d, \
                      \"burstwindow\":%d, \
@@ -399,9 +393,8 @@ void WriteConfig(char* infilename){
                      \"timestamp\":%d}",
                      infilename, 3, config.nhithi, config.nhitlo, config.lothresh, 
                      config.lowindow, config.retrigcut, config.retrigwindow, 
-                     config.prescale, config.bitmask, config.nhitbcut,
-                     config.burstwindow, config.burstsize, config.endrate,
-                     (int)time(NULL)); 
+                     config.bitmask, config.nhitbcut, config.burstwindow, 
+                     config.burstsize, config.endrate, (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   curl_easy_perform(couchcurl);
@@ -415,15 +408,7 @@ counts CountInit(){
   counts count;
   count.eventn = 0;
   count.recordn = 0;
-  count.prescalen = 0;
   return count;
-}
-
-// This function initializes the random number generator
-static sfmt_t InitRand(const uint32_t seed){
-  sfmt_t randgen;
-  sfmt_init_gen_rand(&randgen, seed);
-  return randgen;
 }
 
 // This function initialzes the time object
@@ -470,10 +455,6 @@ int main(int argc, char *argv[])
   }
   WriteConfig(infilename);
 
-  // Start Random number generator for prescale selection
-  sfmt_t randgen = InitRand(42); // FIXME - use run number for seed or something
-  int prescalerand =  (int) (4294967296/config.prescale);
-
   // Prepare to record statistics in redis database
   Opencurl(password);
   l2stats stat;
@@ -512,7 +493,7 @@ int main(int argc, char *argv[])
 
   // Loop over ZDAB Records
   counts count = CountInit();
-  int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0}, psstats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
+  int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   int nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
     // Check to fill Header Buffer
@@ -586,17 +567,6 @@ int main(int argc, char *argv[])
       else
         stats[0]++;
 
-      // Decide whether to put event in prescale file
-      uint32_t rand = sfmt_genrand_uint32(&randgen);
-      if(rand < prescalerand){ //Select 1% of triggers
-        count.prescalen++;
-        // Write out or mark here as desired
-        for(int i=0; i<8; i++){
-          if(key==i)
-            psstats[i]++;
-        }
-      }
-
     } // End Loop for Event Records
     // Write out all non-event records:
     else{
@@ -611,7 +581,7 @@ int main(int argc, char *argv[])
 
   if(yesredis)
     Closeredis();
-  PrintClosing(outfilebase, count, stats, psstats);
+  PrintClosing(outfilebase, count, stats);
   Closecurl();
   return 0;
 }

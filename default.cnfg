@@ -4,7 +4,6 @@ lothresh 50
 lowindow 20000
 nhitretrig 5
 retrigwindow 23
-prescale 100
 nhitburst 40
 burstwindow 10
 burstsize 30

@@ -54,7 +54,6 @@ void ReadConfig(const char* filename, configuration & config){
      else if(!strcmp(param, "lowindow")    ){config.lowindow     = value; bit(3);}
      else if(!strcmp(param, "nhitretrig")  ){config.retrigcut    = value; bit(4);}
      else if(!strcmp(param, "retrigwindow")){config.retrigwindow = value; bit(5);}
-     else if(!strcmp(param, "prescale")    ){config.prescale     = value; bit(6);}
      else if(!strcmp(param, "nhitburst")   ){config.nhitbcut     = value; bit(7);}
      else if(!strcmp(param, "burstwindow") ){config.burstwindow  = value; bit(8);}
      else if(!strcmp(param, "burstsize")   ){config.burstsize    = value; bit(9);}
