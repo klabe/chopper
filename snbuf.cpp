@@ -58,8 +58,10 @@ void InitializeBuf(){
       if(fscanf(fbursttime, "%llu \n", &bursttime[i]) != 1)
         bursttime[i] = 0;
       burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
-      if(burstev[i] == NULL)
+      if(burstev[i] == NULL){
         printf("Error: SN Buffer could not be initialized.\n");
+        alarm(30, "Stonehenge: SN Buffer could not be initialized.");
+      }
     }
     double fburstevsize = ftell(fburstev);
     if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
@@ -72,8 +74,10 @@ void InitializeBuf(){
   else{
     for(int i=0; i<EVENTNUM; i++){
       burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
-      if(burstev[i] == NULL)
+      if(burstev[i] == NULL){
         printf("Error: SN Buffer could not be initialized.\n");
+        alarm(30, "Stonehenge: SN Buffer could not be initialized.");
+      }
       memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
       bursttime[i]=0;
     }
@@ -118,8 +122,10 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
 // This fuction adds events to an open Burst File
 void AddEvBFile(PZdabWriter* const b){
   // Write out the data
-  if(b->WriteBank((uint32_t *)burstev[burstptr.head], kZDABindex))
+  if(b->WriteBank((uint32_t *)burstev[burstptr.head], kZDABindex)){
     fprintf(stderr, "Error writing zdab to burst file\n");
+    alarm(30, "Stonehenge: Error writing zdab to burst file");
+  }
   // The drop the data from the buffer
   for(int j=0; j < MAXSIZE*sizeof(uint32_t); j++){
     burstev[burstptr.head][j] = 0;
@@ -136,8 +142,11 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
   // If so, first drop oldest event, then write
   if(burstptr.head==burstptr.tail && burstptr.head!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
-    if(!burstptr.burst)
+    alarm(30, "Stonehenge: Burst buffer has overflown.");
+    if(!burstptr.burst){
       fprintf(stderr, "ALARM: Burst Threshold larger than buffer!\n");
+      alarm(30, "Stonehenge: Burst threshold larger than buffer.");
+    }
     else
       AddEvBFile(b);
   }
@@ -151,7 +160,10 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
   if(reclen < MAXSIZE*4)
     memcpy(burstev[burstptr.tail], zrec+1, reclen);
   else{
-    fprintf(stderr, "ALARM: Event too big for buffer!  %d bytes!\n", reclen);
+    char buf[128];
+    sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!  Aborting.\n", reclen);
+    fprintf(stderr, buf);
+    alarm(40, buf);
     exit(1);
   }
   bursttime[burstptr.tail] = longtime;
@@ -186,11 +198,13 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
                bool clobber){
   bcount = Burstlength();
   starttick = longtime;
-  fprintf(stderr, "Burst %i has begun!\n", burstindex);
-  alarm(20, "Burst started");
-  char buff[32];
-  sprintf(buff, "Burst_%s_%i", outfilebase, burstindex);
-  b = Output(buff, clobber);
+  char buff[128];
+  sprintf(buff, "Burst %i has begun!\n", burstindex);
+  fprintf(stderr, buff);
+  alarm(20, buff);
+  char namebuff[32];
+  sprintf(namebuff, "Burst_%s_%i", outfilebase, burstindex);
+  b = Output(namebuff, clobber);
   for(int i=0; i<headertypes; i++){
     OutHeader((GenericRecordHeader*) header[i], b, i);
   }
@@ -206,9 +220,11 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   b->Close();
   int btime = longtime - starttick;
   float btimesec = btime/50000000.;
-  fprintf(stderr, "Burst %i has ended.  It contains %i events and lasted"
+  char buff[256];
+  sprintf(buff, "Burst %i has ended.  It contains %i events and lasted"
                   " %.2f seconds.\n", burstindex, bcount, btimesec);
-  alarm(20, "Burst ended");
+  fprintf(stderr, buff);
+  alarm(20, buff);
   burstindex++;
   // Reset to prepare for next burst
   bcount = 0;
