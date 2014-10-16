@@ -216,19 +216,19 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   }
 
   if(!infilename){
-    char[128] buff;
+    char buff[128];
     sprintf(buff, "Stonehenge: Must give an input file with -i.  Aborting.\n");
     fprintf(stderr, buff);
     alarm(40, buff);
   }
   if(!outfilebase){
-    char[128] buff;
+    char buff[128];
     sprintf(buff, "Stonehenge: Must give an output base with -o.  Aborting.\n");
     fprintf(stderr, buff);
     alarm(40, buff);
   }
   if(!configfile){
-    char[128] buff;
+    char buff[128];
     sprintf(buff, "Stonehenge: Must give a configuration file with -c.  Aborting.\n");
     fprintf(stderr, buff);
     alarm(40, buff);
