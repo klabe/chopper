@@ -173,8 +173,8 @@ static void PrintClosing(char* outfilebase, counts count, int stats[]){
                  "%i events pass both retrigger cut and nhit cut\n"
                  "%i events pass both retrigger cut and nhit cut\n"
                  "%i events pass all three cuts\n",
-         outfilebase, count.recordn, count.recordn==1?"":"s", count.eventn,
-         count.eventn==1?"":"s", stats[0], stats[1], stats[2],
+         outfilebase, count.recordn, count.eventn,
+         stats[0], stats[1], stats[2],
          stats[3], stats[4], stats[5], stats[6], stats[7]);
 
   alarm(21, messg);
