@@ -119,8 +119,11 @@ static double getcmdline_d(const char opt)
   if((errno==ERANGE && (fabs(answer) == HUGE_VAL)) ||
      (errno != 0 && answer == 0) ||
      endptr == optarg || *endptr != '\0'){
-    fprintf(stderr, "%s (given with -%c) isn't a number I can handle\n",
-            optarg, opt);
+    char buff[128];
+    sprintf(buff, "Stonehenge input %s (given with -%c) isn't a number I"
+                  " can handle\n", optarg, opt);
+    fprintf(stderr, buff);
+    alarm(40, buff);
     exit(1);
   }
   return answer;
@@ -135,8 +138,11 @@ static int getcmdline_l(const char opt)
   if((errno == ERANGE && (answer == UINT_MAX)) || 
      (errno != 0 && answer == 0) || 
      endptr == optarg || *endptr != '\0'){
-    fprintf(stderr, "%s (given with -%c) isn't a number I can handle\n",
-            optarg, opt);
+    char buff[128];
+    sprintf(buff, "Stonehenge input %s (given with -%c) isn't a number I"
+                  " can handle.\n", optarg, opt);
+    fprintf(stderr, buff);
+    alarm(40, buff);
     exit(1);
   }
   return answer;
@@ -209,9 +215,24 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     }
   }
 
-  if(!infilename)  fprintf(stderr, "Give an input file with -i\n");
-  if(!outfilebase) fprintf(stderr, "Give an output base with -o\n");
-  if(!configfile)  fprintf(stderr, "Give a configuration file with -c\n");
+  if(!infilename){
+    char[128] buff;
+    sprintf(buff, "Stonehenge: Must give an input file with -i.  Aborting.\n");
+    fprintf(stderr, buff);
+    alarm(40, buff);
+  }
+  if(!outfilebase){
+    char[128] buff;
+    sprintf(buff, "Stonehenge: Must give an output base with -o.  Aborting.\n");
+    fprintf(stderr, buff);
+    alarm(40, buff);
+  }
+  if(!configfile){
+    char[128] buff;
+    sprintf(buff, "Stonehenge: Must give a configuration file with -c.  Aborting.\n");
+    fprintf(stderr, buff);
+    alarm(40, buff);
+  }
 
   if(!infilename || !outfilebase || !configfile){
     printhelp();
@@ -447,6 +468,10 @@ static void updatetime(alltimes & alltime){
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
+  // Connect to minard for monitoring
+  Opencurl(password);
+
+  // Configure the system
   char * infilename = NULL, * outfilebase = NULL;
 
   parse_cmdline(argc, argv, infilename, outfilebase);
@@ -456,12 +481,12 @@ int main(int argc, char *argv[])
   PZdabFile* zfile = new PZdabFile();
   if (zfile->Init(infile) < 0){
     fprintf(stderr, "Did not open file\n");
+    alarm(40, "Stonehenge could not open input file.  Aborting.");
     exit(1);
   }
   WriteConfig(infilename);
 
   // Prepare to record statistics in redis database
-  Opencurl(password);
   l2stats stat;
   if(yesredis) 
     Openredis(stat);
