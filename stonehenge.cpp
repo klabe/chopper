@@ -162,22 +162,23 @@ static void printhelp()
 
 // This function prints some information at the end of the file
 static void PrintClosing(char* outfilebase, counts count, int stats[]){
-  char messg[128];
+  char messg[2048];
   sprintf(messg, "Stonehenge: Subfile %s finished."
-                 "  %lu events processed.\n", outfilebase, count.eventn);
-  alarm(21, messg);
-  printf("Done. %lu record%s, %lu event%s processed\n"
-         "%i events pass no cut\n"
-         "%i events pass only nhit cut\n"
-         "%i events pass only external trigger cut\n"
-         "%i events pass both external trigger and nhit cuts\n"
-         "%i events pass only retrigger cut\n"
-         "%i events pass both retrigger cut and nhit cut\n"
-         "%i events pass both retrigger cut and nhit cut\n"
-         "%i events pass all three cuts\n",
-         count.recordn, count.recordn==1?"":"s", count.eventn, 
+                 "  %lu records,  %lu events processed.\n"
+                 "%i events pass no cut\n"
+                 "%i events pass only nhit cut\n"
+                 "%i events pass only external trigger cut\n"
+                 "%i events pass both external trigger and nhit cuts\n"
+                 "%i events pass only retrigger cut\n"
+                 "%i events pass both retrigger cut and nhit cut\n"
+                 "%i events pass both retrigger cut and nhit cut\n"
+                 "%i events pass all three cuts\n",
+         outfilebase, count.recordn, count.recordn==1?"":"s", count.eventn,
          count.eventn==1?"":"s", stats[0], stats[1], stats[2],
          stats[3], stats[4], stats[5], stats[6], stats[7]);
+
+  alarm(21, messg);
+  printf( messg );
 }
 
 // This function interprets the command line arguments to the program
@@ -544,8 +545,8 @@ int main(int argc, char *argv[])
         passretrig = true;
         stat.l2++;
       }
-
     } // End Loop for Event Records
+
     // Write out all non-event records:
     else{
       OutZdab(zrec, w1, zfile);
