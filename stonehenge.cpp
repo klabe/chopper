@@ -423,7 +423,11 @@ void WriteConfig(char* infilename){
                      config.burstsize, config.endrate, (int)time(NULL)); 
   curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
-  curl_easy_perform(couchcurl);
+  CURLcode res = curl_easy_perform(couchcurl);
+  if(res != CURLE_OK){
+    alarm(30, "Could not log parameters to CouchDB!.  Logging here instead.\n");
+    alarm(30, configs);
+  }
   curl_easy_cleanup(couchcurl);
   curl_slist_free_all(headers);
   printf("Wrote configuration.\n");
