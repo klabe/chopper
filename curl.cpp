@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 static CURL* curl; // curl connection object
-static const int max[5] = {5, 5, 5, 5, 1}; // maximum number of curl messages allowed per second
+static const int max[5] = {5, 3, 2, 5, 1}; // maximum number of curl messages allowed per second
 static int alarmn[5]   = {0, 0, 0, 0, 0}; // number of curl messages in last second
 static int overflow[5] = {0, 0, 0, 0, 0}; // number of overfow messages
 static int oldwalltime = 0;
@@ -41,7 +41,7 @@ void alarm(const int level, const char* msg){
       char mssg[128];
       sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflowsum);
       char curlmsg[256];
-      sprintf(curlmsg, "name=L2-client&level=30&message=%s", mssg);
+      sprintf(curlmsg, "name=L2-client&level=40&message=%s", mssg);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
       curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
       CURLcode res = curl_easy_perform(curl);

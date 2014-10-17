@@ -101,7 +101,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
   if(extasy){
     if(link(outname, linkname)){
       char* message = "PCA File could not be copied";
-      alarm(30, message);
+      alarm(40, message);
     }
   }
 
