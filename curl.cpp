@@ -36,7 +36,7 @@ void alarm(const int level, const char* msg){
   if(alarmn[type(level)] > max[type(level)]) 
     overflow[type(level)]++;
   else{
-    char curlmsg[256];
+    char curlmsg[2048];
     sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
@@ -44,7 +44,6 @@ void alarm(const int level, const char* msg){
     if(res != CURLE_OK)
       fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
   }
-  return;
 }
 
 // This function flushes the error buffer when necessary
@@ -68,7 +67,6 @@ void Flusherrors(){
   }
   int walltime = time(NULL);
   oldwalltime = walltime;
-  return;
 }
 
 // This function opens a curl connection
@@ -79,6 +77,8 @@ void Opencurl(char* password){
   if(curl){
 //  curl_easy_setopt(curl, CURLOPT_URL, address);
     curl_easy_setopt(curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
+    curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 2);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1);
   }
   else{
     fprintf(stderr, "Could not initialize curl object");

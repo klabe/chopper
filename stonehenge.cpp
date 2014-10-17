@@ -184,7 +184,7 @@ static void PrintClosing(char* outfilebase, counts count, int stats[]){
          stats[3], stats[4], stats[5], stats[6], stats[7]);
 
   alarm(21, messg);
-  printf( messg );
+  fprintf(stderr, messg);
 }
 
 // This function interprets the command line arguments to the program
@@ -425,7 +425,7 @@ void WriteConfig(char* infilename){
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   CURLcode res = curl_easy_perform(couchcurl);
   if(res != CURLE_OK){
-    alarm(30, "Could not log parameters to CouchDB!.  Logging here instead.\n");
+    alarm(30, "Could not log parameters to CouchDB!  Logging here instead.\n");
     alarm(30, configs);
   }
   curl_easy_cleanup(couchcurl);
