@@ -30,26 +30,8 @@ alarm_type type(const int level){
 // This function sends alarms to the monitoring website
 void alarm(const int level, const char* msg){
   int walltime = time(NULL);
-  if(walltime != oldwalltime){
-    int overflowsum = 0;
-    for(int i=0; i<5; i++){
-      overflowsum += overflow[i];
-      overflow[i] = 0;
-      alarmn[i] = 0;
-    }
-    if(overflowsum){
-      char mssg[128];
-      sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflowsum);
-      char curlmsg[256];
-      sprintf(curlmsg, "name=L2-client&level=40&message=%s", mssg);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
-      CURLcode res = curl_easy_perform(curl);
-      if(res != CURLE_OK)
-        fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
-    }
-    oldwalltime = walltime;
-  }
+  if(walltime != oldwalltime)
+    Flusherrors();
   alarmn[type(level)]++;
   if(alarmn[type(level)] > max[type(level)]) 
     overflow[type(level)]++;
@@ -62,6 +44,31 @@ void alarm(const int level, const char* msg){
     if(res != CURLE_OK)
       fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
   }
+  return;
+}
+
+// This function flushes the error buffer when necessary
+void Flusherrors(){
+  int overflowsum = 0;
+  for(int i=0; i<5; i++){
+    overflowsum += overflow[i];
+    overflow[i] = 0;
+    alarmn[i] = 0;
+  }
+  if(overflowsum){
+    char mssg[128];
+    sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflowsum);
+    char curlmsg[256];
+    sprintf(curlmsg, "name=L2-client&level=40&message=%s", mssg);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
+    CURLcode res = curl_easy_perform(curl);
+    if(res != CURLE_OK)
+      fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+  }
+  int walltime = time(NULL);
+  oldwalltime = walltime;
+  return;
 }
 
 // This function opens a curl connection

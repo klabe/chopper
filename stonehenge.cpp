@@ -531,6 +531,7 @@ int main(int argc, char *argv[])
       if (alltime.walltime!=alltime.oldwalltime){
         if(yesredis) 
           Writetoredis(stat, alltime.oldwalltime);
+        Flusherrors();
       }
 
       // Should we adjust the trigger threshold?
@@ -583,6 +584,7 @@ int main(int argc, char *argv[])
   if(w1) Close(outfilebase, w1, extasy);
   BurstEndofFile(b, alltime.longtime);
 
+  Flusherrors();
   if(yesredis)
     Closeredis();
   PrintClosing(outfilebase, count, stats);

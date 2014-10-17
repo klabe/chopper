@@ -3,6 +3,7 @@
 // K Labe, September 23 2014
 // K Labe, September 24 2014 - remove variables to source file
 // K Labe, Setpember 29 2014 - add enum of types and function for it
+// K Labe, October 17 2014   - add Flusherrors function
 
 enum alarm_type {DEBUG, INFO, SUCCESS, WARNING, ERROR};
 
@@ -20,3 +21,7 @@ void Closecurl();
 // level sets the alarm type (see minard documentation)
 // msg is the accompanying message (include &notify to alarm)
 void alarm(const int level, const char* msg);
+
+// This function is used to flush the error buffer.  It should be called 
+// each time the wall second advances.
+void Flusherrors();
