@@ -431,6 +431,7 @@ void WriteConfig(char* infilename){
   curl_easy_cleanup(couchcurl);
   curl_slist_free_all(headers);
   printf("Wrote configuration.\n");
+  fprintf(stdout, configs);
 }
 
 // This function zeros out the counters
