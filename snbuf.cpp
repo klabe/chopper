@@ -100,7 +100,7 @@ void InitializeBuf(){
 
 // This function clears the pre-loaded buffer if the times are in the future
 void Checkbuffer(uint64_t firsttime){
-  if(!burstptr.head==-1)
+  if(!burstptr.head==-1){
     uint64_t oldtime = bursttime[burstptr.head];
     if( firsttime < oldtime ){
       for(int i=0; i<EVENTNUM; i++){
@@ -110,6 +110,7 @@ void Checkbuffer(uint64_t firsttime){
       burstptr.head = -1;
       burstptr.tail = -1;
     }
+  }
 }
 
 // This function drops old events from the buffer once they expire
