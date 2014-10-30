@@ -282,6 +282,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
   static alltimes standard; // Previous unproblematic timestamp
   static bool problem;      // Was there a problem with previous timestamp?
   alltimes newat = oldat;
+  // For first event
   if(count.eventn == 1){
     newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                              + hits->TriggerCardData.Bc50_1;
@@ -291,7 +292,9 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     newat.longtime = newat.time50;
     standard = newat;
     problem = false;
+    Checkbuffer(newat.time50);
   }
+  // Otherwise
   else{
     // Get the current 50MHz Clock Time
     // Implementing Part of Method Get50MHzTime() 

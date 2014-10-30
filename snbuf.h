@@ -6,11 +6,16 @@
 // K Labe, September 26 2014 - Add new functions to handle saving at end of file
 // K Labe, September 29 2014 - Add ClearBuffer and AdvanceHead functions
 // K Labe, September 30 2014 - Add FillHeaderBuffer() function
+// K Labe, October 30 2014   - Add Checkbuffer() function
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
 // otherwise initializes empty.  It also initializes the header buffer.
 void InitializeBuf();
+
+// This function should be called after reading the first timestamp in a new
+// file to decide whether or not to throw out the loaded buffer data.
+void Checkbuffer(uint64_t firsttime);
 
 // This function drops old events from the buffer once they expire
 // longtime specifies the current time (see comment elsewhere for exact def.)

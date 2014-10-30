@@ -92,10 +92,24 @@ void InitializeBuf(){
     memset(header[i], 0, NWREC);
   }
 
-  // Close files in necessary
+  // Close files if necessary
   if(fburststate) fclose(fburststate);
   if(fburstev)    fclose(fburstev);
   if(fbursttime)  fclose(fbursttime);
+}
+
+// This function clears the pre-loaded buffer if the times are in the future
+void Checkbuffer(uint64_t firsttime){
+  if(!burstptr.head==-1)
+    uint64_t oldtime = bursttime[burstptr.head];
+    if( firsttime < oldtime ){
+      for(int i=0; i<EVENTNUM; i++){
+        bursttime[i] = 0;
+        memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
+      }
+      burstptr.head = -1;
+      burstptr.tail = -1;
+    }
 }
 
 // This function drops old events from the buffer once they expire
