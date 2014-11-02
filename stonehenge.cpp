@@ -353,8 +353,10 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       standard = newat;
       problem = false;
     }
-    else
+    else{
       problem = true;
+      newat = standard;
+    }
   }
   return newat;
 }
