@@ -2,6 +2,7 @@
 //
 // K Labe June 17 2014
 // K Labe September 26 2014 Add code to handle end of file and buffer saving
+// K Labe November 2 2014   Use a single contiguous block of memory for buffer
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -54,31 +55,32 @@ void InitializeBuf(){
   if(fburststate && fburstev && fbursttime){
     fscanf(fburststate, "%d %d %d", &burstptr.head, &burstptr.tail,
                                     &burstptr.burst);
+    burstev[0] = (char*) malloc(MAXSIZE*sizeof(uint32_t)*EVENTNUM);
+    if(burstev[0] == NULL){
+      printf("Error: SN Buffer could not be initialized.\n");
+      alarm(40, "Stonehenge: SN Buffer could not be initialized.");
+      exit(1);
+    }
     for(int i=0; i<EVENTNUM; i++){
       if(fscanf(fbursttime, "%llu \n", &bursttime[i]) != 1)
         bursttime[i] = 0;
-      burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
-      if(burstev[i] == NULL){
-        printf("Error: SN Buffer could not be initialized.\n");
-        alarm(30, "Stonehenge: SN Buffer could not be initialized.");
-      }
+      burstev[i] = (char*) (burstev[0] + MAXSIZE*sizeof(uint32_t));
     }
     double fburstevsize = ftell(fburstev);
     if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
-      for(int i=0; i<EVENTNUM; i++){
-        memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
-      }
+      memset(burstev[0], 0, MAXSIZE*sizeof(uint32_t)*EVENTNUM);
     }
   }
   // Otherwise, initialize empty
   else{
+    burstev[0] = (char*) malloc(MAXSIZE*sizeof(uint32_t)*EVENTNUM);
+    if(burstev[0] == NULL){
+      printf("Error: SN Buffer could not be initialized.\n");
+      alarm(40, "Stonehenge: SN Buffer could not be initialized.");
+      exit(1);
+    }
     for(int i=0; i<EVENTNUM; i++){
-      burstev[i] = (char*) malloc(MAXSIZE*sizeof(uint32_t));
-      if(burstev[i] == NULL){
-        printf("Error: SN Buffer could not be initialized.\n");
-        alarm(30, "Stonehenge: SN Buffer could not be initialized.");
-      }
-      memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
+      burstev[i] = (char*) (burstev[0] + MAXSIZE*sizeof(uint32_t));
       bursttime[i]=0;
     }
     burstptr.head = -1;
@@ -103,9 +105,9 @@ void Checkbuffer(uint64_t firsttime){
   if(!burstptr.head==-1){
     uint64_t oldtime = bursttime[burstptr.head];
     if( firsttime < oldtime ){
+      memset(burstev[0], 0, MAXSIZE*sizeof(uint32_t)*EVENTNUM);
       for(int i=0; i<EVENTNUM; i++){
         bursttime[i] = 0;
-        memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
       }
       burstptr.head = -1;
       burstptr.tail = -1;
@@ -122,9 +124,7 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
   int BurstTicks = BurstLength*50000000; // length in ticks
   while(bursttime[burstptr.head] < longtime - BurstTicks && burstptr.head!=-1){
     bursttime[burstptr.head] = 0;
-    for(int j =0; j < MAXSIZE*sizeof(uint32_t); j++){
-      burstev[burstptr.head][j] = 0;
-    }
+    memset(burstev[burstptr.head], 0, MAXSIZE*sizeof(uint32_t));
     AdvanceHead();
     // Reset to empty state if we have emptied the queue
     if(burstptr.head==burstptr.tail){
@@ -141,10 +141,8 @@ void AddEvBFile(PZdabWriter* const b){
     fprintf(stderr, "Error writing zdab to burst file\n");
     alarm(30, "Stonehenge: Error writing zdab to burst file");
   }
-  // The drop the data from the buffer
-  for(int j=0; j < MAXSIZE*sizeof(uint32_t); j++){
-    burstev[burstptr.head][j] = 0;
-  }
+  // Drop the data from the buffer
+  memset(burstev[burstptr.head], 0, MAXSIZE*sizeof(uint32_t));
   bursttime[burstptr.head] = 0;
   AdvanceHead();
   bcount++;
@@ -252,7 +250,7 @@ void Saveburstbuff(){
   FILE* fburststate = fopen(fnburststate, "w");
   FILE* fburstev = fopen(fnburstev, "wb");
   FILE* fbursttime = fopen(fnbursttime, "w");
-  fwrite(burstev[0], sizeof(char), sizeof(burstev), fburstev);
+  fwrite(*burstev[0], sizeof(char), MAXSIZE*sizeof(uint32_t)*EVENTNUM, fburstev);
   for(int i=0; i<EVENTNUM; i++){
     fprintf(fbursttime, "%llu \n", bursttime[i]);
   }
@@ -305,9 +303,9 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
   if(burstptr.burst)
     Finishburst(b, longtime);
   else{
+    memset(burstev[0], 0, MAXSIZE*sizeof(uint32_t)*EVENTNUM);
     for(int i=0; i<EVENTNUM; i++){
       bursttime[i] = 0;
-      memset(burstev[i],0,MAXSIZE*sizeof(uint32_t));
     }
     burstptr.head = -1;
     burstptr.tail = -1;
