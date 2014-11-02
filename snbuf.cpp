@@ -64,7 +64,7 @@ void InitializeBuf(){
     for(int i=0; i<EVENTNUM; i++){
       if(fscanf(fbursttime, "%llu \n", &bursttime[i]) != 1)
         bursttime[i] = 0;
-      burstev[i] = (char*) (burstev[0] + MAXSIZE*sizeof(uint32_t));
+      burstev[i] = (char*) (burstev[0] + i*MAXSIZE*sizeof(uint32_t));
     }
     double fburstevsize = ftell(fburstev);
     if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
@@ -80,7 +80,7 @@ void InitializeBuf(){
       exit(1);
     }
     for(int i=0; i<EVENTNUM; i++){
-      burstev[i] = (char*) (burstev[0] + MAXSIZE*sizeof(uint32_t));
+      burstev[i] = (char*) (burstev[0] + i*MAXSIZE*sizeof(uint32_t));
       bursttime[i]=0;
     }
     burstptr.head = -1;
