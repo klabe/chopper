@@ -277,7 +277,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                               counts & count, bool & passretrig, bool & retrig,
-                              l2stats & stat, PZdabWriter* & b)
+                              l2stats & stat, PZdabWriter* & b, FILE* timefile)
 {
   static alltimes standard; // Previous unproblematic timestamp
   static bool problem;      // Was there a problem with previous timestamp?
@@ -286,7 +286,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
   if(count.eventn == 1){
     newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
                              + hits->TriggerCardData.Bc50_1;
-    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) <<32)
+    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
                              + hits->TriggerCardData.Bc10_1;
     if(newat.time50 == 0) stat.orphan++;
     newat.longtime = newat.time50;
@@ -358,6 +358,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       newat = standard;
     }
   }
+  fprintf(timefile, "time50 %llu \t longtime %llu \t epoch %d\n", newat.time50, newat.longtime, newat.epoch); 
   return newat;
 }
 
@@ -487,6 +488,7 @@ int main(int argc, char *argv[])
   parse_cmdline(argc, argv, infilename, outfilebase);
 
   FILE* infile = fopen(infilename, "rb");
+  FILE* timefile = fopen("timestamps.txt", "w");
 
   PZdabFile* zfile = new PZdabFile();
   if (zfile->Init(infile) < 0){
@@ -534,7 +536,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       count.eventn++;
-      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
+      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b, timefile);
 
       // Write statistics to Redis if necessary
       updatetime(alltime);
