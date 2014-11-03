@@ -277,7 +277,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
 // varlous clocks we are interested in.
 static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
                               counts & count, bool & passretrig, bool & retrig,
-                              l2stats & stat, PZdabWriter* & b, FILE* timefile)
+                              l2stats & stat, PZdabWriter* & b)
 {
   static alltimes standard; // Previous unproblematic timestamp
   static bool problem;      // Was there a problem with previous timestamp?
@@ -489,7 +489,6 @@ int main(int argc, char *argv[])
   parse_cmdline(argc, argv, infilename, outfilebase);
 
   FILE* infile = fopen(infilename, "rb");
-  FILE* timefile = fopen("timestamps.txt", "w");
 
   PZdabFile* zfile = new PZdabFile();
   if (zfile->Init(infile) < 0){
