@@ -7,6 +7,7 @@
 // K Labe, September 29 2014 - Add ClearBuffer and AdvanceHead functions
 // K Labe, September 30 2014 - Add FillHeaderBuffer() function
 // K Labe, October 30 2014   - Add Checkbuffer() function
+// K Labe, November 3 2014   - Add GetEpoch() function
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
@@ -82,3 +83,7 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime);
 // This function checks the zdab record zrec, and if it is one of the header-
 // type records, it records it in the header buffer.
 void FillHeaderBuffer(nZDAB* const zrec);
+
+// This function checks the burst buffer to return the value of the epoch
+// parameter at the time of the last available write
+int GetEpoch();

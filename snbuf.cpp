@@ -23,6 +23,8 @@ int tail;
 bool burst;
 };
 
+static const uint64_t maxtime = (1UL << 43);
+
 // Stuff for the burst buffer
 static const int EVENTNUM = 1000;        // Maximum Burst buffer depth
 static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
@@ -325,4 +327,13 @@ void FillHeaderBuffer(nZDAB* const zrec){
       SWAP_INT32(zrec,recLen/sizeof(uint32_t));
     }
   }
+}
+
+// This function returns the epoch value used to write timestamp
+// bursttime[burstptr.head]
+int GetEpoch()
+{
+  uint64_t time = bursttime[burstptr.head];
+  int epoch = time/maxtime;
+  return epoch;
 }

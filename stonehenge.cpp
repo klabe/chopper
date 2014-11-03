@@ -454,6 +454,7 @@ static alltimes InitTime(){
   alltime.walltime = 0;
   alltime.oldwalltime = 0;
   alltime.exptime = 0;
+  alltime.epoch = GetEpoch();
   return alltime;
 }
 
@@ -505,15 +506,15 @@ int main(int argc, char *argv[])
 
   bool extasy = false;
 
-  // Initialize the various clocks
-  alltimes alltime = InitTime();
-
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, clobber);
   PZdabWriter* b = NULL; // Burst event file
 
   // Set up the Burst Buffer
   InitializeBuf();
+
+  // Initialize the various clocks
+  alltimes alltime = InitTime();
 
   // Flags for the retriggering logic:
   // passretrig true means that if the next event is a retrigger, we should 
