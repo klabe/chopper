@@ -299,7 +299,7 @@ void AdvanceHead(){
     burstptr.head = 0;
 }
 
-// This function is used to reset the buffer in the event that the events 
+// This function is used to reset the buffer if the events 
 // arrive out of order in a non-recoverable way.
 void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
   if(burstptr.burst)
