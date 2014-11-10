@@ -541,8 +541,10 @@ int main(int argc, char *argv[])
       // Write statistics to Redis if necessary
       updatetime(alltime);
       if (alltime.walltime!=alltime.oldwalltime){
-        if(yesredis) 
+        if(yesredis){
+          gtid(stat, hits);
           Writetoredis(stat, alltime.oldwalltime);
+        }
         Flusherrors();
       }
 

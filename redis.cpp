@@ -14,6 +14,8 @@ void ResetStatistics(l2stats stat){
   stat.l2 = 0;
   stat.burstbool = false;
   stat.orphan = 0;
+  stat.gtid = 0;
+  stat.run = 0;
 }
 
 // This function opens the redis connections
@@ -78,4 +80,10 @@ void Writetoredis(l2stats stat, const int time){
     }
   }
   ResetStatistics(stat);
+}
+
+// This function retrieves the current gtid and run number for writing to redis
+void gtid(l2stats stat, PmtEventRecord * hits){
+  stat.gtid = hits->TriggerCardData.BcGT; 
+  stat.run = hits->RunNumber;
 }
