@@ -358,7 +358,6 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       newat = standard;
     }
   }
-  fprintf(timefile, "time50 %llu \t longtime %llu \t epoch %d\n", newat.time50, newat.longtime, newat.epoch); 
   return newat;
 }
 
@@ -536,7 +535,7 @@ int main(int argc, char *argv[])
     if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
       nhit = hits->NPmtHit;
       count.eventn++;
-      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b, timefile);
+      alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
 
       // Write statistics to Redis if necessary
       updatetime(alltime);

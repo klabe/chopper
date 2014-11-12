@@ -73,7 +73,7 @@ void Writetoredis(l2stats & stat, const int time){
     reply = redisCommand(redis, "INCRBY ts:%d:%d:L2:gtid %d", intervals[i], ts, stat.gtid);
     if(!reply)
       alarm(30, message);
-    reply = redisCmomand(redis, "EXPIRE ts:%d:%d:L2:gtid %d", intervals[i], ts, 2400*intervals[i]);
+    reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2:gtid %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
       alarm(30, message);
 
