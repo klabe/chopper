@@ -9,7 +9,7 @@
 static redisContext* redis = NULL; // hiredis connection object
 
 // This function resets the redis statistics
-void ResetStatistics(l2stats stat){
+void ResetStatistics(l2stats & stat){
   stat.l1 = 0;
   stat.l2 = 0;
   stat.burstbool = false;
@@ -19,7 +19,7 @@ void ResetStatistics(l2stats stat){
 }
 
 // This function opens the redis connections
-void Openredis(l2stats stat){
+void Openredis(l2stats & stat){
   redis = redisConnect("cp4.uchicago.edu", 6379);
   if((redis)->err){
     printf("Error: %s\n", (redis)->errstr);
@@ -39,7 +39,7 @@ void Closeredis(){
 }
 
 // This function writes statistics to redis database
-void Writetoredis(l2stats stat, const int time){
+void Writetoredis(l2stats & stat, const int time){
   if(!redis){
     alarm(30, "Cannot connect to redis.");
     return;
@@ -97,7 +97,7 @@ void Writetoredis(l2stats stat, const int time){
 }
 
 // This function retrieves the current gtid and run number for writing to redis
-void gtid(l2stats stat, PmtEventRecord * hits){
+void gtid(l2stats & stat, PmtEventRecord * hits){
   stat.gtid = hits->TriggerCardData.BcGT; 
   stat.run = hits->RunNumber;
 }
