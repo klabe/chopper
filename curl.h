@@ -4,6 +4,7 @@
 // K Labe, September 24 2014 - remove variables to source file
 // K Labe, Setpember 29 2014 - add enum of types and function for it
 // K Labe, October 17 2014   - add Flusherrors function
+// K Labe, December 5 2014   - add setsilent function
 
 enum alarm_type {DEBUG, INFO, SUCCESS, WARNING, ERROR};
 
@@ -25,3 +26,7 @@ void alarm(const int level, const char* msg);
 // This function is used to flush the error buffer.  It should be called 
 // each time the wall second advances.
 void Flusherrors();
+
+// This function is used to set the "silent" parameter used by curl
+// while parsing the command line of stonehenge.
+void setsilent(const char* silentword);

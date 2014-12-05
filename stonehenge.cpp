@@ -60,6 +60,9 @@ static bool clobber = true;
 // Whether to write to redis database
 static bool yesredis = false;
 
+// Whether to silence alarms
+static bool silent = false;
+
 // Tells us when the 50MHz clock rolls over
 static const uint64_t maxtime = (1UL << 43);
 
@@ -193,11 +196,12 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
 {
   char* configfile = NULL;
-  const char * const opts = "hi:o:l:b:t:u:c:nr";
+  const char * const opts = "hi:o:l:b:t:u:c:s:nr";
 
   bool done = false;
   
   infilename = outfilebase = NULL;
+  const char* silentword = NULL;
 
   while(!done){ 
     const char ch = getopt(argc, argv, opts);
@@ -207,6 +211,8 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
       case 'c': configfile = optarg; break;
+
+      case 's': silentword = optarg; setsilent(silentword); break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;

@@ -12,6 +12,7 @@ static const int max[5] = {5, 3, 2, 5, 1}; // maximum number of curl messages al
 static int alarmn[5]   = {0, 0, 0, 0, 0}; // number of curl messages in last second
 static int overflow[5] = {0, 0, 0, 0, 0}; // number of overfow messages
 static int oldwalltime = 0;
+static bool silent = false; // Whether to set alarms
 
 // This function return alarm_type from tony's log number
 alarm_type type(const int level){
@@ -29,20 +30,22 @@ alarm_type type(const int level){
 
 // This function sends alarms to the monitoring website
 void alarm(const int level, const char* msg){
-  int walltime = time(NULL);
-  if(walltime != oldwalltime)
-    Flusherrors();
-  alarmn[type(level)]++;
-  if(alarmn[type(level)] > max[type(level)]) 
-    overflow[type(level)]++;
-  else{
-    char curlmsg[2048];
-    sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
-    CURLcode res = curl_easy_perform(curl);
-    if(res != CURLE_OK)
-      fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+  if(!silent){
+    int walltime = time(NULL);
+    if(walltime != oldwalltime)
+      Flusherrors();
+    alarmn[type(level)]++;
+    if(alarmn[type(level)] > max[type(level)]) 
+      overflow[type(level)]++;
+    else{
+      char curlmsg[2048];
+      sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
+      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
+      CURLcode res = curl_easy_perform(curl);
+      if(res != CURLE_OK)
+        fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+    }
   }
 }
 
@@ -86,4 +89,12 @@ void Opencurl(char* password){
 // This function closes a curl connection
 void Closecurl(){
   curl_easy_cleanup(curl);
+}
+
+// This function set the silent variable
+void setsilent(const char* silentword){
+  if( silentword == "0" )
+    silent = false;
+  else
+    silent = true;
 }
