@@ -166,6 +166,7 @@ static void printhelp()
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
+  "  -s [string]: If string is anything but "0", the alarms will be silenced\n"
   "  -h: This help text\n"
   );
 }
