@@ -28,6 +28,7 @@
 #include <string>
 #include <stdint.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <string.h>
 #include <errno.h>
 #include <math.h>
@@ -92,7 +93,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
                   const bool extasy)
 {
   char buff1[256];
-  snprintf(buff1, 256, "/trigger/home/PCAdata/%s.zdab", base);
+  snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
   const char* linkname = buff1;
   char buff2[256];
   snprintf(buff2, 256, "%s.zdab", base);

@@ -72,11 +72,8 @@ void Flusherrors(){
 // This function opens a curl connection
 void Opencurl(char* password){
   curl = curl_easy_init();
-  char address[264];
-  sprintf(address, "http://snoplus:%s@snopl.us/monitoring/log", password);
   if(curl){
-//  curl_easy_setopt(curl, CURLOPT_URL, address);
-    curl_easy_setopt(curl, CURLOPT_URL, "http://cp4.uchicago.edu:50000/monitoring/log");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://snoplus:@snopl.us/monitoring/log");
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 2);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1);
   }

@@ -20,7 +20,7 @@ void ResetStatistics(l2stats & stat){
 
 // This function opens the redis connections
 void Openredis(l2stats & stat){
-  redis = redisConnect("cp4.uchicago.edu", 6379);
+  redis = redisConnect("snotpenn01.sp.snolab.ca", 6379);
   if((redis)->err){
     printf("Error: %s\n", (redis)->errstr);
     alarm(10, "Openredis: cannot connect to redis server.");

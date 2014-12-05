@@ -5,6 +5,7 @@
 #include "struct.h"
 #include <stdlib.h>
 #include <fstream>
+#include <string.h>
 
 // Number of parameters held by the configuration object
 static const int paramn = 11;

@@ -217,8 +217,8 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
   sprintf(buff, "Burst %i has begun!\n", burstindex);
   fprintf(stderr, buff);
   alarm(20, buff);
-  char namebuff[32];
-  sprintf(namebuff, "Burst_%s_%i", outfilebase, burstindex);
+  char namebuff[128];
+  sprintf(namebuff, "/home/trigger/Burstdata/Burst_%s_%i", outfilebase, burstindex);
   b = Output(namebuff, clobber);
   for(int i=0; i<headertypes; i++){
     OutHeader((GenericRecordHeader*) header[i], b, i);
