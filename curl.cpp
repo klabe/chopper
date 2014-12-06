@@ -47,6 +47,8 @@ void alarm(const int level, const char* msg){
         fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
     }
   }
+  else
+    fprintf(stderr, "silent\n");
 }
 
 // This function flushes the error buffer when necessary
@@ -92,8 +94,8 @@ void Closecurl(){
 }
 
 // This function set the silent variable
-void setsilent(const char* silentword){
-  if( silentword == "0" )
+void setsilent(const int silentword){
+  if( silentword == 0 )
     silent = false;
   else
     silent = true;

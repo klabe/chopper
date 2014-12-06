@@ -29,4 +29,4 @@ void Flusherrors();
 
 // This function is used to set the "silent" parameter used by curl
 // while parsing the command line of stonehenge.
-void setsilent(const char* silentword);
+void setsilent(const int silentword);

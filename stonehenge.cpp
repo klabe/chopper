@@ -166,7 +166,7 @@ static void printhelp()
   "Misc/debugging options\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
-  "  -s [string]: If string is anything but \"0\", the alarms will be silenced\n"
+  "  -s [int]: 1 to silence alarms; 0 to play alarms\n"
   "  -h: This help text\n"
   );
 }
@@ -202,7 +202,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
   bool done = false;
   
   infilename = outfilebase = NULL;
-  const char* silentword = NULL;
+  int silentword;
 
   while(!done){ 
     const char ch = getopt(argc, argv, opts);
@@ -213,7 +213,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
       case 'o': outfilebase = optarg; break;
       case 'c': configfile = optarg; break;
 
-      case 's': silentword = optarg; setsilent(silentword); break;
+      case 's': silentword = getcmdline_l(ch); setsilent(silentword); break;
 
       case 'n': clobber = false; break;
       case 'r': yesredis = true; password = optarg; break;
