@@ -32,7 +32,7 @@ static const int ENDWINDOW = 1*50000000; // Integration window for ending bursts
 static char* burstev[EVENTNUM];      // Burst Event Buffer
 static uint64_t bursttime[EVENTNUM]; // Burst Time Buffer
 static burststate burstptr; // Object to hold pointers to head and tail of burst
-static int starttick = 0;   // Start time (in 50 MHz ticks) of burst
+static uint64_t starttick = 0;   // Start time (in 50 MHz ticks) of burst
 static int burstindex = 0;  // Number of bursts seen
 static int bcount = 0;      // Number of events in present burst
 
@@ -125,7 +125,7 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
     return;
   // Normal Case
   int BurstTicks = BurstLength*50000000; // length in ticks
-  while(bursttime[burstptr.head] < longtime - BurstTicks && burstptr.head!=-1){
+  while((bursttime[burstptr.head] < longtime - BurstTicks) && (burstptr.head!=-1)){
     bursttime[burstptr.head] = 0;
     memset(burstev[burstptr.head], 0, MAXSIZE*sizeof(uint32_t));
     AdvanceHead();
@@ -203,7 +203,7 @@ int Burstlength(){
 
 // This function writes out the allowable portion of the buffer to a burst file
 void Writeburst(uint64_t longtime, PZdabWriter* b){
-  while(bursttime[burstptr.head] < longtime - ENDWINDOW && burstptr.head < burstptr.tail){
+  while((bursttime[burstptr.head] < longtime - ENDWINDOW) && (burstptr.head < burstptr.tail)){
     AddEvBFile(b);
   }
 }
@@ -211,14 +211,13 @@ void Writeburst(uint64_t longtime, PZdabWriter* b){
 // This function opens a new burst file
 void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase, 
                bool clobber){
-  bcount = Burstlength();
-  starttick = longtime;
+  starttick = bursttime[burstptr.head];
   char buff[128];
   sprintf(buff, "Burst %i has begun!\n", burstindex);
   fprintf(stderr, buff);
   alarm(20, buff);
   char namebuff[128];
-  sprintf(namebuff, "~/Burstdata/Burst_%s_%i", burstname, burstindex);
+  sprintf(namebuff, "/home/cp/klabe/Burstdata/Burst_%s_%i", burstname, burstindex);
   b = Output(namebuff, clobber);
   for(int i=0; i<headertypes; i++){
     OutHeader((GenericRecordHeader*) header[i], b, i);
@@ -233,7 +232,7 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   burstptr.head = -1;
   burstptr.tail = -1;
   b->Close();
-  int btime = longtime - starttick;
+  uint64_t btime = longtime - starttick;
   float btimesec = btime/50000000.;
   char buff[256];
   sprintf(buff, "Burst %i has ended.  It contains %i events and lasted"
