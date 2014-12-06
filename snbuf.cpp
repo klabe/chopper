@@ -176,9 +176,9 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
     memcpy(burstev[burstptr.tail], zrec+1, reclen);
   else{
     char buf[128];
-    sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!  Skipping this event.\n", reclen);
+    sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!  Skipping this event.&notify\n", reclen);
     fprintf(stderr, buf);
-    alarm(40, buf);
+    alarm(30, buf);
   }
   bursttime[burstptr.tail] = longtime;
   if(burstptr.tail<EVENTNUM - 1)

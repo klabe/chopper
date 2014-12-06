@@ -59,9 +59,9 @@ void Flusherrors(){
   }
   if(overflowsum){
     char mssg[128];
-    sprintf(mssg, "ERROR OVERFLOW: %d messages skipped", overflowsum);
+    sprintf(mssg, "ERROR OVERFLOW: %d messages skipped&notify", overflowsum);
     char curlmsg[256];
-    sprintf(curlmsg, "name=L2-client&level=40&message=%s", mssg);
+    sprintf(curlmsg, "name=L2-client&level=30&message=%s", mssg);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
     CURLcode res = curl_easy_perform(curl);
