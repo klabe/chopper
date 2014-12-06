@@ -61,7 +61,7 @@ void InitializeBuf(){
     burstev[0] = (char*) malloc(MAXSIZE*sizeof(uint32_t)*EVENTNUM);
     if(burstev[0] == NULL){
       printf("Error: SN Buffer could not be initialized.\n");
-      alarm(40, "Stonehenge: SN Buffer could not be initialized.");
+      alarm(40, "Stonehenge: SN Buffer could not be initialized.", 12);
       exit(1);
     }
     for(int i=0; i<EVENTNUM; i++){
@@ -79,7 +79,7 @@ void InitializeBuf(){
     burstev[0] = (char*) malloc(MAXSIZE*sizeof(uint32_t)*EVENTNUM);
     if(burstev[0] == NULL){
       printf("Error: SN Buffer could not be initialized.\n");
-      alarm(40, "Stonehenge: SN Buffer could not be initialized.");
+      alarm(40, "Stonehenge: SN Buffer could not be initialized.", 12);
       exit(1);
     }
     for(int i=0; i<EVENTNUM; i++){
@@ -142,7 +142,7 @@ void AddEvBFile(PZdabWriter* const b){
   // Write out the data
   if(b->WriteBank((uint32_t *)burstev[burstptr.head], kZDABindex)){
     fprintf(stderr, "Error writing zdab to burst file\n");
-    alarm(30, "Stonehenge: Error writing zdab to burst file");
+    alarm(30, "Stonehenge: Error writing zdab to burst file", 0);
   }
   // Drop the data from the buffer
   memset(burstev[burstptr.head], 0, MAXSIZE*sizeof(uint32_t));
@@ -158,10 +158,10 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
   // If so, first drop oldest event, then write
   if(burstptr.head==burstptr.tail && burstptr.head!=-1){
     fprintf(stderr, "ALARM: Burst Buffer has overflowed!\n");
-    alarm(30, "Stonehenge: Burst buffer has overflown.");
+    alarm(30, "Stonehenge: Burst buffer has overflown.", 0);
     if(!burstptr.burst){
       fprintf(stderr, "ALARM: Burst Threshold larger than buffer!\n");
-      alarm(30, "Stonehenge: Burst threshold larger than buffer.");
+      alarm(30, "Stonehenge: Burst threshold larger than buffer.", 0);
     }
     else
       AddEvBFile(b);
@@ -179,7 +179,7 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
     char buf[128];
     sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!  Skipping this event.&notify\n", reclen);
     fprintf(stderr, buf);
-    alarm(30, buf);
+    alarm(30, buf, 0);
   }
   bursttime[burstptr.tail] = longtime;
   if(burstptr.tail<EVENTNUM - 1)
@@ -215,7 +215,7 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
   char buff[128];
   sprintf(buff, "Burst %i has begun!\n", burstindex);
   fprintf(stderr, buff);
-  alarm(20, buff);
+  alarm(20, buff, 0);
   char namebuff[128];
   sprintf(namebuff, "/home/cp/klabe/Burstdata/Burst_%s_%i", burstname, burstindex);
   b = Output(namebuff, clobber);
@@ -238,7 +238,7 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   sprintf(buff, "Burst %i has ended.  It contains %i events and lasted"
                   " %.2f seconds.\n", burstindex, bcount, btimesec);
   fprintf(stderr, buff);
-  alarm(20, buff);
+  alarm(20, buff, 0);
   burstindex++;
   // Reset to prepare for next burst
   bcount = 0;

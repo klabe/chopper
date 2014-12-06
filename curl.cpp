@@ -6,6 +6,7 @@
 #include "curl/curl.h"
 #include <cstring>
 #include <stdlib.h>
+#include <stdint.h>
 
 static CURL* curl; // curl connection object
 static const int max[5] = {5, 3, 2, 5, 1}; // maximum number of curl messages allowed per second
@@ -13,6 +14,9 @@ static int alarmn[5]   = {0, 0, 0, 0, 0}; // number of curl messages in last sec
 static int overflow[5] = {0, 0, 0, 0, 0}; // number of overfow messages
 static int oldwalltime = 0;
 static bool silent = false; // Whether to set alarms
+static const int ALARMTYPES = 16; // This should be the number of error alarm types
+static uint64_t alarmtimes[ALARMTYPES]; // Array of timestamps of alarms
+static const int ERRORRATE= 10; // Seconds between alarms
 
 // This function return alarm_type from tony's log number
 alarm_type type(const int level){
@@ -29,7 +33,7 @@ alarm_type type(const int level){
 }
 
 // This function sends alarms to the monitoring website
-void alarm(const int level, const char* msg){
+void alarm(const int level, const char* msg, const int id){
   if(!silent){
     int walltime = time(NULL);
     if(walltime != oldwalltime)
@@ -38,17 +42,27 @@ void alarm(const int level, const char* msg){
     if(alarmn[type(level)] > max[type(level)]) 
       overflow[type(level)]++;
     else{
-      char curlmsg[2048];
-      sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
-      curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
-      CURLcode res = curl_easy_perform(curl);
-      if(res != CURLE_OK)
-        fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+      if( (level < 40) | (alarmtimes[id] > walltime - ERRORRATE)){
+        char curlmsg[2048];
+        sprintf(curlmsg, "name=L2-client&level=%d&message=%s", level, msg);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
+        CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK)
+          fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+        alarmtimes[id] = walltime;
+      }
+      else{
+        char curlmsg[2048];
+        sprintf(curlmsg, "name=L2-client&level=30&message=%s&notify", msg);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, curlmsg);
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, (long) strlen(curlmsg));
+        CURLcode res = curl_easy_perform(curl);
+        if(res != CURLE_OK)
+          fprintf(stderr, "Logging failed: %s\n", curl_easy_strerror(res));
+      }
     }
   }
-  else
-    fprintf(stderr, "silent\n");
 }
 
 // This function flushes the error buffer when necessary

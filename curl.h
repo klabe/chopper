@@ -21,7 +21,9 @@ void Closecurl();
 // This function is used to send an alarm or log a message
 // level sets the alarm type (see minard documentation)
 // msg is the accompanying message (include &notify to alarm)
-void alarm(const int level, const char* msg);
+// id is a unique identifier for each message of level ERROR
+// note that id 0 is reserved for all non ERROR type messages
+void alarm(const int level, const char* msg, const int id);
 
 // This function is used to flush the error buffer.  It should be called 
 // each time the wall second advances.

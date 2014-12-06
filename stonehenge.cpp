@@ -105,7 +105,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
   if(extasy){
     if(link(outname, linkname)){
       char* message = "PCA File could not be copied";
-      alarm(40, message);
+      alarm(40, message, 1);
     }
   }
 
@@ -127,7 +127,7 @@ static double getcmdline_d(const char opt)
     sprintf(buff, "Stonehenge input %s (given with -%c) isn't a number I"
                   " can handle\n", optarg, opt);
     fprintf(stderr, buff);
-    alarm(40, buff);
+    alarm(40, buff, 2);
     exit(1);
   }
   return answer;
@@ -146,7 +146,7 @@ static int getcmdline_l(const char opt)
     sprintf(buff, "Stonehenge input %s (given with -%c) isn't a number I"
                   " can handle.\n", optarg, opt);
     fprintf(stderr, buff);
-    alarm(40, buff);
+    alarm(40, buff, 2);
     exit(1);
   }
   return answer;
@@ -188,7 +188,7 @@ static void PrintClosing(char* outfilebase, counts count, int stats[]){
          stats[0], stats[1], stats[2],
          stats[3], stats[4], stats[5], stats[6], stats[7]);
 
-  alarm(21, messg);
+  alarm(21, messg, 0);
   fprintf(stderr, messg);
 }
 
@@ -229,19 +229,19 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     char buff[128];
     sprintf(buff, "Stonehenge: Must give an input file with -i.  Aborting.\n");
     fprintf(stderr, buff);
-    alarm(40, buff);
+    alarm(40, buff, 2);
   }
   if(!outfilebase){
     char buff[128];
     sprintf(buff, "Stonehenge: Must give an output base with -o.  Aborting.\n");
     fprintf(stderr, buff);
-    alarm(40, buff);
+    alarm(40, buff, 2);
   }
   if(!configfile){
     char buff[128];
     sprintf(buff, "Stonehenge: Must give a configuration file with -c.  Aborting.\n");
     fprintf(stderr, buff);
-    alarm(40, buff);
+    alarm(40, buff, 2);
   }
 
   if(!infilename || !outfilebase || !configfile){
@@ -262,12 +262,12 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
     if((standard.time50 + newat.time50 < maxtime + maxjump) &&
         dd < maxdrift && (standard.time50 > maxtime - maxjump) ){
       fprintf(stderr, "New Epoch\n");
-      alarm(20, "Stonehenge: new epoch.");
+      alarm(20, "Stonehenge: new epoch.", 0);
       newat.epoch++;
     }
     else{
       const char msg[128] = "Stonehenge: Time running backward!\n";
-      alarm(30, msg);
+      alarm(30, msg, 0);
       fprintf(stderr, msg);
       return false;
     }  
@@ -275,7 +275,7 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
   // Check that time has not jumped too far ahead
   if(newat.time50 - standard.time50 > maxjump){
     char msg[128] = "Stonehenge: Large time gap between events!\n";
-    alarm(30, msg);
+    alarm(30, msg, 0);
     fprintf(stderr, msg);
     return false;
   }
@@ -325,7 +325,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
       char msg[128];
       sprintf(msg, "Stonehenge: The 50MHz clock jumped by %i ticks relative"
                    " to the 10MHz clock!\n", dd);
-      alarm(30, msg);
+      alarm(30, msg, 0);
       fprintf(stderr, msg);
     }
 
@@ -354,7 +354,7 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     }
     else if(problem){
       // RESET EVERYTHING
-      alarm(40, "Stonehenge: Events out of order - Resetting buffers.");
+      alarm(40, "Stonehenge: Events out of order - Resetting buffers.", 3);
       ClearBuffer(b, standard.longtime);
       NHITCUT = config.nhithi;
       newat.epoch = 0;
@@ -440,8 +440,8 @@ void WriteConfig(char* infilename){
   curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
   CURLcode res = curl_easy_perform(couchcurl);
   if(res != CURLE_OK){
-    alarm(30, "Could not log parameters to CouchDB!  Logging here instead.\n");
-    alarm(30, configs);
+    alarm(30, "Could not log parameters to CouchDB!  Logging here instead.\n", 0);
+    alarm(30, configs, 0);
   }
   curl_easy_cleanup(couchcurl);
   curl_slist_free_all(headers);
@@ -502,7 +502,7 @@ int main(int argc, char *argv[])
   PZdabFile* zfile = new PZdabFile();
   if (zfile->Init(infile) < 0){
     fprintf(stderr, "Did not open file\n");
-    alarm(40, "Stonehenge could not open input file.  Aborting.");
+    alarm(40, "Stonehenge could not open input file.  Aborting.", 4);
     exit(1);
   }
   WriteConfig(infilename);

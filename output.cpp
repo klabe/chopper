@@ -12,7 +12,7 @@ void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
   const int index = PZdabWriter::GetIndex(data->bank_name);
   if(index < 0){
      fprintf(stderr, "Unrecognized bank name\n");
-     alarm(40, "Outzdab: unrecognized bank name.");
+     alarm(40, "Outzdab: unrecognized bank name.", 5);
   }
   else{
     uint32_t * const bank = zfile->GetBank(data);
@@ -34,12 +34,12 @@ void OutHeader(const GenericRecordHeader * const hdr,
       case 0: index=2; break;
       case 1: index=4; break;
       case 2: index=3; break;
-      default: fprintf(stderr, "Not reached\n"); alarm(40, "Outheader: You never see this!"); exit(1);
+      default: fprintf(stderr, "Not reached\n"); alarm(40, "Outheader: You never see this!", 6); exit(1);
     }
   }
   if(w->WriteBank((uint32_t *)hdr, index)){
     fprintf(stderr,"Error writing to zdab file\n");
-    alarm(40, "Outheader: error writing to zdab file.");
+    alarm(40, "Outheader: error writing to zdab file.", 7);
   }
 }
 
@@ -55,14 +55,14 @@ PZdabWriter * Output(const char * const base, bool clobber){
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
-    alarm(40, "Output: output filename truncated");
+    alarm(40, "Output: output filename truncated", 8);
   }
 
   if(!access(outfilename, W_OK)){
     if(!clobber){
       fprintf(stderr, "%s already exists and you told me not to "
               "overwrite it!\n", outfilename);
-      alarm(40, "Output: Should not overwrite that file.");
+      alarm(40, "Output: Should not overwrite that file.", 9);
       exit(1);
     }
     unlink(outfilename);
@@ -70,7 +70,7 @@ PZdabWriter * Output(const char * const base, bool clobber){
   else if(!access(outfilename, F_OK)){
     fprintf(stderr, "%s already exists and we can't overwrite it!\n",
             outfilename);
-    alarm(40, "Output: Cannot overwrite that file.");
+    alarm(40, "Output: Cannot overwrite that file.", 10);
     exit(1);
   }
 
@@ -78,7 +78,7 @@ PZdabWriter * Output(const char * const base, bool clobber){
 
   if(!ret || !ret->IsOpen()){
     fprintf(stderr, "Could not open output file %s\n", outfilename);
-    alarm(40, "Output: Cannot open file.");
+    alarm(40, "Output: Cannot open file.", 11);
     exit(1);
   }
   return ret;

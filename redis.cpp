@@ -23,12 +23,12 @@ void Openredis(l2stats & stat){
   redis = redisConnect("snotpenn01.sp.snolab.ca", 6379);
   if((redis)->err){
     printf("Error: %s\n", (redis)->errstr);
-    alarm(10, "Openredis: cannot connect to redis server.");
+    alarm(10, "Openredis: cannot connect to redis server.", 0);
     redis = NULL;
   }
   else{
     printf("Connected to Redis.\n");
-    alarm(21, "Openredis: connected to server!");
+    alarm(21, "Openredis: connected to server!", 0);
   }
   ResetStatistics(stat);
 }
@@ -41,7 +41,7 @@ void Closeredis(){
 // This function writes statistics to redis database
 void Writetoredis(l2stats & stat, const int time){
   if(!redis){
-    alarm(30, "Cannot connect to redis.");
+    alarm(30, "Cannot connect to redis.", 0);
     return;
   }
   const char* message = "Writetoredis failed.";
@@ -51,46 +51,46 @@ void Writetoredis(l2stats & stat, const int time){
     int ts = time/intervals[i];
     void* reply = redisCommand(redis, "INCRBY ts:%d:%d:L1 %d", intervals[i], ts, stat.l1);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L1 %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
 
     reply = redisCommand(redis, "INCRBY ts:%d:%d:L2 %d", intervals[i], ts, stat.l2);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2 %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
 
     reply = redisCommand(redis, "INCRBY ts:%d:%d:ORPHANS %d", intervals[i], ts, stat.orphan);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:ORPHANS %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
 
     reply = redisCommand(redis, "SET ts:%d:%d:L2:gtid %d", intervals[i], ts, stat.gtid);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2:gtid %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
 
     reply = redisCommand(redis, "SET ts:%d:%d:L2:run %d", intervals[i], ts, stat.run);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
     reply = redisCommand(redis, "EXPIRE ts:%d:%d:L2:run %d", intervals[i], ts, 2400*intervals[i]);
     if(!reply)
-      alarm(30, message);
+      alarm(30, message, 0);
 
     if(stat.burstbool){
       reply = redisCommand(redis, "INCRBY ts:%d:id:%d:BURSTS 1", intervals[i], ts);
       if(!reply)
-        alarm(30, message);
+        alarm(30, message, 0);
       reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:BURSTS %d", intervals[i], ts, 2400*intervals[i]);
       if(!reply)
-        alarm(30, message);
+        alarm(30, message, 0);
     }
   }
   ResetStatistics(stat);
