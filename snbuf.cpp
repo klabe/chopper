@@ -24,6 +24,7 @@ bool burst;
 };
 
 static const uint64_t maxtime = (1UL << 43);
+static char* burstname;
 
 // Stuff for the burst buffer
 static const int EVENTNUM = 1000;        // Maximum Burst buffer depth
@@ -217,7 +218,7 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
   fprintf(stderr, buff);
   alarm(20, buff);
   char namebuff[128];
-  sprintf(namebuff, "/home/trigger/Burstdata/Burst_%s_%i", outfilebase, burstindex);
+  sprintf(namebuff, "~/Burstdata/Burst_%s_%i", burstname, burstindex);
   b = Output(namebuff, clobber);
   for(int i=0; i<headertypes; i++){
     OutHeader((GenericRecordHeader*) header[i], b, i);
@@ -335,4 +336,9 @@ int GetEpoch()
   uint64_t time = bursttime[burstptr.head];
   int epoch = time/maxtime;
   return epoch;
+}
+
+// This function sets the burst directory
+void setburst(char* burstdir){
+  burstname = burstdir;
 }

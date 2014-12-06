@@ -8,6 +8,7 @@
 // K Labe, September 30 2014 - Add FillHeaderBuffer() function
 // K Labe, October 30 2014   - Add Checkbuffer() function
 // K Labe, November 3 2014   - Add GetEpoch() function
+// K Labe, December 5 2014   - Add setburst() function
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
@@ -87,3 +88,5 @@ void FillHeaderBuffer(nZDAB* const zrec);
 // This function checks the burst buffer to return the value of the epoch
 // parameter at the time of the last available write
 int GetEpoch();
+
+void setburst(char* burstdir);

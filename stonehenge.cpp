@@ -197,6 +197,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
                           char * & outfilebase)
 {
   char* configfile = NULL;
+  char* burstdir = NULL;
   const char * const opts = "hi:o:l:b:t:u:c:s:nr";
 
   bool done = false;
@@ -211,6 +212,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
 
       case 'i': infilename = optarg; break;
       case 'o': outfilebase = optarg; break;
+      case 'b': burstdir = optarg; setburst(burstdir); break;
       case 'c': configfile = optarg; break;
 
       case 's': silentword = getcmdline_l(ch); setsilent(silentword); break;
