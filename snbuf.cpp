@@ -174,9 +174,7 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen
     burstptr.head=0;
   }
   if(reclen < MAXSIZE*4){
-    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
     memcpy(burstev[burstptr.tail], zrec+1, reclen);
-    SWAP_INT32(zrec,reclen/sizeof(uint32_t));
   }
   else{
     char buf[128];
