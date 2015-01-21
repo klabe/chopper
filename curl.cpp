@@ -92,7 +92,7 @@ void Flusherrors(){
 void Opencurl(char* password){
   curl = curl_easy_init();
   if(curl){
-    curl_easy_setopt(curl, CURLOPT_URL, "http://snoplus:@snopl.us/monitoring/log");
+    curl_easy_setopt(curl, CURLOPT_URL, "http://snoplus:@cp4.uchicago.edu/monitoring/log");
     curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 2);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 1);
   }

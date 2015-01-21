@@ -577,7 +577,9 @@ int main(int argc, char *argv[])
         UpdateBuf(alltime.longtime, config.burstwindow);
         int reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
-        hexdump((char*) zrec, reclen*sizeof(uint32_t));
+        SWAP_INT32(zrec, 20);
+        hexdump((char*) zrec, reclen);
+        SWAP_INT32(zrec, 20);
 
         // Write to burst file if necessary
         // A comment here about the following bit of opaque code:
