@@ -535,7 +535,7 @@ int main(int argc, char *argv[])
   // Loop over ZDAB Records
   counts count = CountInit();
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  int nhit = 0;
+  uint16_t nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
     // Fill Header buffer if necessary
     FillHeaderBuffer(zrec);
