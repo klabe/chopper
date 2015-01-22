@@ -32,8 +32,8 @@ void AddEvBFile(PZdabWriter* const b);
 // enter the buffer.  (This should not occur).
 // The PZdabWriter object is required so that an event can be written to file
 // if a burst is ongoing and the buffer overflows.
-void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen,
-              PZdabWriter* const b);
+void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
+              const uint32_t reclen, PZdabWriter* const b);
 
 // This function returns the number of events in the buffer
 int Burstlength();

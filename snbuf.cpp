@@ -152,8 +152,8 @@ void AddEvBFile(PZdabWriter* const b){
 }
 
 // This function adds a new event to the buffer
-void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, const int reclen,
-              PZdabWriter* const b){
+void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime, 
+              const uint32_t reclen, PZdabWriter* const b){
   // Check whether we will overflow the buffer
   // If so, first drop oldest event, then write
   if(burstptr.head==burstptr.tail && burstptr.head!=-1){

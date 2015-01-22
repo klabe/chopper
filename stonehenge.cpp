@@ -575,7 +575,7 @@ int main(int argc, char *argv[])
       }
       if(nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime, config.burstwindow);
-        int reclen = zfile->GetSize(hits);
+        uint32_t reclen = zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
 
         // Write to burst file if necessary
