@@ -221,7 +221,7 @@ void Openburst(PZdabWriter* & b, uint64_t longtime, char* outfilebase,
   sprintf(namebuff, "/home/cp/klabe/Burstdata/Burst_%s_%i", burstname, burstindex);
   b = Output(namebuff, clobber);
   for(int i=0; i<headertypes; i++){
-    OutHeader((GenericRecordHeader*) header[i], b, i);
+    OutHeader((nZDAB*) header[i], b);
   }
 }
 

@@ -10,8 +10,7 @@
 void OutZdab(nZDAB* const data, PZdabWriter* const zwrite, PZdabFile* const zfile);
 
 // This function writes out a header record hdr of type j to file w.
-void OutHeader(const GenericRecordHeader* const hdr, PZdabWriter* const w,
-               const int j);
+void OutHeader(nZDAB* nzdab, PZdabWriter* const w);
 
 // This function builds a new output file.  If it cannot open the file, it 
 // aborts the program, so the pointer does not need to be checked.

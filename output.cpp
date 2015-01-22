@@ -21,23 +21,16 @@ void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
 }
 
 
-// This function writes out the header buffer to a file
-void OutHeader(const GenericRecordHeader * const hdr,
-                      PZdabWriter* const w, const int j){
-  if (!hdr) return;
-
-  int index = PZdabWriter::GetIndex(hdr->RecordID);
+// This function writes out a header record from the buffer to a file
+void OutHeader(nZDAB* nzdab, PZdabWriter* const w){
+  if (!nzdab) return;
+  int index = PZdabWriter::GetIndex(nzdab->bank_name);
   if(index < 0){
-    // PZdab for some reason got zero for the header type, 
-    // but I know what it is, so I will set it
-    switch(j){
-      case 0: index=2; break;
-      case 1: index=4; break;
-      case 2: index=3; break;
-      default: fprintf(stderr, "Not reached\n"); alarm(40, "Outheader: You never see this!", 6); exit(1);
-    }
+    fprintf(stderr, "Not reached\n");
+    alarm(40, "Outheader: You never see this!", 6);
+    exit(1);
   }
-  if(w->WriteBank((uint32_t *)hdr, index)){
+  if(w->WriteBank(PZdabFile::GetBank(nzdab), index)){
     fprintf(stderr,"Error writing to zdab file\n");
     alarm(40, "Outheader: error writing to zdab file.", 7);
   }
