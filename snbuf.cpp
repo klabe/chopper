@@ -140,7 +140,8 @@ void UpdateBuf(uint64_t longtime, int BurstLength){
 // This fuction adds events to an open Burst File
 void AddEvBFile(PZdabWriter* const b){
   // Write out the data
-  if(b->WriteBank((uint32_t *)burstev[burstptr.head], kZDABindex)){
+  if(b->WriteBank(
+        PZdabFile::GetBank((nZDAB*) burstev[burstptr.head]), kZDABindex)){
     fprintf(stderr, "Error writing zdab to burst file\n");
     alarm(30, "Stonehenge: Error writing zdab to burst file", 0);
   }
@@ -174,11 +175,12 @@ void AddEvBuf(const nZDAB* const zrec, const uint64_t longtime,
     burstptr.head=0;
   }
   if(reclen < MAXSIZE*4){
-    memcpy(burstev[burstptr.tail], zrec+1, reclen);
+    memcpy(burstev[burstptr.tail], zrec, reclen);
   }
   else{
     char buf[128];
-    sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!  Skipping this event.&notify\n", reclen);
+    sprintf(buf, "ALARM: Event too big for buffer!  %d bytes!"
+                 "  Skipping this event.&notify\n", reclen);
     fprintf(stderr, buf);
     alarm(30, buf, 0);
   }
