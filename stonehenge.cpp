@@ -386,7 +386,7 @@ uint32_t triggertype(PmtEventRecord* hits){
 // Keep event if it is over nhit threshold
 // or, if it was externally triggered
 // or, if it is a retrigger to an accepted event
-bool l2filter(const int nhit, const uint32_t word, const bool passretrig, 
+bool l2filter(const uint16_t nhit, const uint32_t word, const bool passretrig, 
               const bool retrig, int stats[]){
   bool pass = false;
   int key = 0;
@@ -469,7 +469,7 @@ static alltimes InitTime(){
 
 // This function sets the trigger threshold appropriately
 // The "Kalpana" solution
-static void setthreshold(int nhit, alltimes & alltime){
+static void setthreshold(uint16_t nhit, alltimes & alltime){
   if(nhit > config.lothresh){
     alltime.exptime = alltime.longtime + config.lowindow;
     NHITCUT = config.nhitlo;
