@@ -321,9 +321,11 @@ void FillHeaderBuffer(nZDAB* const zrec){
   for(int i=0; i<headertypes; i++){
     if(zrec->bank_name == Headernames[i]){
       memset(header[i], 0, NWREC);
-      unsigned long recLen = ((GenericRecordHeader*)zrec)->RecordLength;
+      // Add 9 words for the length of the nZDAB header itself
+      // Copy the data to buffer in native format
+      uint32_t recLen = zrec->data_words+9;
       SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-      memcpy(header[i], zrec+1, recLen);
+      memcpy(header[i], zrec, recLen);
       SWAP_INT32(zrec,recLen/sizeof(uint32_t));
     }
   }
