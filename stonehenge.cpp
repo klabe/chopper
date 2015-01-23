@@ -570,8 +570,7 @@ int main(int argc, char *argv[])
 
       uint32_t word = triggertype(hits); 
       // Add 9 words for nZDAB, ZDAB record length, and hit length
-      uint32_t reclen = 9 + zrec->data_words + zfile->GetSize(hits);
-      // Unswap bytes
+      uint32_t reclen = 9 + zfile->GetSize(hits)/4;
       zfile->GetPmtRecord(zrec);
 
       if(!extasy){
