@@ -569,14 +569,17 @@ int main(int argc, char *argv[])
       // We also check for EXTASY triggers here to send PCA data to Freija
 
       uint32_t word = triggertype(hits); 
+      // Add 9 words for nZDAB, ZDAB record length, and hit length
+      uint32_t reclen = 9 + zrec->data_words + zfile->GetSize(hits);
+      // Unswap bytes
+      zfile->GetPmtRecord(zrec);
+
       if(!extasy){
         if((word & EXTASY ) != 0) 
           extasy = true;
       }
       if(nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime, config.burstwindow);
-        // Add 9 words for nZDAB, ZDAB record length, and hit length
-        uint32_t reclen = 9 + zrec->data_words + zfile->GetSize(hits);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
 
         // Write to burst file if necessary
