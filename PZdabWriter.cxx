@@ -527,6 +527,10 @@ int PZdabWriter::WriteBank(u_int32 *bank_ptr, int index)
         fast = 0;
     }
 
+    // KLabe - February 3 2015 - SWAP back if necessary
+    if(index == kZDABindex)
+      SWAP_INT32(bank_ptr, 11);
+
     return(0);
 }
 
