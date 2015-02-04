@@ -616,7 +616,6 @@ int main(int argc, char *argv[])
   // Loop over ZDAB Records
   counts count = CountInit();
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
-  uint16_t nhit = 0;
   while(nZDAB * const zrec = zfile->NextRecord()){
     // Fill Header buffer if necessary
     FillHeaderBuffer(zrec);
@@ -638,7 +637,7 @@ int main(int argc, char *argv[])
       }
 
       // Should we adjust the trigger threshold?
-      setthreshold(nhit, alltime);
+      setthreshold(hits.nhit, alltime);
 
       // Burst Detection Here
       // If the current event is over our burst nhit threshold (nhitbcut):
@@ -655,7 +654,7 @@ int main(int argc, char *argv[])
         if((word & EXTASY ) != 0) 
           extasy = true;
       }
-      if(nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
+      if(hits.nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime, config.burstwindow);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
 
@@ -670,7 +669,7 @@ int main(int argc, char *argv[])
 
       } // End Burst Loop
       // L2 Filter
-      if(l2filter(nhit, word, passretrig, retrig, stats)){
+      if(l2filter(hits.nhit, word, passretrig, retrig, stats)){
         OutZdab(zrec, w1, zfile);
         passretrig = true;
         stat.l2++;
