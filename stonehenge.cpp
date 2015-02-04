@@ -527,10 +527,10 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
 
   // Read the 50 MHz and 10 MHz clock times
   // This method copied from PZdabFile
-  hit.time50 = (uint64_t(pmtEventPtr->TriggerCardData.Bc50_2) << 11
-                        + pmtEventPtr->TriggerCardData.Bc50_1 );
-  hit.time10 = (uint64_t(pmtEventPtr->TriggerCardData.Bc10_2) << 32
-                        + pmtEventPtr->TriggerCardData.Bc10_1 );
+  hit.time50 = (uint64_t(pmtEventPtr->TriggerCardData.Bc50_2) << 11)
+                        + pmtEventPtr->TriggerCardData.Bc50_1;
+  hit.time10 = (uint64_t(pmtEventPtr->TriggerCardData.Bc10_2) << 32)
+                        + pmtEventPtr->TriggerCardData.Bc10_1;
 
   // Next retrieve the trigger word
   // This method copied from zdab_convert
@@ -555,7 +555,7 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
     SWAP_INT32(sub_header, 1);
     sub_header += jump;
     SWAP_INT32(sub_header, 1);
-    event_size += (*sub_header & SUB_LENGTH_MASK)*sizeof(uint32_t);
+    event_size += (*sub_header & SUB_LENGTH_MASK);
     SWAP_INT32(sub_header, 1);
   }
   hit.reclen = event_size;
