@@ -542,7 +542,7 @@ int main(int argc, char *argv[])
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
-    if(PmtEventRecord * hits = zfile->GetPmtRecord(zrec)){
+    if(hitinfo* hits = ReadHits(zrec));
       nhit = hits->NPmtHit;
       count.eventn++;
       alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
@@ -571,7 +571,6 @@ int main(int argc, char *argv[])
       uint32_t word = triggertype(hits); 
       // Add 9 words for nZDAB, ZDAB record length, and hit length
       uint32_t reclen = 9 + zfile->GetSize(hits)/4;
-      zfile->GetPmtRecord(zrec);
 
       if(!extasy){
         if((word & EXTASY ) != 0) 

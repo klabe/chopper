@@ -1,6 +1,7 @@
 // Struct Header
 //
 // K Labe, September 24 2014
+// K Labe, February 4 2015 - Add hitinfo struct
 
 #include <stdint.h>
 
@@ -40,4 +41,17 @@ struct counts
 uint64_t prescalen;
 uint64_t eventn;
 uint64_t recordn;
+};
+
+// Structure to hold all the information we want to read out of the hits
+// object of a ZDAB record
+struct hitinfo
+{
+uint64_t time50;
+uint64_t time10;
+uint32_t triggertype;
+uint16_t NPmtHit;
+uint32_t reclen;
+uint32_t gtid;
+uint32_t run;
 };
