@@ -562,6 +562,7 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
 
   // Finally, restore the record to its external state
   SWAP_PMT_RECORD( pmtEventPtr );
+  SWAP_INT32( pmtEventPtr+1, 3*hit.nhit);
   return 0;
 }
 

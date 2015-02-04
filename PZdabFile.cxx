@@ -753,6 +753,7 @@ u_int32 PZdabFile::GetSize(PmtEventRecord *pmtRecord)
 		
 	/* make room for sub-headers */
 	u_int32	*sub_header = &pmtRecord->CalPckType;
+    SWAP_INT32(sub_header, 1);
 	while (*sub_header & SUB_NOT_LAST) {
         u_int32 jump = (*sub_header & SUB_LENGTH_MASK);
         if( jump > MAX_BUFFSIZE/4 ){
