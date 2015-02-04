@@ -545,8 +545,7 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
   // This method copied from PZdabFile
   uint32_t event_size = 20 + 3*hit.nhit;
   uint32_t* sub_header = &pmtEventPtr->CalPckType;
-  SWAP_INT32(sub_header, 1);
-  while( *sub_header & SUB_NOT_LAST){
+  while( *sub_header & SUB_NOT_LAST ){
     uint32_t jump = (*sub_header & SUB_LENGTH_MASK);
     if( jump > MAX_BUFFSIZE/4 ){
       fprintf(stderr, "Error: wanted to jump past the end of the buffer\n");
@@ -555,8 +554,9 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
     SWAP_INT32(sub_header, 1);
     sub_header += jump;
     SWAP_INT32(sub_header, 1);
-    event_size += (*sub_header & SUB_LENGTH_MASK);
-    SWAP_INT32(sub_header, 1);
+    uint32_t datawords = (*sub_header & SUB_LENGTH_MASK);
+    event_size += datawords;
+    SWAP_INT32(sub_header, datawords);
   }
   hit.reclen = event_size;
 
