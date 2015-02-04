@@ -491,6 +491,7 @@ static hitinfo InitHit(){
   hit.reclen = 0;
   hit.gtid = 0;
   hit.run = 0;
+  return hit;
 }
 
 // This function reads out the information about each event that we need
