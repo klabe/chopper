@@ -97,7 +97,7 @@ void Writetoredis(l2stats & stat, const int time){
 }
 
 // This function retrieves the current gtid and run number for writing to redis
-void gtid(l2stats & stat, PmtEventRecord * hits){
-  stat.gtid = hits->TriggerCardData.BcGT; 
-  stat.run = hits->RunNumber;
+void gtid(l2stats & stat, hitinfo hits){
+  stat.gtid = hits.gtid; 
+  stat.run = hits.run;
 }

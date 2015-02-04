@@ -24,13 +24,13 @@ MD5Checksum.o: MD5Checksum.cxx
 	g++ -c MD5Checksum.cxx $(CFLAGS) 
 
 
-snbuf.o: snbuf.cpp 
+snbuf.o: snbuf.cpp
 	g++ -c snbuf.cpp $(CFLAGS) 
 
 curl.o: curl.cpp
 	g++ -c curl.cpp $(CFLAGS)
 
-redis.o: redis.cpp
+redis.o: redis.cpp struct.h
 	g++ -c redis.cpp -I/cp/home/cp/klabe/hiredis $(CFLAGS)
 
 output.o: output.cpp

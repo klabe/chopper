@@ -39,12 +39,20 @@
 #include "redis.h"
 #include "curl.h"
 #include "curl/curl.h"
-#include "struct.h"
 #include "snbuf.h"
 #include "output.h"
 #include "config.h"
 
 #define EXTASY 0x8000 // Bit 15
+
+/* constants */
+#define BASE_BUFFSIZE       32768UL     // base size of zdab record buffer
+#define MAX_BUFFSIZE        0x400000UL  // maximum size of zdab record buffer (4 MB)
+
+// the builder won't put out events with NHIT > 10000
+// (note that these are possible due to hardware problems)
+// but XSNOED can write an event with up to 10240 channels
+#define MAX_NHIT            10240
 
 // This variable holds the configuration of the parameters that determine the
 // behavior of the filter
@@ -285,8 +293,8 @@ bool IsConsistent(alltimes & newat, alltimes standard, const int dd){
 
 // This function calculates the time of an event as measured by the
 // varlous clocks we are interested in.
-static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
-                              counts & count, bool & passretrig, bool & retrig,
+static alltimes compute_times(hitinfo hits, alltimes oldat, counts & count, 
+                              bool & passretrig, bool & retrig,
                               l2stats & stat, PZdabWriter* & b)
 {
   static alltimes standard; // Previous unproblematic timestamp
@@ -294,10 +302,8 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
   alltimes newat = oldat;
   // For first event
   if(count.eventn == 1){
-    newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                             + hits->TriggerCardData.Bc50_1;
-    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                             + hits->TriggerCardData.Bc10_1;
+    newat.time50 = hits.time50;
+    newat.time10 = hits.time10;
     if(newat.time50 == 0) stat.orphan++;
     newat.longtime = newat.time50;
     standard = newat;
@@ -309,13 +315,11 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     // Get the current 50MHz Clock Time
     // Implementing Part of Method Get50MHzTime() 
     // from PZdabFile.cxx
-    newat.time50 = (uint64_t(hits->TriggerCardData.Bc50_2) << 11)
-                             + hits->TriggerCardData.Bc50_1;
+    newat.time50 = hits.time50;
 
     // Get the current 10MHz Clock Time
     // Method taken from zdab_convert.cpp
-    newat.time10 = (uint64_t(hits->TriggerCardData.Bc10_2) << 32)
-                             + hits->TriggerCardData.Bc10_1;
+    newat.time10 = hits.time10;
 
     // Check for consistency between clocks
     const int dd = ( (oldat.time10 - newat.time10)*5 > oldat.time50 - newat.time50 ? 
@@ -369,16 +373,6 @@ static alltimes compute_times(const PmtEventRecord * const hits, alltimes oldat,
     }
   }
   return newat;
-}
-
-// Function to retreive the trigger word
-// This method copied from zdab_convert
-uint32_t triggertype(PmtEventRecord* hits){
-  uint32_t mtcwords[6];
-  memcpy(mtcwords, &(hits->TriggerCardData), 6*sizeof(uint32_t));
-  uint32_t triggerword = ((mtcwords[3] & 0xff000000) >> 24) |
-                         ((mtcwords[4] & 0x3ffff) << 8);
-  return triggerword;
 }
 
 // This Function performs the actual L2 cut
@@ -486,6 +480,90 @@ static void updatetime(alltimes & alltime){
   alltime.walltime = (int) time(NULL);
 }
 
+// This function just puts a bunch of zeros in a hitinfo struct
+// to initialize it
+static hitinfo InitHit(){
+  hitinfo hit;
+  hit.time50 = 0;
+  hit.time10 = 0;
+  hit.triggertype = 0;
+  hit.nhit = 0;
+  hit.reclen = 0;
+  hit.gtid = 0;
+  hit.run = 0;
+}
+
+// This function reads out the information about each event that we need
+// for making decisions/processing.  It then restores the hit data to its
+// external format.
+// This is based on PZdabFile::GetPmtRecord but it does not leave things
+// in a byte-swapped state.
+static int ReadHits(nZDAB* zrec, hitinfo& hit){
+  PmtEventRecord* pmtEventPtr;
+  // Double check that the record is a ZDAB bank
+  // If not, throw alarm and return empty object
+  if( zrec->bank_name != ZDAB_RECORD ){
+    fprintf(stderr, "Trying to read event info from a nonZDAB bank!\n");
+    alarm(30, "Trying to read event info from a nonZDAB bank!\n", 0);
+    return 1;
+  }
+
+  pmtEventPtr = (PmtEventRecord*) (zrec + 1);
+
+  // Read nhit and check that it is sensible
+  // If not, throw alarm and return empty object
+  SWAP_PMT_RECORD( pmtEventPtr );
+  hit.nhit = pmtEventPtr->NPmtHit;
+  if(hit.nhit > MAX_NHIT){
+    fprintf(stderr, "Read error: Bad ZDAB -- %d pmt hit!\x07\n", hit.nhit);
+    alarm(30, "Too many hits found!\n", 0);
+    return 1;
+  }
+
+  // Read the gtid and run number
+  hit.gtid = pmtEventPtr->TriggerCardData.BcGT;
+  hit.run  = pmtEventPtr->RunNumber;
+
+  // Read the 50 MHz and 10 MHz clock times
+  // This method copied from PZdabFile
+  hit.time50 = (uint64_t(pmtEventPtr->TriggerCardData.Bc50_2) << 11
+                        + pmtEventPtr->TriggerCardData.Bc50_1 );
+  hit.time10 = (uint64_t(pmtEventPtr->TriggerCardData.Bc10_2) << 32
+                        + pmtEventPtr->TriggerCardData.Bc10_1 );
+
+  // Next retrieve the trigger word
+  // This method copied from zdab_convert
+  uint32_t mtcwords[6];
+  memcpy(mtcwords, &(pmtEventPtr->TriggerCardData), 6*sizeof(uint32_t));
+  hit.triggertype = ((mtcwords[3] & 0xff000000) >> 24) |
+                    ((mtcwords[4] & 0x3ffff) << 8);
+
+  // Then report the length of the record in words
+  // 9 words for nZDAB, 11 words for PmtEventRecord, 3 words per nhit
+  // plus the length of any subrecords
+  // This method copied from PZdabFile
+  uint32_t event_size = 20 + 3*hit.nhit;
+  uint32_t* sub_header = &pmtEventPtr->CalPckType;
+  SWAP_INT32(sub_header, 1);
+  while( *sub_header & SUB_NOT_LAST){
+    uint32_t jump = (*sub_header & SUB_LENGTH_MASK);
+    if( jump > MAX_BUFFSIZE/4 ){
+      fprintf(stderr, "Error: wanted to jump past the end of the buffer\n");
+      return(0);
+    }
+    SWAP_INT32(sub_header, 1);
+    sub_header += jump;
+    SWAP_INT32(sub_header, 1);
+    event_size += (*sub_header & SUB_LENGTH_MASK)*sizeof(uint32_t);
+    SWAP_INT32(sub_header, 1);
+  }
+  hit.reclen = event_size;
+
+  // Finally, restore the record to its external state
+  SWAP_PMT_RECORD( pmtEventPtr );
+  return 0;
+}
+
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
@@ -521,8 +599,9 @@ int main(int argc, char *argv[])
   // Set up the Burst Buffer
   InitializeBuf();
 
-  // Initialize the various clocks
+  // Initialize the various clocks and the hitinfo object
   alltimes alltime = InitTime();
+  hitinfo hits = InitHit();
 
   // Flags for the retriggering logic:
   // passretrig true means that if the next event is a retrigger, we should 
@@ -542,8 +621,7 @@ int main(int argc, char *argv[])
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
-    if(hitinfo* hits = ReadHits(zrec));
-      nhit = hits->NPmtHit;
+    if(! ReadHits(zrec, hits)){
       count.eventn++;
       alltime = compute_times(hits, alltime, count, passretrig, retrig, stat, b);
 
@@ -568,9 +646,8 @@ int main(int argc, char *argv[])
       //   * If we were in a burst: write event to file, and check if the burst has ended
       // We also check for EXTASY triggers here to send PCA data to Freija
 
-      uint32_t word = triggertype(hits); 
-      // Add 9 words for nZDAB, ZDAB record length, and hit length
-      uint32_t reclen = 9 + zfile->GetSize(hits)/4;
+      uint32_t word = hits.triggertype; 
+      uint32_t reclen = hits.reclen;
 
       if(!extasy){
         if((word & EXTASY ) != 0) 

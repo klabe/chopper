@@ -3,9 +3,12 @@
 // K Labe, September 23 2014
 // K Labe, September 24 2014 - Remove variables to source file
 // K Labe, November 10 2014  - Add gtid function
+// K Labe, February 4 2014 - change gtid function to accept a hitinfo object
+//                           instead of a PmtEventRecord object
 
 #include <stdint.h>
 #include "Record_Info.h"
+#include "struct.h"
 
 // This structure holds the data which gets written to the redis server
 struct l2stats
@@ -33,4 +36,4 @@ void Closeredis();
 void Writetoredis(l2stats & stat, const int time);
 
 // This function retrieves the current gtid and run for writing to redis
-void gtid(l2stats & stat, PmtEventRecord * hits);
+void gtid(l2stats & stat, hitinfo hits);

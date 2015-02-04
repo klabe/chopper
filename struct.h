@@ -50,7 +50,7 @@ struct hitinfo
 uint64_t time50;
 uint64_t time10;
 uint32_t triggertype;
-uint16_t NPmtHit;
+uint16_t nhit;
 uint32_t reclen;
 uint32_t gtid;
 uint32_t run;
