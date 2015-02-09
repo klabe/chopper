@@ -1,8 +1,8 @@
-Stonehenge (Chopper) Readme file.
+Stonehenge Readme file.
 
 Installation instructions
 -------------------------
-In addition to downloading the chopper repository,  the hiredis and libcurl 
+In addition to downloading the stonehenge repository,  the hiredis and libcurl 
 libraries are required.  These must be installed independently.  Furthermore, 
 the Makefile must be updated to provide the appropriate library and inclusion 
 paths.  Thereafter, a simple "make" should suffice to build the software.
