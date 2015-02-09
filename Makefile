@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
          -fdiagnostics-show-option $(curl-config --cflags) 
 
-LINKFLAGS = -lhiredis -lcurl
+LINKFLAGS = -L/usr/include/hiredis -lhiredis -lcurl
 
 all: stonehenge 
 
@@ -9,7 +9,7 @@ stonehenge: stonehenge.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o 
 	g++ $(CFLAGS) -o stonehenge stonehenge.o PZdabFile.o PZdabWriter.o MD5Checksum.o snbuf.o curl.o redis.o output.o config.o $(LINKFLAGS)
 
 stonehenge.o: stonehenge.cpp snbuf.h curl.h redis.h struct.h output.h config.h
-	g++ -c stonehenge.cpp $(CFLAGS) 
+	g++ -c stonehenge.cpp $(CFLAGS) -I/usr/include/hiredis
 
 
 PZdabFile.o: PZdabFile.cxx
@@ -31,7 +31,7 @@ curl.o: curl.cpp
 	g++ -c curl.cpp $(CFLAGS)
 
 redis.o: redis.cpp struct.h
-	g++ -c redis.cpp $(CFLAGS)
+	g++ -c redis.cpp $(CFLAGS) -I/usr/include/hiredis
 
 output.o: output.cpp
 	g++ -c output.cpp $(CFLAGS)
