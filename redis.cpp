@@ -91,6 +91,9 @@ void Writetoredis(l2stats & stat, const int time){
       reply = redisCommand(redis, "EXPIRE ts:%d:id:%d:BURSTS %d", intervals[i], ts, 2400*intervals[i]);
       if(!reply)
         alarm(30, message, 0);
+      reply = redisCommand(redis, "SET l2:run %d", stat.run);
+      if(!reply)
+        alarm(30, message, 0);
     }
   }
   ResetStatistics(stat);
