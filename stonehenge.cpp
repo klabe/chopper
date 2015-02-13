@@ -44,6 +44,7 @@
 #include "config.h"
 
 #define EXTASY 0x8000 // Bit 15
+#define PED 0x1000 // Bit 12
 
 /* constants */
 #define BASE_BUFFSIZE       32768UL     // base size of zdab record buffer
@@ -101,18 +102,26 @@ void hexdump(char* const ptr, const int len){
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
 static void Close(const char* const base, PZdabWriter* const & w, 
-                  const bool extasy)
+                  const bool extasy, const bool ped)
 {
   char buff1[256];
-  snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
-  const char* linkname = buff1;
   char buff2[256];
   snprintf(buff2, 256, "%s.zdab", base);
   const char* outname = buff2;
   w->Close();
   if(extasy){
+    snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
+    const char* linkname = buff1;
     if(link(outname, linkname)){
       char* message = "PCA File could not be copied";
+      alarm(40, message, 1);
+    }
+  }
+  if(ped){
+    snprintf(buff1, 256, "/home/trigger/ECAdata/%s.zdab", base);
+    const char* linkname = buff1;
+    if(link(outname, linkname)){
+      char* message = "ECA File could not be copied";
       alarm(40, message, 1);
     }
   }
@@ -593,6 +602,7 @@ int main(int argc, char *argv[])
     Openredis(stat);
 
   bool extasy = false;
+  bool ped    = false;
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, clobber);
@@ -654,6 +664,10 @@ int main(int argc, char *argv[])
         if((word & EXTASY ) != 0) 
           extasy = true;
       }
+      if(!ped){
+        if((word & PED ) != 0)
+          ped = true;
+      }
       if(hits.nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime, config.burstwindow);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
@@ -684,7 +698,7 @@ int main(int argc, char *argv[])
     count.recordn++;
     stat.l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, w1, extasy);
+  if(w1) Close(outfilebase, w1, extasy, ped);
   BurstEndofFile(b, alltime.longtime);
 
   Flusherrors();
