@@ -49,7 +49,7 @@ PZdabWriter * Output(const char * const base, bool clobber){
   const int maxlen = 1024;
   char outfilename[maxlen];
 
-  if(snprintf(outfilename, maxlen, "%s.zdab", base) >= maxlen){
+  if(snprintf(outfilename, maxlen, "/home/trigger/zdab/%s.zdab", base) >= maxlen){
     outfilename[maxlen-1] = 0; // or does snprintf do this already?
     fprintf(stderr, "WARNING: Output filename truncated to %s\n",
             outfilename);
