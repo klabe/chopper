@@ -508,13 +508,11 @@ static hitinfo InitHit(){
 // external format.
 // This is based on PZdabFile::GetPmtRecord but it does not leave things
 // in a byte-swapped state.
+// If the function is passed a non ZDAB_RECORD it returns 1.
 static int ReadHits(nZDAB* zrec, hitinfo& hit){
   PmtEventRecord* pmtEventPtr;
-  // Double check that the record is a ZDAB bank
-  // If not, throw alarm and return empty object
+  // Check that the record is a ZDAB bank
   if( zrec->bank_name != ZDAB_RECORD ){
-    fprintf(stderr, "Trying to read event info from a nonZDAB bank!\n");
-    alarm(30, "Trying to read event info from a nonZDAB bank!\n", 0);
     return 1;
   }
 
