@@ -109,6 +109,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
   snprintf(buff2, 256, "%s.zdab", base);
   const char* outname = buff2;
   w->Close();
+  delete w;
   if(extasy){
     snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
     const char* linkname = buff1;
@@ -698,6 +699,7 @@ int main(int argc, char *argv[])
   } // End of the Event Loop for this subrun file
   if(w1) Close(outfilebase, w1, extasy, ped);
   BurstEndofFile(b, alltime.longtime);
+  delete zfile;
 
   Flusherrors();
   if(yesredis)

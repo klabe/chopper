@@ -235,6 +235,7 @@ void Finishburst(PZdabWriter* & b, uint64_t longtime){
   burstptr.head = -1;
   burstptr.tail = -1;
   b->Close();
+  delete b;
   uint64_t btime = longtime - starttick;
   float btimesec = btime/50000000.;
   char buff[256];
