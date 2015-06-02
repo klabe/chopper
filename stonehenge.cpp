@@ -106,7 +106,9 @@ static void Close(const char* const base, PZdabWriter* const & w,
 {
   char buff1[256];
   char buff2[256];
+  char buff3[256];
   snprintf(buff2, 256, "%s.zdab", base);
+  snprintf(buff3, 256, "%s.lock", base);
   const char* outname = buff2;
   w->Close();
   char* checksum = w->GetMD5();
@@ -129,7 +131,8 @@ static void Close(const char* const base, PZdabWriter* const & w,
   }
 
   std::ofstream myfile;
-  myfile.open("chopper.run.log", std::fstream::app);
+  myfile.open(buff3, std::fstream::app);
+  myfile << checksum << "\n"; 
   myfile.close();
 }
 
