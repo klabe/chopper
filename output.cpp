@@ -72,7 +72,7 @@ PZdabWriter * Output(const char * const base, bool clobber){
     exit(1);
   }
 
-  PZdabWriter * const ret = new PZdabWriter(outfilename, 0);
+  PZdabWriter * const ret = new PZdabWriter(outfilename, 1);
 
   if(!ret || !ret->IsOpen()){
     fprintf(stderr, "Could not open output file %s\n", outfilename);
