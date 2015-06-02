@@ -109,6 +109,7 @@ static void Close(const char* const base, PZdabWriter* const & w,
   snprintf(buff2, 256, "%s.zdab", base);
   const char* outname = buff2;
   w->Close();
+  char* checksum = w->GetMD5();
   delete w;
   if(extasy){
     snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
