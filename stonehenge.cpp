@@ -43,9 +43,6 @@
 #include "output.h"
 #include "config.h"
 
-#define EXTASY 0x8000 // Bit 15
-#define PED 0x1000 // Bit 12
-
 /* constants */
 #define BASE_BUFFSIZE       32768UL     // base size of zdab record buffer
 #define MAX_BUFFSIZE        0x400000UL  // maximum size of zdab record buffer (4 MB)
@@ -101,8 +98,7 @@ void hexdump(char* const ptr, const int len){
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
-static void Close(const char* const base, PZdabWriter* const & w, 
-                  const bool extasy, const bool ped)
+static void Close(const char* const base, PZdabWriter* const & w)
 {
   char buff1[256];
   char buff2[256];
@@ -113,22 +109,6 @@ static void Close(const char* const base, PZdabWriter* const & w,
   w->Close();
   char* checksum = w->GetMD5();
   delete w;
-  if(extasy){
-    snprintf(buff1, 256, "/home/trigger/PCAdata/%s.zdab", base);
-    const char* linkname = buff1;
-    if(link(outname, linkname)){
-      char* message = "PCA File could not be copied";
-      alarm(40, message, 1);
-    }
-  }
-  if(ped){
-    snprintf(buff1, 256, "/home/trigger/ECAdata/%s.zdab", base);
-    const char* linkname = buff1;
-    if(link(outname, linkname)){
-      char* message = "ECA File could not be copied";
-      alarm(40, message, 1);
-    }
-  }
 
   std::ofstream myfile;
   myfile.open(buff3, std::fstream::app);
@@ -604,8 +584,6 @@ int main(int argc, char *argv[])
   if(yesredis) 
     Openredis(stat);
 
-  bool extasy = false;
-  bool ped    = false;
 
   // Setup initial output file
   PZdabWriter* w1  = Output(outfilebase, clobber);
@@ -663,14 +641,6 @@ int main(int argc, char *argv[])
       uint32_t word = hits.triggertype; 
       uint32_t reclen = hits.reclen;
 
-      if(!extasy){
-        if((word & EXTASY ) != 0) 
-          extasy = true;
-      }
-      if(!ped){
-        if((word & PED ) != 0)
-          ped = true;
-      }
       if(hits.nhit > config.nhitbcut && ((word & config.bitmask) == 0) ){
         UpdateBuf(alltime.longtime, config.burstwindow);
         AddEvBuf(zrec, alltime.longtime, reclen*sizeof(uint32_t), b);
@@ -701,7 +671,7 @@ int main(int argc, char *argv[])
     count.recordn++;
     stat.l1++;
   } // End of the Event Loop for this subrun file
-  if(w1) Close(outfilebase, w1, extasy, ped);
+  if(w1) Close(outfilebase, w1);
   BurstEndofFile(b, alltime.longtime);
   delete zfile;
 
