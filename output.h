@@ -14,4 +14,4 @@ void OutHeader(nZDAB* nzdab, PZdabWriter* const w);
 
 // This function builds a new output file.  If it cannot open the file, it 
 // aborts the program, so the pointer does not need to be checked.
-PZdabWriter* Output(const char * const base, bool clobber);
+PZdabWriter* Output(const char * const base, bool clobber, bool burst=0);

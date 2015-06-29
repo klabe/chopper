@@ -45,15 +45,27 @@ void OutHeader(nZDAB* nzdab, PZdabWriter* const w){
 // This function builds a new output file.  If it can't open 
 // the file, it aborts the program, so the return pointer does not
 // need to be checked.
-PZdabWriter * Output(const char * const base, bool clobber){
+// The optional argument burst states whether to write to the burst
+// directory instead of the data directory.  Defaults to false.
+PZdabWriter * Output(const char * const base, bool clobber, bool burst){
   const int maxlen = 1024;
   char outfilename[maxlen];
 
-  if(snprintf(outfilename, maxlen, "/home/trigger/zdab/%s.zdab", base) >= maxlen){
-    outfilename[maxlen-1] = 0; // or does snprintf do this already?
-    fprintf(stderr, "WARNING: Output filename truncated to %s\n",
-            outfilename);
-    alarm(40, "Output: output filename truncated", 8);
+  if(!burst){
+    if(snprintf(outfilename, maxlen, "/home/trigger/zdab/%s.zdab", base) >= maxlen){
+      outfilename[maxlen-1] = 0; // or does snprintf do this already?
+      fprintf(stderr, "WARNING: Output filename truncated to %s\n",
+              outfilename);
+      alarm(40, "Output: output filename truncated", 8);
+    }
+  }
+  else{
+    if(snprintf(outfilename, maxlen, "/raid/data/burst/%s.zdab", base) >= maxlen){
+      outfilename[maxlen-1] = 0;
+      fprintf(stderr, "WARNING: Output filename truncated to %s\n",
+              outfilename);
+      alarm(40, "OutputL output filename truncated", 8);
+    }
   }
 
   if(!access(outfilename, W_OK)){
