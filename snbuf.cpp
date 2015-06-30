@@ -73,6 +73,11 @@ void InitializeBuf(){
     if(fread(burstev[0], sizeof(char), sizeof(burstev), fburstev) != fburstevsize){
       memset(burstev[0], 0, MAXSIZE*sizeof(uint32_t)*EVENTNUM);
     }
+    // TODO: Handle the case of burst on file start correctly
+    // For now, just pretend we're not in the middle of a burst
+    if(burstptr.burst){
+      burstptr.burst = false;
+    }
   }
   // Otherwise, initialize empty
   else{
