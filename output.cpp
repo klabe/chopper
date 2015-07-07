@@ -32,7 +32,8 @@ void OutHeader(nZDAB* nzdab, PZdabWriter* const w){
     if(index < 0){
       fprintf(stderr, "Unknown bank name %x\n", nzdab->bank_name);
       alarm(40, "Outheader: You never see this!", 6);
-      exit(1);
+// TODO: Fix whatever is causing this to happen
+//      exit(1);
     }
     if(w->WriteBank(PZdabFile::GetBank(nzdab), index)){
       fprintf(stderr,"Error writing to zdab file\n");
