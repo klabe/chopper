@@ -32,6 +32,7 @@ void OutHeader(nZDAB* nzdab, PZdabWriter* const w){
     if(index < 0){
       fprintf(stderr, "Unknown bank name %x\n", nzdab->bank_name);
       alarm(40, "Outheader: You never see this!", 6);
+      return
 // TODO: Fix whatever is causing this to happen
 //      exit(1);
     }
