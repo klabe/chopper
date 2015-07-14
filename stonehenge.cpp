@@ -143,7 +143,7 @@ static int getcmdline_l(const char opt)
 static void printhelp()
 {
   printf(
-  "chopper: Chops a ZDAB file into smaller ones by time.\n"
+  "Stonehenge: The L2 ZDAB Utility.\n"
   "\n"
   "Mandatory options:\n"
   "  -i [string]: Input file\n"
@@ -151,6 +151,7 @@ static void printhelp()
   "  -c [string]: Configuration file\n"
   "\n"
   "Misc/debugging options\n"
+  "  -b [string]: burst naming string\n"
   "  -n: Do not overwrite existing output (default is to do so)\n"
   "  -r: Write statistics to the redis database.\n"
   "  -s [int]: 1 to silence alarms; 0 to play alarms\n"
