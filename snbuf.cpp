@@ -332,9 +332,7 @@ void FillHeaderBuffer(nZDAB* const zrec){
       // Add 9 words for the length of the nZDAB header itself
       // Copy the data to buffer in native format
       uint32_t recLen = zrec->data_words+9;
-      SWAP_INT32(zrec,recLen/sizeof(uint32_t));
-      memcpy(header[i], zrec, recLen);
-      SWAP_INT32(zrec,recLen/sizeof(uint32_t));
+      memcpy(header[i], zrec, recLen*sizeof(uint32_t));
     }
   }
 }

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "curl.h"
+#include "ctype.h"
 
 // This function writes out the ZDAB record
 void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
@@ -20,25 +21,38 @@ void OutZdab(nZDAB * const data, PZdabWriter * const zwrite,
   }
 }
 
+// This function prints ZDAB records to the screen in a human-readable format
+void hexdump(char* const ptr, const int len){
+  for(int i=0; i < len/16 +1; i++){
+    char* lptr = ptr+i*16;
+    for(int j=0; j<16; j++){
+      fprintf(stderr, "%.2x", (unsigned char) lptr[j]);
+    }
+    fprintf(stderr, " ");
+    for(int j=0; j<16; j++){
+      fprintf(stderr, "%c", isprint(lptr[j])?lptr[j]:'.');
+    }
+    fprintf(stderr, "\n");
+  }
+}
 
 // This function writes out a header record from the buffer to a file
 void OutHeader(nZDAB* nzdab, PZdabWriter* const w){
   if (!nzdab) return;
   if( nzdab->bank_name != 0){
-    // Must put nzdab in external format for use with GetIndex
-    SWAP_INT32(&nzdab->bank_name, 1);
     int index = PZdabWriter::GetIndex(nzdab->bank_name);
-    SWAP_INT32(&nzdab->bank_name, 1);
     if(index < 0){
       fprintf(stderr, "Unknown bank name %x\n", nzdab->bank_name);
       alarm(40, "Outheader: You never see this!", 6);
-      return;
-// TODO: Fix whatever is causing this to happen
-//      exit(1);
+      exit(1);
     }
     if(w->WriteBank(PZdabFile::GetBank(nzdab), index)){
       fprintf(stderr,"Error writing to zdab file\n");
       alarm(40, "Outheader: error writing to zdab file.", 7);
+    }
+    // If bank is successfully written to file, unswap buffer for future use
+    else{
+      SWAP_INT32(nzdab+1, nzdab->data_words);
     }
   }
 }

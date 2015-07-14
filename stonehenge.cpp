@@ -80,21 +80,6 @@ static const int maxdrift = 5000; // 50 MHz ticks (1 us)
 
 static char* password = NULL;
 
-// Function to Print ZDAB records to screen readably
-void hexdump(char* const ptr, const int len){
-  for(int i=0; i < len/16 +1; i++){
-    char* lptr = ptr+i*16;
-    for(int j=0; j<16; j++){
-      fprintf(stderr,"%.2x", (unsigned char) lptr[j]);
-    }
-    fprintf(stderr, " ");
-    for(int j=0; j<16; j++){
-      fprintf(stderr, "%c", isprint(lptr[j])?lptr[j]:'.');
-    }
-    fprintf(stderr, "\n");
-  } 
-}
-
 // This function closes the completed primary chunk and  moves the file
 // to the appropriate directory.  It should be used here in place of the 
 // PZdabWriter Close() call. 
