@@ -80,7 +80,7 @@ PZdabWriter * Output(const char * const base, bool clobber, bool burst){
       outfilename[maxlen-1] = 0;
       fprintf(stderr, "WARNING: Output filename truncated to %s\n",
               outfilename);
-      alarm(40, "OutputL output filename truncated", 8);
+      alarm(40, "Output: output filename truncated", 8);
     }
   }
 
