@@ -339,7 +339,8 @@ uint32_t FillHeaderBuffer(nZDAB* const zrec){
       memcpy(header[i], zrec, recLen*sizeof(uint32_t));
       // For RHDR's pull out run type to return
       if(i==0){
-        RunRecord* rhdr = (RunRecord*) zrec;
+        RunRecord* rhdr = (RunRecord*) (zrec+1);
+        SWAP_INT32(rhdr, 9);
         runtype = rhdr->RunMask;
         fprintf(stderr, "runtype: %d\n", runtype);
       }
