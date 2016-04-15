@@ -595,7 +595,11 @@ int main(int argc, char *argv[])
   int stats[8] = {0, 0, 0, 0, 0, 0, 0, 0};
   while(nZDAB * const zrec = zfile->NextRecord()){
     // Fill Header buffer if necessary
-    FillHeaderBuffer(zrec);
+    // Check for runtype, configure and record parameters if necessary
+    uint32_t runtype = FillHeaderBuffer(zrec);
+    if(runtype){
+      WriteConfig(infilename);
+    }
 
     // If the record has an associated time, compute all the time
     // variables.  Non-hit records don't have times.
@@ -622,7 +626,6 @@ int main(int argc, char *argv[])
       //   * Then add the new event to the buffer
       //   * If we were not in a burst, check whether one has started
       //   * If we were in a burst: write event to file, and check if the burst has ended
-      // We also check for EXTASY triggers here to send PCA data to Freija
 
       uint32_t word = hits.triggertype; 
       uint32_t reclen = hits.reclen;

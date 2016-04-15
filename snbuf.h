@@ -9,6 +9,7 @@
 // K Labe, October 30 2014   - Add Checkbuffer() function
 // K Labe, November 3 2014   - Add GetEpoch() function
 // K Labe, December 5 2014   - Add setburst() function
+// K Labe, April 7 2016      - Modify FillHeaderBuffer() to return run type
 
 // This function should be called once at the beginning of a subfile to set
 // up the burst buffers.  It tries to read in the buffer state from file, or
@@ -83,7 +84,8 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime);
 
 // This function checks the zdab record zrec, and if it is one of the header-
 // type records, it records it in the header buffer.
-void FillHeaderBuffer(nZDAB* const zrec);
+// If the record was a RHDR, it returns the run type; otherwise 0.
+uint32_t FillHeaderBuffer(nZDAB* const zrec);
 
 // This function checks the burst buffer to return the value of the epoch
 // parameter at the time of the last available write

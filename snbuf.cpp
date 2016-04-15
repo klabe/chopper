@@ -3,6 +3,7 @@
 // K Labe June 17 2014
 // K Labe September 26 2014 Add code to handle end of file and buffer saving
 // K Labe November 2 2014   Use a single contiguous block of memory for buffer
+// K Labe April 7 2016      Modify FillHeaderBuffer to check for run type
 
 #include "PZdabFile.h"
 #include "PZdabWriter.h"
@@ -325,7 +326,10 @@ void ClearBuffer(PZdabWriter* & b, uint64_t longtime){
 
 // This function checks whether the passed record is a header record, and,
 // if it is, writes it to the header buffer.
-void FillHeaderBuffer(nZDAB* const zrec){
+// It also checks the run type for RHDR records.  It returns 0 if the record
+// was not a RHDR, and the run type if it was.
+uint32_t FillHeaderBuffer(nZDAB* const zrec){
+  uint32_t runtype = 0;
   for(int i=0; i<headertypes; i++){
     if(zrec->bank_name == Headernames[i]){
       memset(header[i], 0, NWREC);
@@ -333,8 +337,15 @@ void FillHeaderBuffer(nZDAB* const zrec){
       // Copy the data to buffer in native format
       uint32_t recLen = zrec->data_words+9;
       memcpy(header[i], zrec, recLen*sizeof(uint32_t));
+      // For RHDR's pull out run type to return
+      if(i==0){
+        RunRecord* rhdr = (RunRecord*) zrec;
+        runtype = rhdr->RunMask;
+        fprintf(stderr, "runtype: %d\n", runtype);
+      }
     }
   }
+  return runtype;
 }
 
 // This function returns the epoch value used to write timestamp
