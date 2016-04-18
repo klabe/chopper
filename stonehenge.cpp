@@ -56,6 +56,10 @@
 // behavior of the filter
 static configuration config;
 
+// This variable holds the data on all the configurations read out of the 
+// configuration file
+static configuration allconfigs[2];
+
 // This variable holds the current Nhitcut, which can be either the Hi or 
 // Lo Nhitcut, depending on what has been going on
 static int NHITCUT;
@@ -237,7 +241,7 @@ static void parse_cmdline(int argc, char ** argv, char * & infilename,
     exit(1);
   }
 
-  ReadConfig(configfile, config);
+  ReadConfig(configfile, allconfigs);
 
 }
 
@@ -547,6 +551,10 @@ static int ReadHits(nZDAB* zrec, hitinfo& hit){
 // MAIN FUCTION 
 int main(int argc, char *argv[])
 {
+  // This states whether we have received the Run Header, and therefore set
+  // the cut configuration
+  bool configknown = false;
+
   // Connect to minard for monitoring
   Opencurl(password);
 
@@ -563,7 +571,6 @@ int main(int argc, char *argv[])
     alarm(40, "Stonehenge could not open input file.  Aborting.", 4);
     exit(1);
   }
-  WriteConfig(infilename);
 
   // Prepare to record statistics in redis database
   l2stats stat;
@@ -597,8 +604,12 @@ int main(int argc, char *argv[])
     // Fill Header buffer if necessary
     // Check for runtype, configure and record parameters if necessary
     uint32_t runtype = FillHeaderBuffer(zrec);
-    if(runtype){
+    if(runtype && !configknown){
+      SetConfig(runtype, allconfigs, config);
       WriteConfig(infilename);
+    }
+    if(runtype && configknown){
+      alarm(30, "Stonehenge: RHDR Record in the middle of a run!\n", 0);
     }
 
     // If the record has an associated time, compute all the time
@@ -615,6 +626,13 @@ int main(int argc, char *argv[])
           Writetoredis(stat, alltime.oldwalltime);
         }
         Flusherrors();
+      }
+
+      // If we don't have the run type yet, use defaults and throw error
+      if(!configknown){
+        SetConfig(0, allconfigs, config);
+        WriteConfig(infilename);
+        alarm(30, "Stonehenge: No RHDR Record found!  Using default cuts!\n", 0);
       }
 
       // Should we adjust the trigger threshold?
