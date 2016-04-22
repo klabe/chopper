@@ -1,11 +1,11 @@
-nhithi 30
-nhitlo 10
-lothresh 50
-lowindow 20000
-nhitretrig 5
-retrigwindow 23
-nhitburst 40
-burstwindow 10
-burstsize 30
-endrate 10
-bitmask 0x02FFF800
+nhithi 30 30
+nhitlo 10 10
+lothresh 50 50
+lowindow 20000 20000
+nhitretrig 5 5
+retrigwindow 23 23
+nhitburst 40 500
+burstwindow 10 10
+burstsize 30 30
+endrate 10 10
+bitmask 0x02FFF800 0x02FFF800
