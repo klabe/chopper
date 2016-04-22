@@ -623,6 +623,7 @@ int main(int argc, char *argv[])
     if(runtype && !configknown){
       SetConfig(runtype, allconfigs, config);
       WriteConfig(infilename);
+      configknown = true;
     }
     if(runtype && configknown){
       alarm(30, "Stonehenge: RHDR Record in the middle of a run!\n", 0);
