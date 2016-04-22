@@ -438,7 +438,7 @@ void WriteConfig(char* infilename){
     alarm(30, configtext, 0);
   }
   printf("Wrote configuration.\n");
-  fprintf(stdout, configs);
+  fprintf(stdout, configtext);
   return;
 }
 
