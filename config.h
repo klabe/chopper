@@ -6,4 +6,4 @@
 void bit(int num);
 bool allset();
 void SetConfig(int runtype, configuration allconfigs[2], configuration & config);
-void ReadConfig(const char* filename, configuration & config[2]);
+void ReadConfig(const char* filename, configuration & allconfigs[2]);
