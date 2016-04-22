@@ -1,7 +1,7 @@
 CFLAGS = -Wall -Wextra -Wno-write-strings -DSWAP_BYTES \
          -fdiagnostics-show-option $(curl-config --cflags) 
 
-LINKFLAGS = -L/usr/include/hiredis -lhiredis -lcurl
+LINKFLAGS = -L/usr/include/hiredis -lhiredis -lcurl -lpq
 
 all: stonehenge 
 
