@@ -650,6 +650,7 @@ int main(int argc, char *argv[])
         SetConfig(0, allconfigs, config);
         WriteConfig(infilename);
         alarm(30, "Stonehenge: No RHDR Record found!  Using default cuts!\n", 0);
+        configknown = true;
       }
 
       // Should we adjust the trigger threshold?
