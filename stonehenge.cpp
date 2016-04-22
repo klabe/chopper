@@ -36,6 +36,7 @@
 #include <fstream>
 #include <signal.h>
 #include <time.h>
+#include <libpq-fe.h>
 #include "redis.h"
 #include "curl.h"
 #include "curl/curl.h"
@@ -416,20 +417,20 @@ void WriteConfig(char* infilename){
     return;
   }
 
-  int paramValues[13];
-  paramValues[0] = 7777; // run number
-  paramValues[1] = 0;    // subfile number
-  paramValues[2] = config.nhithi;
-  paramValues[3] = config.nhitlo;
-  paramValues[4] = config.lothresh;
-  paramValues[5] = config.lowindow;
-  paramValues[6] = config.retrigcut;
-  paramValues[7] = config.retrigwindow;
-  paramValues[8] = config.bitmask;
-  paramValues[9] = config.nhitbcut;
-  paramValues[10]= config.burstwindow;
-  paramValues[11]= config.burstsize;
-  paramValues[12]= config.endrate;
+  const char* paramValues[13];
+  paramValues[0] = (char*) 7777; // run number
+  paramValues[1] = (char*) 0;    // subfile number
+  paramValues[2] = (char*) config.nhithi;
+  paramValues[3] = (char*) config.nhitlo;
+  paramValues[4] = (char*) config.lothresh;
+  paramValues[5] = (char*) config.lowindow;
+  paramValues[6] = (char*) config.retrigcut;
+  paramValues[7] = (char*) config.retrigwindow;
+  paramValues[8] = (char*) config.bitmask;
+  paramValues[9] = (char*) config.nhitbcut;
+  paramValues[10]= (char*) config.burstwindow;
+  paramValues[11]= (char*) config.burstsize;
+  paramValues[12]= (char*) config.endrate;
 
   PGresult* res = PQexecParams(conn, "INSERT into l2 values($1)", 13, NULL,
                                paramValues, NULL, NULL, 1);
@@ -438,7 +439,7 @@ void WriteConfig(char* infilename){
     alarm(30, configtext, 0);
   }
   printf("Wrote configuration.\n");
-  fprintf(stdout, configs);
+  fprintf(stdout, configtext);
   return;
 }
 
