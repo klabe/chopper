@@ -387,44 +387,59 @@ bool l2filter(const uint16_t nhit, const uint32_t word, const bool passretrig,
   return pass;
 }
 
-// This function writes the configuration parameters to couchdb.
+// This function writes the configuration parameters to postgresql
 void WriteConfig(char* infilename){
-  CURL* couchcurl = curl_easy_init();
-  struct curl_slist *headers = NULL;
-  headers = curl_slist_append(headers, "Content-Type: application/json"); 
-  curl_easy_setopt(couchcurl, CURLOPT_URL, "http://127.0.0.1:5984/l2configuration");
-  char configs[1024];
-  sprintf(configs, "{\"type\":\"L2CONFIG\", \
-                     \"version\":0, \
-                     \"run\":\"%s\", \
-                     \"pass\":%d, \
-                     \"hinhitcut\":%d, \
-                     \"lonhitcut\":%d, \
-                     \"lowthresh\":%d, \
-                     \"lowindow\":%d, \
-                     \"retrigcut\":%d, \
-                     \"retrigwindow\":%d, \
-                     \"bitmask\":%d, \
-                     \"nhitbcut\":%d, \
-                     \"burstwindow\":%d, \
-                     \"burstsize\":%d, \
-                     \"endrate\":%d, \
-                     \"timestamp\":%d}",
-                     infilename, 3, config.nhithi, config.nhitlo, config.lothresh, 
-                     config.lowindow, config.retrigcut, config.retrigwindow, 
-                     config.bitmask, config.nhitbcut, config.burstwindow, 
-                     config.burstsize, config.endrate, (int)time(NULL)); 
-  curl_easy_setopt(couchcurl, CURLOPT_POSTFIELDS, configs);
-  curl_easy_setopt(couchcurl, CURLOPT_HTTPHEADER, headers);
-  CURLcode res = curl_easy_perform(couchcurl);
-  if(res != CURLE_OK){
-    alarm(30, "Could not log parameters to CouchDB!  Logging here instead.\n", 0);
-    alarm(30, configs, 0);
+  //TODO: Parse run number and subfile number from infilename
+  char configtext[1024];
+  snprintf(configtext, 1024, "runnumber: %d\n \
+                              subfile: %d\n \
+                              nhithi: %d\n \
+                              nhitlo: %d\n \
+                              lothresh: %d\n \
+                              retrigcut: %d\n \
+                              retrigwindow: %d\n \
+                              bitmask: %x\n \
+                              nhitbcut: %d\n \
+                              burstwindow: %d\n \
+                              burstsize: %d\n \
+                              endrate: %d\n",
+           7777, 0, config.nhithi, config.nhitlo, config.lothresh, 
+           config.lowindow, config.retrigcut, config.retrigwindow, 
+           config.bitmask, config.nhitbcut, config.burstwindow, 
+           config.burstsize, config.endrate); 
+
+  const char* conninfo = "dbname = test";
+  PGConn* conn = PQconnectdb(conninfo);
+  if( PQstatus(conn) != CONNECTION_OK){
+    alarm(30, "Could not log parameters to database!  Logging here instead.\n", 0);
+    alarm(30, configtext, 0);
+    return;
   }
-  curl_easy_cleanup(couchcurl);
-  curl_slist_free_all(headers);
+
+  int paramValues[13];
+  paramValues[0] = 7777; // run number
+  paramValues[1] = 0;    // subfile number
+  paramValues[2] = config.nhithi;
+  paramValues[3] = config.nhitlo;
+  paramValues[4] = config.lothresh;
+  paramValues[5] = config.lowindow;
+  paramValues[6] = config.retrigcut;
+  paramValues[7] = config.retrigwindow;
+  paramValues[8] = config.bitmask;
+  paramValues[9] = config.nhitbcut;
+  paramValues[10]= config.burstwindow;
+  paramValues[11]= config.burstsize;
+  paramValues[12]= config.endrate;
+
+  PGresult* res = PQexecParams(conn, "INSERT into l2 values($1)", 13, NULL,
+                               paramValues, NULL, NULL, 1);
+  if(PQresultStatus(res) != PGRES_TUPLES_OK){
+    alarm(30, "Could not log parameters to database!  Logging here instead.\n", 0);
+    alarm(30, configtext, 0);
+  }
   printf("Wrote configuration.\n");
   fprintf(stdout, configs);
+  return;
 }
 
 // This function zeros out the counters
