@@ -397,6 +397,7 @@ void WriteConfig(char* infilename){
                               nhithi: %d\n \
                               nhitlo: %d\n \
                               lothresh: %d\n \
+                              lowindow: %d\n \
                               retrigcut: %d\n \
                               retrigwindow: %d\n \
                               bitmask: %x\n \
@@ -409,6 +410,14 @@ void WriteConfig(char* infilename){
            config.bitmask, config.nhitbcut, config.burstwindow, 
            config.burstsize, config.endrate); 
 
+  char insertstmt[1024];
+  snprintf(insertstmt, 1024, "INSERT into l2 values(%d, %d, %d, %d, %d, \
+                              %d, %d, %d, '%x', %d, %d, %d, %d);",
+           7777, 0, config.nhithi, config.nhitlo, config.lothresh,
+           config.lowindow, config.retrigcut, config.retrigwindow,
+           config.bitmask, config.nhitbcut, config.burstwindow,
+           config.burstsize, config.endrate);
+
   const char* conninfo = "dbname = test";
   PGConn* conn = PQconnectdb(conninfo);
   if( PQstatus(conn) != CONNECTION_OK){
@@ -417,28 +426,11 @@ void WriteConfig(char* infilename){
     return;
   }
 
-  const char* paramValues[13];
-  paramValues[0] = (char*) 7777; // run number
-  paramValues[1] = (char*) 0;    // subfile number
-  paramValues[2] = (char*) config.nhithi;
-  paramValues[3] = (char*) config.nhitlo;
-  paramValues[4] = (char*) config.lothresh;
-  paramValues[5] = (char*) config.lowindow;
-  paramValues[6] = (char*) config.retrigcut;
-  paramValues[7] = (char*) config.retrigwindow;
-  paramValues[8] = (char*) config.bitmask;
-  paramValues[9] = (char*) config.nhitbcut;
-  paramValues[10]= (char*) config.burstwindow;
-  paramValues[11]= (char*) config.burstsize;
-  paramValues[12]= (char*) config.endrate;
-
-  PGresult* res = PQexecParams(conn, "INSERT into l2 values($1)", 13, NULL,
-                               paramValues, NULL, NULL, 1);
+  PGresult* res = PQexec(conn, insertstmt);
   if(PQresultStatus(res) != PGRES_TUPLES_OK){
     alarm(30, "Could not log parameters to database!  Logging here instead.\n", 0);
     alarm(30, configtext, 0);
   }
-  printf("Wrote configuration.\n");
   fprintf(stdout, configtext);
   return;
 }
@@ -623,6 +615,7 @@ int main(int argc, char *argv[])
     if(runtype && !configknown){
       SetConfig(runtype, allconfigs, config);
       WriteConfig(infilename);
+      configknown = true;
     }
     if(runtype && configknown){
       alarm(30, "Stonehenge: RHDR Record in the middle of a run!\n", 0);
@@ -649,6 +642,7 @@ int main(int argc, char *argv[])
         SetConfig(0, allconfigs, config);
         WriteConfig(infilename);
         alarm(30, "Stonehenge: No RHDR Record found!  Using default cuts!\n", 0);
+        configknown = true;
       }
 
       // Should we adjust the trigger threshold?
