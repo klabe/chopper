@@ -36,6 +36,7 @@
 #include <fstream>
 #include <signal.h>
 #include <time.h>
+#include <libpq-fe.h>
 #include "redis.h"
 #include "curl.h"
 #include "curl/curl.h"
