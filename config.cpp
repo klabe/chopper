@@ -95,7 +95,7 @@ void ReadConfig(const char* filename, configuration allconfigs[2]){
       else if(!strcmp(param, "nhitretrig")  )
         {allconfigs[i].retrigcut    = value[i]; bit(4);}
       else if(!strcmp(param, "retrigwindow"))
-        {allconfigs[i].retrigwindow = value[i]; bit(5)}
+        {allconfigs[i].retrigwindow = value[i]; bit(5);}
       else if(!strcmp(param, "nhitburst")   )
         {allconfigs[i].nhitbcut     = value[i]; bit(6);}
       else if(!strcmp(param, "burstwindow") )
@@ -113,7 +113,7 @@ void ReadConfig(const char* filename, configuration allconfigs[2]){
     }
     rewind(configfile);
     while(fscanf(configfile, "%s %x %x\n", param, &value[0], &value[1])==3){
-      if(strcmp(param, "bitmask") == 0)
+      if(!strcmp(param, "bitmask"))
         {allconfigs[i].bitmask = value[i]; bit(10);}
     }
     // Check whether all bits were set
