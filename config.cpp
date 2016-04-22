@@ -63,7 +63,7 @@ void SetConfig(int runtype, configuration allconfigs[2], configuration & config)
 
 // This function reads the configuration file and writes the results in the
 // allconfigs object
-void ReadConfig(const char* filename, configuration &allconfigs[2]){
+void ReadConfig(const char* filename, configuration allconfigs[2]){
    FILE* configfile = fopen(filename, "r");
    if(configfile == NULL){
      printf("Could not open configuration file.\n");
