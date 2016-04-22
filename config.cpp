@@ -36,6 +36,13 @@ bool allset(){
   return true;
 }
 
+// This function clears the state object
+void resetstate(){
+  for(int i=0; i<paramn; i++){
+    state[i] = 0;
+  }
+}
+
 // This function sets the actual cuts used by the program
 // Contains the logic to decide on cuts based on run type
 void SetConfig(int runtype, configuration allconfigs[2], configuration & config){
@@ -64,58 +71,57 @@ void SetConfig(int runtype, configuration allconfigs[2], configuration & config)
 // This function reads the configuration file and writes the results in the
 // allconfigs object
 void ReadConfig(const char* filename, configuration allconfigs[2]){
-   FILE* configfile = fopen(filename, "r");
-   if(configfile == NULL){
-     printf("Could not open configuration file.\n");
-     exit(1);
-   }
+  FILE* configfile = fopen(filename, "r");
+  if(configfile == NULL){
+    printf("Could not open configuration file.\n");
+    exit(1);
+  }
 
-   char param[16];
-   int value[2];
+  char param[16];
+  int value[2];
 
-   // Read file and check that each parameter set exactly once
-   while(fscanf(configfile, "%s %d %d\n", param, &value[0], &value[1])==3){
-     for(int i=0; i<2; i++){
-       if     (!strcmp(param, "nhithi")      )
-         {allconfigs[i].nhithi       = value[i]; bit(0);}
-       else if(!strcmp(param, "nhitlo")      )
-         {allconfigs[i].nhitlo       = value[i]; bit(1);}
-       else if(!strcmp(param, "lothresh")    )
-         {allconfigs[i].lothresh     = value[i]; bit(2);}
-       else if(!strcmp(param, "lowindow")    )
-         {allconfigs[i].lowindow     = value[i]; bit(3);}
-       else if(!strcmp(param, "nhitretrig")  )
-         {allconfigs[i].retrigcut    = value[i]; bit(4);}
-       else if(!strcmp(param, "retrigwindow"))
-         {allconfigs[i].retrigwindow = value[i]; bit(5);}
-       else if(!strcmp(param, "nhitburst")   )
-         {allconfigs[i].nhitbcut     = value[i]; bit(6);}
-       else if(!strcmp(param, "burstwindow") )
-         {allconfigs[i].burstwindow  = value[i]; bit(7);}
-       else if(!strcmp(param, "burstsize")   )
-         {allconfigs[i].burstsize    = value[i]; bit(8);}
-       else if(!strcmp(param, "endrate")     )
-         {allconfigs[i].endrate      = value[i]; bit(9);}
-       else if(!strcmp(param, "bitmask")     ){;} // Do nothing
-       else{
-          printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
-                 param);
-          exit(1);
-       }
-     }
-   }
-   rewind(configfile);
-   while(fscanf(configfile, "%s %x %x\n", param, &value[0], &value[1])==3){
-     if(strcmp(param, "bitmask") == 0){
-       allconfigs[0].bitmask = value[0]; 
-       allconfigs[1].bitmask = value[1];
-       bit(10);
-     }
-   }
-
-   // Check whether all bits were set
-   if(!allset()){
-     printf("The configuration file did not set all the parameters!\n");
-     exit(1);
-   }
+  resetstate();
+  // Read file and check that each parameter set exactly once
+  for(int i=0; i<2; i++){
+    while(fscanf(configfile, "%s %d %d\n", param, &value[0], &value[1])==3){
+      if     (!strcmp(param, "nhithi")      )
+        {allconfigs[i].nhithi       = value[i]; bit(0);}
+      else if(!strcmp(param, "nhitlo")      )
+        {allconfigs[i].nhitlo       = value[i]; bit(1);}
+      else if(!strcmp(param, "lothresh")    )
+        {allconfigs[i].lothresh     = value[i]; bit(2);}
+      else if(!strcmp(param, "lowindow")    )
+        {allconfigs[i].lowindow     = value[i]; bit(3);}
+      else if(!strcmp(param, "nhitretrig")  )
+        {allconfigs[i].retrigcut    = value[i]; bit(4);}
+      else if(!strcmp(param, "retrigwindow"))
+        {allconfigs[i].retrigwindow = value[i]; bit(5)}
+      else if(!strcmp(param, "nhitburst")   )
+        {allconfigs[i].nhitbcut     = value[i]; bit(6);}
+      else if(!strcmp(param, "burstwindow") )
+        {allconfigs[i].burstwindow  = value[i]; bit(7);}
+      else if(!strcmp(param, "burstsize")   )
+        {allconfigs[i].burstsize    = value[i]; bit(8);}
+      else if(!strcmp(param, "endrate")     )
+        {allconfigs[i].endrate      = value[i]; bit(9);}
+      else if(!strcmp(param, "bitmask")     ){;} // Do nothing
+      else{
+         printf("ReadConfig does not recognize parameter %s.  Ignoring.\n",
+                param);
+         exit(1);
+      }
+    }
+    rewind(configfile);
+    while(fscanf(configfile, "%s %x %x\n", param, &value[0], &value[1])==3){
+      if(strcmp(param, "bitmask") == 0)
+        {allconfigs[i].bitmask = value[i]; bit(10);}
+    }
+    // Check whether all bits were set
+    if(!allset()){
+      printf("The configuration file did not set all the parameters!\n");
+      exit(1);
+    }
+    rewind(configfile);
+    resetstate();
+  }
 }
