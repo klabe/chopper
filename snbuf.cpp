@@ -343,6 +343,7 @@ uint32_t FillHeaderBuffer(nZDAB* const zrec){
         SWAP_INT32(rhdr, 9);
         runtype = rhdr->RunMask;
         fprintf(stderr, "runtype: %d\n", runtype);
+        SWAP_INT32(rhdr, 9);
       }
     }
   }
